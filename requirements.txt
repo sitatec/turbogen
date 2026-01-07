@@ -1,0 +1,13 @@
+torch==2.8.0
+Pillow
+opencv-python-headless
+numpy
+fast-thumbhash
+transformers
+piexif
+aiohttp
+sgl-kernel
+https://huggingface.co/sitatech/sageattantion-wheels/resolve/main/sageattention-2.2.0-cp310-cp310-linux_x86_64.whl
+https://github.com/windreamer/flash-attention3-wheels/releases/download/2026.01.05-c947cd1/flash_attn_3-3.0.0b1%2B20260105.cu128torch280cxx11abitrue.9b6dba-cp39-abi3-linux_x86_64.whl
+hpsv3
+git+https://github.com/ModelTC/LightX2V.git
