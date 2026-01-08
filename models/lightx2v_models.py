@@ -236,3 +236,16 @@ class ZImageTurbo(BaseModel):
                 "9:21": {"1K": (640, 1536), "1.3K": (720, 1680), "1.5K": (864, 2016)},
             },
         )
+
+
+class Wan22_5B(BaseModel):
+    def __init__(self, model_path: str):
+        super().__init__(
+            model_cls="wan2.2",
+            generation_type="i2i",
+            model_path=model_path,
+            aspect_ratios={
+                "16:9": {"480p": (854, 480), "720p": (1280, 720)},
+                "9:16": {"480p": (480, 854), "720p": (720, 1280)},
+            },
+        )
