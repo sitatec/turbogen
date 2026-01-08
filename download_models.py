@@ -17,8 +17,10 @@ def download_qwen_models() -> tuple[Path, Path]:
         tuple[Path, Path]: [image edit path, image path].
     """
     project_root = Path(__file__).parent
-    qwen_image_edit_2511_path = project_root / "models/Qwen-Image-Edit-2511-Lightning"
-    qwen_image_2512_path = project_root / "models/Qwen-Image-2512-Lightning"
+    qwen_image_edit_2511_path = (
+        project_root / "_model_weights/Qwen-Image-Edit-2511-Lightning"
+    )
+    qwen_image_2512_path = project_root / "_model_weights/Qwen-Image-2512-Lightning"
 
     # Qwen-Image-Edit-2511-Lightning
     hf_hub.hf_hub_download(
