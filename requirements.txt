@@ -4,6 +4,7 @@ opencv-python-headless
 numpy
 fast-thumbhash
 transformers
+huggingface-hub
 piexif
 aiohttp
 sgl-kernel

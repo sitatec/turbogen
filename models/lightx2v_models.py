@@ -1,3 +1,5 @@
+import types
+import functools
 from typing import Literal, override
 import random
 
@@ -10,6 +12,7 @@ from lightx2v.utils.input_info import T2IInputInfo
 from lightx2v.utils.input_info import set_input_info
 from lightx2v.utils.utils import seed_all
 from lightx2v import LightX2VPipeline as LightX2VPipelineBase
+from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
 
 
 class LightX2VPipeline(LightX2VPipelineBase):
@@ -70,10 +73,9 @@ class BaseModel:
     def __init__(
         self,
         model_cls: str,
+        model_path: str,
         generation_type: Literal["t2i", "i2i"],
-        fp8_weights_path: str,
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
-        model_path: str = "",
         infer_steps: int = 8,
         guidance_scale: int = 1,
         compile: bool = True,
@@ -87,7 +89,6 @@ class BaseModel:
 
         self.pipe.enable_quantize(
             dit_quantized=True,
-            dit_quantized_ckpt=fp8_weights_path,
             quant_scheme="fp8-sgl",
         )
 
@@ -141,11 +142,11 @@ class BaseModel:
 
 
 class QwenImageEdit(BaseModel):
-    def __init__(self):
+    def __init__(self, model_path: str):
         super().__init__(
             model_cls="qwen-image-edit-2511",
             generation_type="i2i",
-            fp8_weights_path="lightx2v/Qwen-Image-Edit-2511-Lightning/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_4steps_v1.0.safetensors",
+            model_path=model_path,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024)},
                 "16:9": {"1K": (1344, 768)},
@@ -163,11 +164,15 @@ class QwenImageEdit(BaseModel):
 
 
 class QwenImage(BaseModel):
-    def __init__(self):
+    def __init__(self, model_path: str, text_encoder=None, vae=None):
+        if text_encoder and vae:
+            QwenImageRunner.load_model = self._create_patched_load_model(
+                text_encoder, vae
+            )
         super().__init__(
             model_cls="qwen-image-2512",
             generation_type="t2i",
-            fp8_weights_path="lightx2v/Qwen-Image-2512-Lightning/qwen_image_2512_fp8_e4m3fn_scaled_4steps_v1.0.safetensors",
+            model_path=model_path,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1328, 1328)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1664, 928)},
@@ -183,13 +188,40 @@ class QwenImage(BaseModel):
             },
         )
 
+    def _create_patched_load_model(self, text_encoder, vae):
+        original_load_model = QwenImageRunner.load_model
+
+        @functools.wraps(original_load_model)
+        def patched_load_model(self):
+            orig_load_text_encoder = self.load_text_encoder
+            orig_load_vae = self.load_vae
+
+            @functools.wraps(orig_load_text_encoder)
+            def _load_text_encoder(_):
+                return text_encoder
+
+            @functools.wraps(orig_load_vae)
+            def _load_vae(_):
+                return vae
+
+            self.load_text_encoder = types.MethodType(_load_text_encoder, self)
+            self.load_vae = types.MethodType(_load_vae, self)
+
+            try:
+                return original_load_model(self)
+            finally:
+                # Restore original behavior at class level
+                QwenImageRunner.load_model = original_load_model
+
+        return patched_load_model
+
 
 class ZImageTurbo(BaseModel):
-    def __init__(self):
+    def __init__(self, model_path: str):
         super().__init__(
             model_cls="z_image",
             generation_type="t2i",
-            fp8_weights_path="TODO",
+            model_path=model_path,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1280, 1280), "1.5K": (1536, 1536)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1536, 864), "1.5K": (2048, 1152)},
