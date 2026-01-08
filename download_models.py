@@ -1,6 +1,7 @@
+import os
 from pathlib import Path
 
-import huggingface_hub
+import huggingface_hub as hf_hub
 
 
 def download_qwen_models() -> tuple[Path, Path]:
@@ -20,12 +21,12 @@ def download_qwen_models() -> tuple[Path, Path]:
     qwen_image_2512_path = project_root / "models/Qwen-Image-2512-Lightning"
 
     # Qwen-Image-Edit-2511-Lightning
-    huggingface_hub.hf_hub_download(
+    hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
         filename="qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_4steps_v1.0.safetensors",
         local_dir=qwen_image_edit_2511_path,
     )
-    huggingface_hub.snapshot_download(
+    hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
         allow_patterns=[
@@ -37,10 +38,27 @@ def download_qwen_models() -> tuple[Path, Path]:
         ],
     )
     # Qwen-Image-2512-Lightning
-    huggingface_hub.hf_hub_download(
+    hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-2512-Lightning",
         filename="qwen_image_2512_fp8_e4m3fn_scaled_4steps_v1.0.safetensors",
         local_dir=qwen_image_2512_path,
+    )
+    # Add symlinks to the common components
+    os.symlink(
+        qwen_image_edit_2511_path / "text_encoder",
+        qwen_image_2512_path / "text_encoder",
+    )
+    os.symlink(
+        qwen_image_edit_2511_path / "vae",
+        qwen_image_2512_path / "vae",
+    )
+    os.symlink(
+        qwen_image_edit_2511_path / "scheduler",
+        qwen_image_2512_path / "scheduler",
+    )
+    os.symlink(
+        qwen_image_edit_2511_path / "tokenizer",
+        qwen_image_2512_path / "tokenizer",
     )
 
     return qwen_image_edit_2511_path.resolve(), qwen_image_2512_path.resolve()
