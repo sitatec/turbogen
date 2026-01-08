@@ -24,12 +24,10 @@ def download_qwen_models() -> tuple[Path, Path]:
         repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
         filename="qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_4steps_v1.0.safetensors",
         local_dir=qwen_image_edit_2511_path,
-        local_dir_use_symlinks=False,
     )
     huggingface_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
-        local_dir_use_symlinks=False,
         allow_patterns=[
             "text_encoder/**",
             "vae/**",
@@ -43,7 +41,6 @@ def download_qwen_models() -> tuple[Path, Path]:
         repo_id="lightx2v/Qwen-Image-2512-Lightning",
         filename="qwen_image_2512_fp8_e4m3fn_scaled_4steps_v1.0.safetensors",
         local_dir=qwen_image_2512_path,
-        local_dir_use_symlinks=False,
     )
 
     return qwen_image_edit_2511_path.resolve(), qwen_image_2512_path.resolve()
