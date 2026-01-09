@@ -16,6 +16,18 @@ from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
 
 
 class LightX2VPipeline(LightX2VPipelineBase):
+    def __init__(
+        self,
+        model_cls: str,
+        model_path: str,
+        generation_type: Literal["t2i", "i2i", "i2v"],
+        **kwargs,
+    ):
+        if model_cls in ["z_image", "qwen-image-edit-2511", "qwen-image-2512"]:
+            self.in_channels = 64
+
+        super().__init__(model_cls, model_path, generation_type, **kwargs)
+
     def enable_compilation(self, supported_shapes: list[list[int]]):
         self.compile = True
         self.compile_shapes = supported_shapes
@@ -85,7 +97,7 @@ class BaseModel:
         self.pipe = LightX2VPipeline(
             model_path=model_path,
             model_cls=model_cls,
-            task=generation_type,
+            generation_type=generation_type,
         )
 
         self.pipe.enable_quantize(
