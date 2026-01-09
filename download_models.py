@@ -36,6 +36,7 @@ def download_qwen_models() -> tuple[Path, Path]:
             "scheduler/**",
             "tokenizer/**",
             "processor/**",
+            "transformer/config.json",
         ],
     )
     # Qwen-Image-2512-Lightning
@@ -44,6 +45,12 @@ def download_qwen_models() -> tuple[Path, Path]:
         filename="qwen_image_2512_fp8_e4m3fn_scaled_4steps_v1.0.safetensors",
         local_dir=qwen_image_2512_path / "transformer",
     )
+    hf_hub.snapshot_download(
+        repo_id="Qwen/Qwen-Image-2512",
+        local_dir=qwen_image_2512_path,
+        allow_patterns=["transformer/config.json"],
+    )
+
     symlink_common_components(qwen_image_2512_path, qwen_image_edit_2511_path)
 
     return qwen_image_edit_2511_path.resolve(), qwen_image_2512_path.resolve()
