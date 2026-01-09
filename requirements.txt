@@ -1,6 +1,6 @@
+opencv-python-headless # List first attempt to override opencv-python in other libs
 torch==2.8.0
 Pillow
-opencv-python-headless
 numpy
 fast-thumbhash
 transformers

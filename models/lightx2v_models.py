@@ -74,8 +74,9 @@ class BaseModel:
         self,
         model_cls: str,
         model_path: str,
-        generation_type: Literal["t2i", "i2i"],
+        generation_type: Literal["t2i", "i2i", "i2v"],
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
+        attention_backend: Literal["flash_attn3", "sage_attn2"] = "flash_attn3",
         infer_steps: int = 8,
         guidance_scale: int = 1,
         compile: bool = True,
@@ -93,7 +94,7 @@ class BaseModel:
         )
 
         self.pipe.create_generator(
-            attn_mode="flash_attn3",
+            attn_mode=attention_backend,
             resize_mode="adaptive",
             infer_steps=infer_steps,
             guidance_scale=guidance_scale,
@@ -245,9 +246,10 @@ class Wan22_5B(BaseModel):
     def __init__(self, model_path: str, compile=True):
         super().__init__(
             model_cls="wan2.2",
-            generation_type="i2i",
+            generation_type="i2v",
             model_path=model_path,
             compile=compile,
+            attention_backend="sage_attn2",
             aspect_ratios={
                 "16:9": {"480p": (854, 480), "720p": (1280, 720)},
                 "9:16": {"480p": (480, 854), "720p": (720, 1280)},

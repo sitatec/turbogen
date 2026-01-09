@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import huggingface_hub as hf_hub
@@ -45,22 +44,33 @@ def download_qwen_models() -> tuple[Path, Path]:
         filename="qwen_image_2512_fp8_e4m3fn_scaled_4steps_v1.0.safetensors",
         local_dir=qwen_image_2512_path,
     )
-    # Add symlinks to the common components
-    os.symlink(
-        qwen_image_edit_2511_path / "text_encoder",
-        qwen_image_2512_path / "text_encoder",
-    )
-    os.symlink(
-        qwen_image_edit_2511_path / "vae",
-        qwen_image_2512_path / "vae",
-    )
-    os.symlink(
-        qwen_image_edit_2511_path / "scheduler",
-        qwen_image_2512_path / "scheduler",
-    )
-    os.symlink(
-        qwen_image_edit_2511_path / "tokenizer",
-        qwen_image_2512_path / "tokenizer",
-    )
+    symlink_common_components(qwen_image_2512_path, qwen_image_edit_2511_path)
 
     return qwen_image_edit_2511_path.resolve(), qwen_image_2512_path.resolve()
+
+
+def symlink_common_components(
+    qwen_image_2512_path: Path,
+    qwen_image_edit_2511_path: Path,
+):
+    text_encoder_symlink = qwen_image_2512_path / "text_encoder"
+    vae_symlink = qwen_image_2512_path / "vae"
+    scheduler_symlink = qwen_image_2512_path / "scheduler"
+    tokenizer_symlink = qwen_image_2512_path / "tokenizer"
+
+    if not text_encoder_symlink.exists():
+        text_encoder_symlink.symlink_to(
+            qwen_image_edit_2511_path / "text_encoder", target_is_directory=True
+        )
+    if not vae_symlink.exists():
+        vae_symlink.symlink_to(
+            qwen_image_edit_2511_path / "vae", target_is_directory=True
+        )
+    if not scheduler_symlink.exists():
+        scheduler_symlink.symlink_to(
+            qwen_image_edit_2511_path / "scheduler", target_is_directory=True
+        )
+    if not tokenizer_symlink.exists():
+        tokenizer_symlink.symlink_to(
+            qwen_image_edit_2511_path / "tokenizer", target_is_directory=True
+        )
