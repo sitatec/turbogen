@@ -3,13 +3,12 @@ torch==2.8.0
 Pillow
 numpy
 fast-thumbhash
-transformers
-peft==0.17.1
+transformers==4.57.3
 huggingface-hub
 piexif
 aiohttp
-sgl-kernel
+sgl-kernel==0.3.18.post1
 https://huggingface.co/sitatech/sageattantion-wheels/resolve/main/sageattention-2.2.0-cp310-cp310-linux_x86_64.whl
-https://github.com/windreamer/flash-attention3-wheels/releases/download/2026.01.05-c947cd1/flash_attn_3-3.0.0b1%2B20260105.cu128torch280cxx11abitrue.9b6dba-cp39-abi3-linux_x86_64.whl
-hpsv3
+https://github.com/windreamer/flash-attention3-wheels/releases/download/2026.01.05-c947cd1/flash_attn_3-3.0.0b1+20260105.cu128torch291cxx11abitrue.9b6dba-cp39-abi3-linux_x86_64.whl
+git+https://github.com/sitatec/HPSv3.git
 git+https://github.com/ModelTC/LightX2V.git

@@ -114,11 +114,11 @@ class BaseModel:
 
     def generate(
         self,
-        image_paths: list[str],
         prompt: str,
         aspect_ratio: str,
         resolution: str,
         output_path: str,
+        image_paths: list[str] = [],
         seed: int = -1,  # -1 for random seed
         negative_prompt: str | None = None,
     ):
