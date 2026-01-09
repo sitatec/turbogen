@@ -26,7 +26,7 @@ class LightX2VPipeline(LightX2VPipelineBase):
         if model_cls in ["z_image", "qwen-image-edit-2511", "qwen-image-2512"]:
             self.in_channels = 64
 
-        super().__init__(model_cls, model_path, generation_type, **kwargs)
+        super().__init__(generation_type, model_path, model_cls, **kwargs)
 
     def enable_compilation(self, supported_shapes: list[list[int]]):
         self.compile = True
