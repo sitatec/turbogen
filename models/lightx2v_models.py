@@ -97,7 +97,7 @@ class BaseModel:
 
         self.pipe.create_generator(
             attn_mode=attention_backend,
-            resize_mode="adaptive",
+            resize_mode="adaptive" if generation_type == "i2i" else None,
             infer_steps=infer_steps,
             guidance_scale=guidance_scale,
         )
