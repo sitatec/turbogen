@@ -177,6 +177,7 @@ class QwenImageEdit(BaseModel):
         lora_configs: list[dict] | None = None,
         compile: bool = True,
         enable_cpu_offload: bool = False,
+        **kwargs,
     ):
         super().__init__(
             model_cls="qwen-image-edit-2511",
@@ -199,6 +200,7 @@ class QwenImageEdit(BaseModel):
                 "21:9": {"1K": (1536, 640)},
                 "9:21": {"1K": (640, 1536)},
             },
+            **kwargs,
         )
 
 
@@ -212,6 +214,7 @@ class QwenImage(BaseModel):
         vae=None,
         compile: bool = True,
         enable_cpu_offload: bool = False,
+        **kwargs,
     ):
         if text_encoder and vae:
             QwenImageRunner.load_model = self._create_patched_load_model(
@@ -238,6 +241,7 @@ class QwenImage(BaseModel):
                 "21:9": {"1K": (1536, 640), "1.3K": (1792, 768)},
                 "9:21": {"1K": (640, 1536), "1.3K": (768, 1792)},
             },
+            **kwargs,
         )
 
     def _create_patched_load_model(self, text_encoder, vae):
@@ -276,6 +280,7 @@ class ZImageTurbo(BaseModel):
         lora_configs: list[dict] | None = None,
         compile: bool = True,
         enable_cpu_offload: bool = False,
+        **kwargs,
     ):
         super().__init__(
             model_cls="z_image",
@@ -298,6 +303,7 @@ class ZImageTurbo(BaseModel):
                 "21:9": {"1K": (1536, 640), "1.3K": (1680, 720), "1.5K": (2016, 864)},
                 "9:21": {"1K": (640, 1536), "1.3K": (720, 1680), "1.5K": (864, 2016)},
             },
+            **kwargs,
         )
 
 
@@ -309,6 +315,7 @@ class Wan22_5B(BaseModel):
         lora_configs: list[dict] | None = None,
         compile: bool = True,
         enable_cpu_offload: bool = False,
+        **kwargs,
     ):
         super().__init__(
             model_cls="wan2.2",
@@ -323,4 +330,5 @@ class Wan22_5B(BaseModel):
                 "16:9": {"480p": (854, 480), "720p": (1280, 720)},
                 "9:16": {"480p": (480, 854), "720p": (720, 1280)},
             },
+            **kwargs,
         )
