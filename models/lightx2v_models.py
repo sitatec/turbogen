@@ -37,6 +37,7 @@ class LightX2VPipeline(LightX2VPipelineBase):
         return_result_tensor=False,
         height=None,
         width=None,
+        steps: int = 8,
     ):
         if seed is None or seed == -1:
             seed = random.randint(1, np.iinfo(np.int32).max)
@@ -55,6 +56,7 @@ class LightX2VPipeline(LightX2VPipelineBase):
         self.return_result_tensor = return_result_tensor
         seed_all(self.seed)
 
+        self.infer_steps = steps
         input_info = set_input_info(self)
         if (
             isinstance(input_info, (T2IInputInfo, T2VInputInfo, I2IInputInfo))
@@ -62,9 +64,16 @@ class LightX2VPipeline(LightX2VPipelineBase):
             and width
         ):
             input_info.custom_shape = [height, width]
+            self.runner.set_config({"infer_steps": steps})
         else:
             self.target_height, self.target_width = height, width
-            self.runner.set_config({"target_height": height, "target_width": width})
+            self.runner.set_config(
+                {
+                    "target_height": height,
+                    "target_width": width,
+                    "infer_steps": steps,
+                }
+            )
 
         return self.runner.run_pipeline(input_info)
 
@@ -137,6 +146,7 @@ class BaseModel:
         image_paths: list[str] = [],
         seed: int = -1,  # -1 for random seed
         negative_prompt: str | None = None,
+        steps: int = 8,
     ):
         image_paths_str = ",".join(image_paths)
 
@@ -155,6 +165,7 @@ class BaseModel:
             save_result_path=output_path,
             height=height,
             width=width,
+            steps=steps,
         )
 
 
