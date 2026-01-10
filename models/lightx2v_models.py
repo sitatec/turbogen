@@ -83,7 +83,7 @@ class BaseModel:
         compile: bool = True,
         default_negative_prompt: str | None = None,
         lora_configs: list[dict] | None = None,
-        quant_scheme: str = "fp8-sgl",
+        quant_scheme: str | None = None,
         enable_cpu_offload: bool = False,
     ):
         self.pipe = LightX2VPipeline(
