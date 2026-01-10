@@ -83,6 +83,8 @@ class BaseModel:
         compile: bool = True,
         default_negative_prompt: str | None = None,
         lora_configs: list[dict] | None = None,
+        quant_scheme: str = "fp8-sgl",
+        enable_cpu_offload: bool = False,
     ):
         self.pipe = LightX2VPipeline(
             model_path=model_path,
@@ -90,11 +92,18 @@ class BaseModel:
             task=generation_type,
         )
 
-        if quantized_model_path:
+        if enable_cpu_offload:
+            self.pipe.enable_offload(
+                text_encoder_offload=True,
+                image_encoder_offload=True,
+                vae_offload=True,
+            )
+
+        if quant_scheme or quantized_model_path:
             self.pipe.enable_quantize(
                 dit_quantized=True,
                 dit_quantized_ckpt=quantized_model_path,
-                quant_scheme="fp8-sgl",
+                quant_scheme=quant_scheme,
             )
 
         if lora_configs:
@@ -155,7 +164,8 @@ class QwenImageEdit(BaseModel):
         model_path: str,
         quantized_model_path: str | None = None,
         lora_configs: list[dict] | None = None,
-        compile=True,
+        compile: bool = True,
+        enable_cpu_offload: bool = False,
     ):
         super().__init__(
             model_cls="qwen-image-edit-2511",
@@ -164,6 +174,7 @@ class QwenImageEdit(BaseModel):
             compile=compile,
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
+            enable_cpu_offload=enable_cpu_offload,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024)},
                 "16:9": {"1K": (1344, 768)},
@@ -188,7 +199,8 @@ class QwenImage(BaseModel):
         lora_configs: list[dict] | None = None,
         text_encoder=None,
         vae=None,
-        compile=True,
+        compile: bool = True,
+        enable_cpu_offload: bool = False,
     ):
         if text_encoder and vae:
             QwenImageRunner.load_model = self._create_patched_load_model(
@@ -201,6 +213,7 @@ class QwenImage(BaseModel):
             compile=compile,
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
+            enable_cpu_offload=enable_cpu_offload,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1328, 1328)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1664, 928)},
@@ -250,7 +263,8 @@ class ZImageTurbo(BaseModel):
         model_path: str,
         quantized_model_path: str | None = None,
         lora_configs: list[dict] | None = None,
-        compile=True,
+        compile: bool = True,
+        enable_cpu_offload: bool = False,
     ):
         super().__init__(
             model_cls="z_image",
@@ -259,6 +273,7 @@ class ZImageTurbo(BaseModel):
             compile=compile,
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
+            enable_cpu_offload=enable_cpu_offload,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1280, 1280), "1.5K": (1536, 1536)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1536, 864), "1.5K": (2048, 1152)},
@@ -281,7 +296,8 @@ class Wan22_5B(BaseModel):
         model_path: str,
         quantized_model_path: str | None = None,
         lora_configs: list[dict] | None = None,
-        compile=True,
+        compile: bool = True,
+        enable_cpu_offload: bool = False,
     ):
         super().__init__(
             model_cls="wan2.2",
@@ -291,6 +307,7 @@ class Wan22_5B(BaseModel):
             attention_backend="sage_attn2",
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
+            enable_cpu_offload=enable_cpu_offload,
             aspect_ratios={
                 "16:9": {"480p": (854, 480), "720p": (1280, 720)},
                 "9:16": {"480p": (480, 854), "720p": (720, 1280)},
