@@ -24,31 +24,26 @@ def download_qwen_models() -> tuple[Path, Path]:
     # Qwen-Image-Edit-2511-Lightning
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
-        filename="qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_4steps_v1.0.safetensors",
-        local_dir=qwen_image_edit_2511_path / "transformer",
+        filename="Qwen-Image-2512-Lightning-8steps-V1.0-fp32.safetensors",
+        local_dir=qwen_image_edit_2511_path / "lora",
     )
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
-        allow_patterns=[
-            "text_encoder/**",
-            "vae/**",
-            "scheduler/**",
-            "tokenizer/**",
-            "processor/**",
-            "transformer/config.json",
-        ],
     )
+
     # Qwen-Image-2512-Lightning
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-2512-Lightning",
-        filename="qwen_image_2512_fp8_e4m3fn_scaled_4steps_v1.0.safetensors",
-        local_dir=qwen_image_2512_path / "transformer",
+        filename="Qwen-Image-Edit-2511-Lightning-8steps-V1.0-fp32.safetensors",
+        local_dir=qwen_image_2512_path / "lora",
     )
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-2512",
         local_dir=qwen_image_2512_path,
-        allow_patterns=["transformer/config.json"],
+        # We will only download the transformer, the other components will be
+        # shared with the edit model
+        allow_patterns=["transformer/**"],
     )
 
     symlink_common_components(qwen_image_2512_path, qwen_image_edit_2511_path)

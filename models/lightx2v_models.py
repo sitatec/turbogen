@@ -82,6 +82,7 @@ class BaseModel:
         guidance_scale: int = 1,
         compile: bool = True,
         default_negative_prompt: str | None = None,
+        lora_configs: list[dict] | None = None,
     ):
         self.pipe = LightX2VPipeline(
             model_path=model_path,
@@ -89,11 +90,15 @@ class BaseModel:
             task=generation_type,
         )
 
-        self.pipe.enable_quantize(
-            dit_quantized=True,
-            dit_quantized_ckpt=quantized_model_path,
-            quant_scheme="fp8-sgl",
-        )
+        if quantized_model_path:
+            self.pipe.enable_quantize(
+                dit_quantized=True,
+                dit_quantized_ckpt=quantized_model_path,
+                quant_scheme="fp8-sgl",
+            )
+
+        if lora_configs:
+            self.pipe.enable_lora(lora_configs)
 
         self.pipe.create_generator(
             attn_mode=attention_backend,
@@ -149,6 +154,7 @@ class QwenImageEdit(BaseModel):
         self,
         model_path: str,
         quantized_model_path: str | None = None,
+        lora_configs: list[dict] | None = None,
         compile=True,
     ):
         super().__init__(
@@ -157,6 +163,7 @@ class QwenImageEdit(BaseModel):
             model_path=model_path,
             compile=compile,
             quantized_model_path=quantized_model_path,
+            lora_configs=lora_configs,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024)},
                 "16:9": {"1K": (1344, 768)},
@@ -178,6 +185,7 @@ class QwenImage(BaseModel):
         self,
         model_path: str,
         quantized_model_path: str | None = None,
+        lora_configs: list[dict] | None = None,
         text_encoder=None,
         vae=None,
         compile=True,
@@ -192,6 +200,7 @@ class QwenImage(BaseModel):
             model_path=model_path,
             compile=compile,
             quantized_model_path=quantized_model_path,
+            lora_configs=lora_configs,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1328, 1328)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1664, 928)},
@@ -240,6 +249,7 @@ class ZImageTurbo(BaseModel):
         self,
         model_path: str,
         quantized_model_path: str | None = None,
+        lora_configs: list[dict] | None = None,
         compile=True,
     ):
         super().__init__(
@@ -248,6 +258,7 @@ class ZImageTurbo(BaseModel):
             model_path=model_path,
             compile=compile,
             quantized_model_path=quantized_model_path,
+            lora_configs=lora_configs,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1280, 1280), "1.5K": (1536, 1536)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1536, 864), "1.5K": (2048, 1152)},
@@ -269,6 +280,7 @@ class Wan22_5B(BaseModel):
         self,
         model_path: str,
         quantized_model_path: str | None = None,
+        lora_configs: list[dict] | None = None,
         compile=True,
     ):
         super().__init__(
@@ -278,6 +290,7 @@ class Wan22_5B(BaseModel):
             compile=compile,
             attention_backend="sage_attn2",
             quantized_model_path=quantized_model_path,
+            lora_configs=lora_configs,
             aspect_ratios={
                 "16:9": {"480p": (854, 480), "720p": (1280, 720)},
                 "9:16": {"480p": (480, 854), "720p": (720, 1280)},
