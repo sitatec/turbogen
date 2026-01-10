@@ -131,7 +131,7 @@ class BaseModel:
         if resolution not in self.aspect_ratios[aspect_ratio]:
             raise ValueError(f"Invalid resolution: {resolution}")
 
-        height, width = self.aspect_ratios[aspect_ratio][resolution]
+        width, height = self.aspect_ratios[aspect_ratio][resolution]
 
         self.pipe.generate(
             seed=seed,
