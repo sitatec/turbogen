@@ -77,6 +77,7 @@ class BaseModel:
         generation_type: Literal["t2i", "i2i", "i2v"],
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
         attention_backend: Literal["flash_attn3", "sage_attn2"] = "flash_attn3",
+        quantized_model_path: str | None = None,
         infer_steps: int = 8,
         guidance_scale: int = 1,
         compile: bool = True,
@@ -90,6 +91,7 @@ class BaseModel:
 
         self.pipe.enable_quantize(
             dit_quantized=True,
+            dit_quantized_ckpt=quantized_model_path,
             quant_scheme="fp8-sgl",
         )
 
@@ -143,12 +145,18 @@ class BaseModel:
 
 
 class QwenImageEdit(BaseModel):
-    def __init__(self, model_path: str, compile=True):
+    def __init__(
+        self,
+        model_path: str,
+        quantized_model_path: str | None = None,
+        compile=True,
+    ):
         super().__init__(
             model_cls="qwen-image-edit-2511",
             generation_type="i2i",
             model_path=model_path,
             compile=compile,
+            quantized_model_path=quantized_model_path,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024)},
                 "16:9": {"1K": (1344, 768)},
@@ -166,7 +174,14 @@ class QwenImageEdit(BaseModel):
 
 
 class QwenImage(BaseModel):
-    def __init__(self, model_path: str, text_encoder=None, vae=None, compile=True):
+    def __init__(
+        self,
+        model_path: str,
+        quantized_model_path: str | None = None,
+        text_encoder=None,
+        vae=None,
+        compile=True,
+    ):
         if text_encoder and vae:
             QwenImageRunner.load_model = self._create_patched_load_model(
                 text_encoder, vae
@@ -176,6 +191,7 @@ class QwenImage(BaseModel):
             generation_type="t2i",
             model_path=model_path,
             compile=compile,
+            quantized_model_path=quantized_model_path,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1328, 1328)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1664, 928)},
@@ -220,12 +236,18 @@ class QwenImage(BaseModel):
 
 
 class ZImageTurbo(BaseModel):
-    def __init__(self, model_path: str, compile=True):
+    def __init__(
+        self,
+        model_path: str,
+        quantized_model_path: str | None = None,
+        compile=True,
+    ):
         super().__init__(
             model_cls="z_image",
             generation_type="t2i",
             model_path=model_path,
             compile=compile,
+            quantized_model_path=quantized_model_path,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1280, 1280), "1.5K": (1536, 1536)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1536, 864), "1.5K": (2048, 1152)},
@@ -243,13 +265,19 @@ class ZImageTurbo(BaseModel):
 
 
 class Wan22_5B(BaseModel):
-    def __init__(self, model_path: str, compile=True):
+    def __init__(
+        self,
+        model_path: str,
+        quantized_model_path: str | None = None,
+        compile=True,
+    ):
         super().__init__(
             model_cls="wan2.2",
             generation_type="i2v",
             model_path=model_path,
             compile=compile,
             attention_backend="sage_attn2",
+            quantized_model_path=quantized_model_path,
             aspect_ratios={
                 "16:9": {"480p": (854, 480), "720p": (1280, 720)},
                 "9:16": {"480p": (480, 854), "720p": (720, 1280)},
