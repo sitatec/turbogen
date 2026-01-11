@@ -4,7 +4,7 @@ Pillow
 numpy
 fast-thumbhash
 transformers==4.57.3
-accelerate
+#accelerate
 huggingface-hub
 piexif
 aiohttp
