@@ -41,7 +41,7 @@ def download_qwen_models() -> tuple[Path, Path]:
     hf_hub.hf_hub_download(
         repo_id="sitatech/Qwen-Image-FP8-Models",
         filename="Qwen-Image-2512-FP8.safetensors",
-        local_dir=qwen_image_2512_path / "transformer",
+        local_dir=qwen_image_2512_path / "fp8",
     )
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-2512-Lightning",
