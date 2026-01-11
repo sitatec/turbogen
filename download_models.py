@@ -30,22 +30,26 @@ def download_qwen_models() -> tuple[Path, Path]:
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
+        allow_patterns=[
+            "text_encoder/**",
+            "vae/**",
+            "scheduler/**",
+            "tokenizer/**",
+            "processor/**",
+            "transformer/config.json",
+        ],
     )
-
     # Qwen-Image-2512-Lightning
-    hf_hub.hf_hub_download(
-        repo_id="lightx2v/Qwen-Image-2512-Lightning",
-        filename="Qwen-Image-2512-Lightning-8steps-V1.0-fp32.safetensors",
-        local_dir=qwen_image_2512_path / "lora",
+    hf_hub.snapshot_download(
+        repo_id="sitatech/Qwen-Image-Lightning-FP8-Models",
+        local_dir=qwen_image_2512_path / "fp8",
+        allow_patterns=["Qwen-Image-2512-Lightning-4steps-FP8.safetensors"],
     )
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-2512",
         local_dir=qwen_image_2512_path,
-        # We will only download the transformer, the other components will be
-        # shared with the edit model
-        allow_patterns=["transformer/**"],
+        allow_patterns=["transformer/config.json"],
     )
-
     symlink_common_components(qwen_image_2512_path, qwen_image_edit_2511_path)
 
     return qwen_image_edit_2511_path.resolve(), qwen_image_2512_path.resolve()
