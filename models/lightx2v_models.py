@@ -112,7 +112,7 @@ class BaseModel:
             self.pipe.enable_quantize(
                 dit_quantized=True,
                 dit_quantized_ckpt=quantized_model_path,
-                quant_scheme=quant_scheme,
+                quant_scheme=quant_scheme or "fp8-sgl",
             )
 
         if lora_configs:
