@@ -1,4 +1,4 @@
-opencv-python-headless # List first attempt to override opencv-python in other libs
+opencv-python-headless
 torch==2.8.0
 Pillow
 numpy
@@ -12,4 +12,4 @@ sgl-kernel==0.3.18
 https://huggingface.co/sitatech/sageattantion-wheels/resolve/main/sageattention-2.2.0-cp310-cp310-linux_x86_64.whl
 https://github.com/windreamer/flash-attention3-wheels/releases/download/2026.01.05-c947cd1/flash_attn_3-3.0.0b1%2B20260105.cu128torch280cxx11abitrue.9b6dba-cp39-abi3-linux_x86_64.whl
 git+https://github.com/sitatec/HPSv3.git
-git+https://github.com/ModelTC/LightX2V.git
+git+https://github.com/sitatec/LightX2V.git
