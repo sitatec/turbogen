@@ -38,6 +38,7 @@ class LightX2VPipeline(LightX2VPipelineBase):
         height=None,
         width=None,
         steps: int = 8,
+        guidance_scale: int = 1,
     ):
         if seed is None or seed == -1:
             seed = random.randint(1, np.iinfo(np.int32).max)
@@ -57,6 +58,10 @@ class LightX2VPipeline(LightX2VPipelineBase):
         seed_all(self.seed)
 
         self.infer_steps = steps
+        if self.sample_guide_scale != guidance_scale:
+            self.sample_guide_scale = guidance_scale
+            self.enable_cfg = guidance_scale > 1
+
         input_info = set_input_info(self)
         if (
             isinstance(input_info, (T2IInputInfo, T2VInputInfo, I2IInputInfo))
@@ -64,7 +69,13 @@ class LightX2VPipeline(LightX2VPipelineBase):
             and width
         ):
             input_info.custom_shape = [height, width]
-            self.runner.set_config({"infer_steps": steps})
+            self.runner.set_config(
+                {
+                    "infer_steps": steps,
+                    "sample_guide_scale": guidance_scale,
+                    "enable_cfg": self.enable_cfg,
+                }
+            )
         else:
             self.target_height, self.target_width = height, width
             self.runner.set_config(
@@ -72,6 +83,8 @@ class LightX2VPipeline(LightX2VPipelineBase):
                     "target_height": height,
                     "target_width": width,
                     "infer_steps": steps,
+                    "sample_guide_scale": guidance_scale,
+                    "enable_cfg": self.enable_cfg,
                 }
             )
 
@@ -147,6 +160,7 @@ class BaseModel:
         seed: int = -1,  # -1 for random seed
         negative_prompt: str | None = None,
         steps: int = 8,
+        guidance_scale: int = 1,
     ):
         image_paths_str = ",".join(image_paths)
 
@@ -166,6 +180,7 @@ class BaseModel:
             height=height,
             width=width,
             steps=steps,
+            guidance_scale=guidance_scale,
         )
 
 
