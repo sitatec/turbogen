@@ -220,7 +220,7 @@ class QwenImageEdit(BaseModel):
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
-            infer_steps=kwargs.pop("infer_steps", 8),
+            infer_steps=kwargs.pop("infer_steps", 4),
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024)},
                 "16:9": {"1K": (1344, 768)},
