@@ -1,3 +1,4 @@
+from lightx2v.models.runners.default_runner import DefaultRunner
 import types
 import functools
 from typing import Literal, override
@@ -10,15 +11,13 @@ from lightx2v.utils.input_info import I2IInputInfo
 from lightx2v.utils.input_info import T2VInputInfo
 from lightx2v.utils.input_info import T2IInputInfo
 from lightx2v.utils.input_info import set_input_info
-from lightx2v.utils.utils import seed_all
 from lightx2v import LightX2VPipeline as LightX2VPipelineBase
 from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
 
 
 class LightX2VPipeline(LightX2VPipelineBase):
     def enable_compilation(self, supported_shapes: list[list[int]]):
-        self.compile = True
-        self.compile_shapes = supported_shapes
+        pass  # TODO: implement
 
     @override
     @torch.no_grad()
@@ -35,56 +34,48 @@ class LightX2VPipeline(LightX2VPipelineBase):
         src_video=None,
         src_mask=None,
         return_result_tensor=False,
-        height=None,
-        width=None,
-        steps: int = 8,
-        guidance_scale: int = 1,
+        height: int | None = None,
+        width: int | None = None,
+        steps: int | None = None,
+        guidance_scale: int | None = None,
     ):
         if seed is None or seed == -1:
             seed = random.randint(1, np.iinfo(np.int32).max)
 
-        # Run inference (following LightX2V pattern)
-        self.seed = seed
-        self.image_path = image_path
-        self.last_frame_path = last_frame_path
-        self.audio_path = audio_path
-        self.src_ref_images = src_ref_images
-        self.src_video = src_video
-        self.src_mask = src_mask
-        self.prompt = prompt
-        self.negative_prompt = negative_prompt
-        self.save_result_path = save_result_path
-        self.return_result_tensor = return_result_tensor
-        seed_all(self.seed)
+        input_info = set_input_info(
+            {
+                "seed": seed,
+                "prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "save_result_path": save_result_path,
+                "image_path": image_path,
+                "last_frame_path": last_frame_path,
+                "audio_path": audio_path,
+                "src_ref_images": src_ref_images,
+                "src_video": src_video,
+                "src_mask": src_mask,
+                "return_result_tensor": return_result_tensor,
+            }
+        )
 
-        self.infer_steps = steps
-        if self.sample_guide_scale != guidance_scale:
-            self.sample_guide_scale = guidance_scale
-            self.enable_cfg = guidance_scale > 1
-
-        input_info = set_input_info(self)
         if (
             isinstance(input_info, (T2IInputInfo, T2VInputInfo, I2IInputInfo))
             and height
             and width
         ):
             input_info.custom_shape = [height, width]
-            self.runner.set_config(
-                {
-                    "infer_steps": steps,
-                    "sample_guide_scale": guidance_scale,
-                    "enable_cfg": self.enable_cfg,
-                }
+
+        if guidance_scale or steps:
+            print(
+                "⚠️WARNING⚠️: guidance_scale and steps params should only be provided during testing or local runs. It will break think in concurrent envs like production inference."
             )
-        else:
-            self.target_height, self.target_width = height, width
             self.runner.set_config(
                 {
-                    "target_height": height,
-                    "target_width": width,
-                    "infer_steps": steps,
-                    "sample_guide_scale": guidance_scale,
-                    "enable_cfg": self.enable_cfg,
+                    "infer_steps": steps or self.infer_steps,
+                    "sample_guide_scale": guidance_scale or self.sample_guide_scale,
+                    "enable_cfg": guidance_scale > 1
+                    if guidance_scale
+                    else self.enable_cfg,
                 }
             )
 
@@ -96,13 +87,13 @@ class BaseModel:
         self,
         model_cls: str,
         model_path: str,
-        generation_type: Literal["t2i", "i2i", "i2v"],
+        generation_type: Literal["t2i", "i2i", "i2v", "ti2v"],
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
         attention_backend: Literal["flash_attn3", "sage_attn2"] = "flash_attn3",
         quantized_model_path: str | None = None,
         infer_steps: int = 8,
         guidance_scale: int = 1,
-        compile: bool = True,
+        compile: bool = False,
         default_negative_prompt: str | None = None,
         lora_configs: list[dict] | None = None,
         quant_scheme: str | None = None,
@@ -150,17 +141,36 @@ class BaseModel:
                 ]
             )
 
+        if generation_type == "ti2v" and model_cls == "wan2.2":
+
+            def unified_ti2v_input_encoder(self: DefaultRunner):
+                assert self.input_info, (
+                    f"Oops, this shouldn't happen, input_info is not defined or is empty: {self.input_info}"
+                )
+                if self.input_info.image_path:
+                    if self.input_info.last_frame_path:
+                        return self._run_input_encoder_local_flf2v()
+
+                    return self._run_input_encoder_local_i2v()
+
+                return self._run_input_encoder_local_t2v()
+
+            self.pipe.runner.run_input_encoder = types.MethodType(
+                unified_ti2v_input_encoder, self.pipe.runner
+            )
+
     def generate(
         self,
         prompt: str,
         aspect_ratio: str,
         resolution: str,
-        output_path: str,
+        output_path: str | None = None,
         image_paths: list[str] = [],
+        last_frame_path: str | None = None,
         seed: int = -1,  # -1 for random seed
         negative_prompt: str | None = None,
-        steps: int = 8,
-        guidance_scale: int = 1,
+        steps: int | None = None,
+        guidance_scale: int | None = None,
     ):
         image_paths_str = ",".join(image_paths)
 
@@ -181,6 +191,7 @@ class BaseModel:
             width=width,
             steps=steps,
             guidance_scale=guidance_scale,
+            last_frame_path=last_frame_path,
         )
 
 
@@ -190,7 +201,7 @@ class QwenImageEdit(BaseModel):
         model_path: str,
         quantized_model_path: str | None = None,
         lora_configs: list[dict] | None = None,
-        compile: bool = True,
+        compile: bool = False,
         enable_cpu_offload: bool = False,
         **kwargs,
     ):
@@ -227,7 +238,7 @@ class QwenImage(BaseModel):
         lora_configs: list[dict] | None = None,
         text_encoder=None,
         vae=None,
-        compile: bool = True,
+        compile: bool = False,
         enable_cpu_offload: bool = False,
         **kwargs,
     ):
@@ -294,7 +305,7 @@ class ZImageTurbo(BaseModel):
         model_path: str,
         quantized_model_path: str | None = None,
         lora_configs: list[dict] | None = None,
-        compile: bool = True,
+        compile: bool = False,
         enable_cpu_offload: bool = False,
         **kwargs,
     ):
@@ -329,13 +340,13 @@ class Wan22_5B(BaseModel):
         model_path: str,
         quantized_model_path: str | None = None,
         lora_configs: list[dict] | None = None,
-        compile: bool = True,
+        compile: bool = False,
         enable_cpu_offload: bool = False,
         **kwargs,
     ):
         super().__init__(
             model_cls="wan2.2",
-            generation_type="i2v",
+            generation_type="ti2v",
             model_path=model_path,
             compile=compile,
             attention_backend="sage_attn2",

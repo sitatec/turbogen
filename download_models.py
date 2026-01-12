@@ -79,3 +79,15 @@ def download_zimage_models():
     )
 
     return zimage_turbo_path.resolve()
+
+
+def download_wan22_models():
+    wan22_5b_path = _ROOT_DIR / "_model_weights/Wan2.2"
+
+    hf_hub.snapshot_download(
+        repo_id="Wan-AI/Wan2.2-TI2V-5B",
+        local_dir=wan22_5b_path,
+        ignore_patterns=["assets", "examples"],
+    )
+
+    return wan22_5b_path.resolve()
