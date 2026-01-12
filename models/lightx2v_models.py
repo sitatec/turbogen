@@ -43,19 +43,24 @@ class LightX2VPipeline(LightX2VPipelineBase):
             seed = random.randint(1, np.iinfo(np.int32).max)
 
         input_info = set_input_info(
-            {
-                "seed": seed,
-                "prompt": prompt,
-                "negative_prompt": negative_prompt,
-                "save_result_path": save_result_path,
-                "image_path": image_path,
-                "last_frame_path": last_frame_path,
-                "audio_path": audio_path,
-                "src_ref_images": src_ref_images,
-                "src_video": src_video,
-                "src_mask": src_mask,
-                "return_result_tensor": return_result_tensor,
-            }
+            _AttrDict(
+                {
+                    **super().__dict__,
+                    **{
+                        "seed": seed,
+                        "prompt": prompt,
+                        "negative_prompt": negative_prompt,
+                        "save_result_path": save_result_path,
+                        "image_path": image_path,
+                        "last_frame_path": last_frame_path,
+                        "audio_path": audio_path,
+                        "src_ref_images": src_ref_images,
+                        "src_video": src_video,
+                        "src_mask": src_mask,
+                        "return_result_tensor": return_result_tensor,
+                    },
+                }
+            )
         )
 
         if (
@@ -92,7 +97,7 @@ class BaseModel:
         attention_backend: Literal["flash_attn3", "sage_attn2"] = "flash_attn3",
         quantized_model_path: str | None = None,
         infer_steps: int = 8,
-        guidance_scale: int = 1,
+        guidance_scale: float = 1,
         compile: bool = False,
         default_negative_prompt: str | None = None,
         lora_configs: list[dict] | None = None,
@@ -213,6 +218,7 @@ class QwenImageEdit(BaseModel):
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
+            infer_steps=8,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024)},
                 "16:9": {"1K": (1344, 768)},
@@ -317,6 +323,7 @@ class ZImageTurbo(BaseModel):
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
+            infer_steps=9,
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1280, 1280), "1.5K": (1536, 1536)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1536, 864), "1.5K": (2048, 1152)},
@@ -353,12 +360,25 @@ class Wan22_5B(BaseModel):
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
+            infer_steps=30,
+            guidance_scale=5,
             aspect_ratios={
                 "16:9": {"480p": (854, 480), "720p": (1280, 720)},
                 "9:16": {"480p": (480, 854), "720p": (720, 1280)},
             },
             **kwargs,
         )
+
+
+class _AttrDict(dict):
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name)
+
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
 
 __all__ = [Wan22_5B, ZImageTurbo, QwenImage, QwenImageEdit]
