@@ -94,7 +94,9 @@ class BaseModel:
         model_path: str,
         generation_type: Literal["t2i", "i2i", "i2v", "ti2v"],
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
-        attention_backend: Literal["flash_attn3", "sage_attn2"] = "flash_attn3",
+        attention_backend: Literal[
+            "flash_attn3", "sage_attn2", "torch_sdpa"
+        ] = "flash_attn3",
         quantized_model_path: str | None = None,
         infer_steps: int = 8,
         guidance_scale: float = 1,
@@ -218,7 +220,8 @@ class QwenImageEdit(BaseModel):
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
-            infer_steps=8,
+            infer_steps=kwargs.pop("infer_steps", 8),
+            attention_backend=kwargs.pop("attention_backend", "torch_sdpa"),
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024)},
                 "16:9": {"1K": (1344, 768)},
@@ -260,7 +263,7 @@ class QwenImage(BaseModel):
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
-            infer_steps=4,
+            infer_steps=kwargs.pop("infer_steps", 4),
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1328, 1328)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1664, 928)},
@@ -323,7 +326,7 @@ class ZImageTurbo(BaseModel):
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
-            infer_steps=9,
+            infer_steps=kwargs.pop("infer_steps", 9),
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1280, 1280), "1.5K": (1536, 1536)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1536, 864), "1.5K": (2048, 1152)},
@@ -360,7 +363,7 @@ class Wan22_5B(BaseModel):
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
-            infer_steps=30,
+            infer_steps=kwargs.pop("infer_steps", 30),
             guidance_scale=5,
             aspect_ratios={
                 "16:9": {"480p": (854, 480), "720p": (1280, 720)},
