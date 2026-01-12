@@ -348,3 +348,6 @@ class Wan22_5B(BaseModel):
             },
             **kwargs,
         )
+
+
+__all__ = [Wan22_5B, ZImageTurbo, QwenImage, QwenImageEdit]
