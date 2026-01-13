@@ -7,9 +7,6 @@ import random
 import torch
 import numpy as np
 
-from lightx2v.utils.input_info import I2IInputInfo
-from lightx2v.utils.input_info import T2VInputInfo
-from lightx2v.utils.input_info import T2IInputInfo
 from lightx2v.utils.input_info import set_input_info
 from lightx2v import LightX2VPipeline as LightX2VPipelineBase
 from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
@@ -63,12 +60,8 @@ class LightX2VPipeline(LightX2VPipelineBase):
             )
         )
 
-        if (
-            isinstance(input_info, (T2IInputInfo, T2VInputInfo, I2IInputInfo))
-            and height
-            and width
-        ):
-            input_info.custom_shape = [height, width]
+        if height and width:
+            input_info.target_shape = [height, width]
 
         if guidance_scale or steps:
             print(
@@ -326,6 +319,7 @@ class ZImageTurbo(BaseModel):
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
             infer_steps=kwargs.pop("infer_steps", 9),
+            guidance_scale=kwargs.pop("guidance_scale", 0),
             aspect_ratios={
                 "1:1": {"1K": (1024, 1024), "1.3K": (1280, 1280), "1.5K": (1536, 1536)},
                 "16:9": {"1K": (1344, 768), "1.3K": (1536, 864), "1.5K": (2048, 1152)},
