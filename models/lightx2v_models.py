@@ -46,6 +46,7 @@ class LightX2VPipeline(LightX2VPipelineBase):
                     **{
                         "seed": seed,
                         "prompt": prompt,
+                        "target_shape": [height, width],
                         "negative_prompt": negative_prompt,
                         "save_result_path": save_result_path,
                         "image_path": image_path,
@@ -59,9 +60,6 @@ class LightX2VPipeline(LightX2VPipelineBase):
                 }
             )
         )
-
-        if height and width:
-            input_info.target_shape = [height, width]
 
         if guidance_scale or steps:
             print(
