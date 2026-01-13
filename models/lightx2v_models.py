@@ -100,7 +100,8 @@ class BaseModel:
         self.pipe = LightX2VPipeline(
             model_path=model_path,
             model_cls=model_cls,
-            task=generation_type,
+            # LightX2V doesn't support ti2v type
+            task="i2v" if generation_type == "ti2v" else generation_type,
         )
 
         if enable_cpu_offload:
