@@ -73,7 +73,7 @@ def download_zimage_models():
     zimage_turbo_path = _ROOT_DIR / "_model_weights/Z-Image-Turbo"
 
     hf_hub.snapshot_download(
-        repo_id="lightx2v/Z-Image-Turbo",
+        repo_id="Tongyi-MAI/Z-Image-Turbo",
         local_dir=zimage_turbo_path,
         ignore_patterns=["assets"],
     )
