@@ -74,7 +74,7 @@ def download_wan22_models():
     hf_hub.snapshot_download(
         repo_id="lightx2v/Encoders",
         local_dir=wan22_i2v_path,
-        allow_patterns=["google/**", "models_t5_umt5-xxl-enc-fp8.safetensors"],
+        allow_patterns=["google/**", "models_t5_umt5-xxl-enc-fp8.pth"],
     )
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Autoencoders",
