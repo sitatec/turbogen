@@ -1,4 +1,3 @@
-from lightx2v.models.runners.default_runner import DefaultRunner
 import types
 import functools
 from typing import Literal, override
@@ -83,25 +82,25 @@ class BaseModel:
         self,
         model_cls: str,
         model_path: str,
-        generation_type: Literal["t2i", "i2i", "i2v", "ti2v"],
+        generation_type: Literal["t2i", "i2i", "i2v"],
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
         attention_backend: Literal[
             "flash_attn3", "sage_attn2", "torch_sdpa"
         ] = "flash_attn3",
-        quantized_model_path: str | None = None,
-        infer_steps: int = 8,
+        infer_steps: int = 4,
         guidance_scale: float = 1,
         compile: bool = False,
         default_negative_prompt: str | None = None,
         lora_configs: list[dict] | None = None,
-        quant_scheme: str | None = None,
         enable_cpu_offload: bool = False,
+        quant_scheme: str | None = None,
+        quantized_model_path: str | None = None,
+        quantized_text_encoder_path: str | None = None,
     ):
         self.pipe = LightX2VPipeline(
             model_path=model_path,
             model_cls=model_cls,
-            # LightX2V doesn't support ti2v type
-            task="i2v" if generation_type == "ti2v" else generation_type,
+            task=generation_type,
         )
 
         if enable_cpu_offload:
@@ -111,11 +110,13 @@ class BaseModel:
                 vae_offload=True,
             )
 
-        if quant_scheme or quantized_model_path:
+        if quant_scheme or quantized_model_path or quantized_text_encoder_path:
             self.pipe.enable_quantize(
-                dit_quantized=True,
-                dit_quantized_ckpt=quantized_model_path,
                 quant_scheme=quant_scheme or "fp8-sgl",
+                dit_quantized=quant_scheme or quantized_model_path,
+                dit_quantized_ckpt=quantized_model_path,
+                text_encoder_quantized=quantized_text_encoder_path is not None,
+                text_encoder_quantized_ckpt=quantized_text_encoder_path,
             )
 
         if lora_configs:
@@ -138,24 +139,6 @@ class BaseModel:
                     for resolutions in aspect_ratios.values()
                     for shape in resolutions.values()
                 ]
-            )
-
-        if generation_type == "ti2v" and model_cls == "wan2.2":
-
-            def unified_ti2v_input_encoder(self: DefaultRunner):
-                assert self.input_info, (
-                    f"Oops, this shouldn't happen, input_info is not defined or is empty: {self.input_info}"
-                )
-                if self.input_info.image_path:
-                    if self.input_info.last_frame_path:
-                        return self._run_input_encoder_local_flf2v()
-
-                    return self._run_input_encoder_local_i2v()
-
-                return self._run_input_encoder_local_t2v()
-
-            self.pipe.runner.run_input_encoder = types.MethodType(
-                unified_ti2v_input_encoder, self.pipe.runner
             )
 
     def generate(
@@ -336,32 +319,37 @@ class ZImageTurbo(BaseModel):
         )
 
 
-class Wan22_5B(BaseModel):
+class Wan22(BaseModel):
     def __init__(
         self,
         model_path: str,
-        quantized_model_path: str | None = None,
         lora_configs: list[dict] | None = None,
         compile: bool = False,
         enable_cpu_offload: bool = False,
+        quant_scheme: str | None = None,
         **kwargs,
     ):
         super().__init__(
-            model_cls="wan2.2",
-            generation_type="ti2v",
+            model_cls="wan2.2_moe",
+            generation_type="i2v",
             model_path=model_path,
             compile=compile,
             attention_backend="sage_attn2",
-            quantized_model_path=quantized_model_path,
+            quant_scheme=quant_scheme,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
-            infer_steps=kwargs.pop("infer_steps", 30),
-            guidance_scale=5,
+            infer_steps=kwargs.pop("infer_steps", 4),
+            guidance_scale=kwargs.pop("guidance_scale", 1),
             aspect_ratios={
                 "16:9": {"480p": (854, 480), "720p": (1280, 720)},
                 "9:16": {"480p": (480, 854), "720p": (720, 1280)},
             },
             **kwargs,
+        )
+
+        self.pipe.enable_lightvae(
+            use_lightvae=True,
+            vae_path=f"{model_path}/lightvaew2_1.safetensors",
         )
 
 
@@ -376,4 +364,4 @@ class _AttrDict(dict):
     __delattr__ = dict.__delitem__
 
 
-__all__ = [Wan22_5B, ZImageTurbo, QwenImage, QwenImageEdit]
+__all__ = [Wan22, ZImageTurbo, QwenImage, QwenImageEdit]

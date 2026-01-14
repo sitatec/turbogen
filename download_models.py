@@ -1,6 +1,11 @@
+import shutil
+from tempfile import TemporaryDirectory
+import os
 from pathlib import Path
 
 import huggingface_hub as hf_hub
+
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
 _ROOT_DIR = Path(__file__).parent
 
@@ -43,30 +48,13 @@ def download_qwen_models() -> tuple[Path, Path]:
         local_dir=qwen_image_2512_path,
         allow_patterns=["transformer/**"],
     )
-    _symlink_common_components(qwen_image_2512_path, qwen_image_edit_2511_path)
+    _symlink_common_components(
+        qwen_image_edit_2511_path,
+        qwen_image_2512_path,
+        ["tokenizer", "scheduler", "vae", "text_encoder"],
+    )
 
     return qwen_image_edit_2511_path.resolve(), qwen_image_2512_path.resolve()
-
-
-def _symlink_common_components(
-    destination_dir: Path,
-    source_dir: Path,
-):
-    text_encoder_symlink = destination_dir / "text_encoder"
-    vae_symlink = destination_dir / "vae"
-    scheduler_symlink = destination_dir / "scheduler"
-    tokenizer_symlink = destination_dir / "tokenizer"
-
-    if not text_encoder_symlink.exists():
-        text_encoder_symlink.symlink_to(
-            source_dir / "text_encoder", target_is_directory=True
-        )
-    if not vae_symlink.exists():
-        vae_symlink.symlink_to(source_dir / "vae", target_is_directory=True)
-    if not scheduler_symlink.exists():
-        scheduler_symlink.symlink_to(source_dir / "scheduler", target_is_directory=True)
-    if not tokenizer_symlink.exists():
-        tokenizer_symlink.symlink_to(source_dir / "tokenizer", target_is_directory=True)
 
 
 def download_zimage_models():
@@ -82,12 +70,66 @@ def download_zimage_models():
 
 
 def download_wan22_models():
-    wan22_5b_path = _ROOT_DIR / "_model_weights/Wan2.2"
+    wan22_i2v_path = _ROOT_DIR / "_model_weights/Wan2.2-I2V"
+    wan22_t2v_path = _ROOT_DIR / "_model_weights/Wan2.2-T2V"
 
     hf_hub.snapshot_download(
-        repo_id="Wan-AI/Wan2.2-TI2V-5B",
-        local_dir=wan22_5b_path,
-        ignore_patterns=["assets", "examples"],
+        repo_id="lightx2v/Encoders",
+        local_dir=wan22_i2v_path,
+        allow_patterns=["google", "models_t5_umt5-xxl-enc-fp8.safetensors"],
+    )
+    hf_hub.snapshot_download(
+        repo_id="lightx2v/Autoencoders",
+        local_dir=wan22_i2v_path,
+        allow_patterns=["lightvaew2_1.safetensors"],
     )
 
-    return wan22_5b_path.resolve()
+    _symlink_common_components(
+        wan22_i2v_path,
+        wan22_t2v_path,
+        [
+            "google",
+            "models_t5_umt5-xxl-enc-fp8.safetensors",
+            "lightvaew2_1.safetensors",
+        ],
+    )
+
+    with TemporaryDirectory() as temp_dir:
+        hf_hub.snapshot_download(
+            repo_id="sitatech/Wan2.2-FP8-Models",
+            local_dir=temp_dir,
+        )
+
+        shutil.move(f"{temp_dir}/i2v/config.json", f"{wan22_i2v_path}/")
+        shutil.move(
+            f"{temp_dir}/i2v/wan2.2_i2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
+            f"{wan22_i2v_path}/high_noise_model/",
+        )
+        shutil.move(
+            f"{temp_dir}/i2v/wan2.2_i2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
+            f"{wan22_i2v_path}/low_noise_model/",
+        )
+
+        shutil.move(f"{temp_dir}/t2v/config.json", f"{wan22_t2v_path}/")
+        shutil.move(
+            f"{temp_dir}/t2v/wan2.2_t2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
+            f"{wan22_t2v_path}/high_noise_model/",
+        )
+        shutil.move(
+            f"{temp_dir}/t2v/wan2.2_t2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
+            f"{wan22_t2v_path}/low_noise_model/",
+        )
+
+    return wan22_i2v_path.resolve(), wan22_t2v_path.resolve()
+
+
+def _symlink_common_components(
+    source_dir: Path,
+    destination_dir: Path,
+    subdirs: list[str],
+):
+    for subdir in subdirs:
+        dest = destination_dir / subdir
+        src = source_dir / subdir
+        if not dest.exists():
+            dest.symlink_to(src, target_is_directory=True)
