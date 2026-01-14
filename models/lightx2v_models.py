@@ -82,7 +82,7 @@ class BaseModel:
         self,
         model_cls: str,
         model_path: str,
-        generation_type: Literal["t2i", "i2i", "i2v"],
+        generation_type: Literal["t2i", "i2i", "i2v", "t2v"],
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
         attention_backend: Literal[
             "flash_attn3", "sage_attn2", "torch_sdpa"
@@ -94,6 +94,7 @@ class BaseModel:
         lora_configs: list[dict] | None = None,
         enable_cpu_offload: bool = False,
         quant_scheme: str | None = None,
+        text_encoder_quantized: bool = False,
         quantized_model_path: str | None = None,
         quantized_text_encoder_path: str | None = None,
     ):
@@ -110,12 +111,19 @@ class BaseModel:
                 vae_offload=True,
             )
 
-        if quant_scheme or quantized_model_path or quantized_text_encoder_path:
+        if (
+            quant_scheme
+            or quantized_model_path
+            or quantized_text_encoder_path
+            or text_encoder_quantized
+        ):
             self.pipe.enable_quantize(
                 quant_scheme=quant_scheme or "fp8-sgl",
-                dit_quantized=quant_scheme or quantized_model_path,
+                dit_quantized=(
+                    quant_scheme is not None or quantized_model_path is not None
+                ),
                 dit_quantized_ckpt=quantized_model_path,
-                text_encoder_quantized=quantized_text_encoder_path is not None,
+                text_encoder_quantized=text_encoder_quantized,
                 text_encoder_quantized_ckpt=quantized_text_encoder_path,
             )
 
@@ -327,15 +335,18 @@ class Wan22(BaseModel):
         compile: bool = False,
         enable_cpu_offload: bool = False,
         quant_scheme: str | None = None,
+        text_encoder_quantized: bool = False,
+        generation_type: Literal["i2v", "t2v"] = "i2v",
         **kwargs,
     ):
         super().__init__(
             model_cls="wan2.2_moe",
-            generation_type="i2v",
+            generation_type=generation_type,
             model_path=model_path,
             compile=compile,
             attention_backend="sage_attn2",
             quant_scheme=quant_scheme,
+            text_encoder_quantized=text_encoder_quantized,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
             infer_steps=kwargs.pop("infer_steps", 4),
