@@ -78,10 +78,15 @@ def download_wan22_models():
         local_dir=wan22_i2v_path,
         allow_patterns=["google", "models_t5_umt5-xxl-enc-fp8.safetensors"],
     )
-    hf_hub.snapshot_download(
+    hf_hub.hf_hub_download(
         repo_id="lightx2v/Autoencoders",
+        filename="lightvaew2_1.safetensors",
         local_dir=wan22_i2v_path,
-        allow_patterns=["lightvaew2_1.safetensors"],
+    )
+    hf_hub.hf_hub_download(
+        repo_id="sitatech/Wan2.2-FP8-Models",
+        filename="config.json",
+        local_dir=wan22_i2v_path,
     )
 
     _symlink_common_components(
@@ -91,34 +96,30 @@ def download_wan22_models():
             "google",
             "models_t5_umt5-xxl-enc-fp8.safetensors",
             "lightvaew2_1.safetensors",
+            "config.json",
         ],
     )
 
-    with TemporaryDirectory() as temp_dir:
-        hf_hub.snapshot_download(
-            repo_id="sitatech/Wan2.2-FP8-Models",
-            local_dir=temp_dir,
-        )
-
-        shutil.move(f"{temp_dir}/i2v/config.json", f"{wan22_i2v_path}/")
-        shutil.move(
-            f"{temp_dir}/i2v/wan2.2_i2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
-            f"{wan22_i2v_path}/high_noise_model/",
-        )
-        shutil.move(
-            f"{temp_dir}/i2v/wan2.2_i2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
-            f"{wan22_i2v_path}/low_noise_model/",
-        )
-
-        shutil.move(f"{temp_dir}/t2v/config.json", f"{wan22_t2v_path}/")
-        shutil.move(
-            f"{temp_dir}/t2v/wan2.2_t2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
-            f"{wan22_t2v_path}/high_noise_model/",
-        )
-        shutil.move(
-            f"{temp_dir}/t2v/wan2.2_t2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
-            f"{wan22_t2v_path}/low_noise_model/",
-        )
+    hf_hub.hf_hub_download(
+        repo_id="sitatech/Wan2.2-FP8-Models",
+        filename="wan2.2_i2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
+        local_dir=wan22_i2v_path / "high_noise_model",
+    )
+    hf_hub.hf_hub_download(
+        repo_id="sitatech/Wan2.2-FP8-Models",
+        filename="wan2.2_i2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
+        local_dir=wan22_i2v_path / "low_noise_model",
+    )
+    hf_hub.hf_hub_download(
+        repo_id="sitatech/Wan2.2-FP8-Models",
+        filename="wan2.2_t2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
+        local_dir=wan22_t2v_path / "high_noise_model",
+    )
+    hf_hub.hf_hub_download(
+        repo_id="sitatech/Wan2.2-FP8-Models",
+        filename="wan2.2_t2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
+        local_dir=wan22_t2v_path / "low_noise_model",
+    )
 
     return wan22_i2v_path.resolve(), wan22_t2v_path.resolve()
 
