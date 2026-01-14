@@ -78,7 +78,7 @@ def download_wan22_models():
     )
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Autoencoders",
-        filename="lightvaew2_1.safetensors",
+        filename="Wan2.1_VAE.pth",
         local_dir=wan22_i2v_path,
     )
     hf_hub.hf_hub_download(
@@ -113,8 +113,8 @@ def download_wan22_models():
         wan22_t2v_path,
         [
             "google",
-            "models_t5_umt5-xxl-enc-fp8.safetensors",
-            "lightvaew2_1.safetensors",
+            "models_t5_umt5-xxl-enc-fp8.pth",
+            "Wan2.1_VAE.pth",
             "config.json",
         ],
     )

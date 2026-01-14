@@ -340,7 +340,7 @@ class Wan22(BaseModel):
         **kwargs,
     ):
         super().__init__(
-            model_cls="wan2.2_moe",
+            model_cls="wan2.2_moe_distill",
             generation_type=generation_type,
             model_path=model_path,
             compile=compile,
@@ -356,11 +356,6 @@ class Wan22(BaseModel):
                 "9:16": {"480p": (480, 854), "720p": (720, 1280)},
             },
             **kwargs,
-        )
-
-        self.pipe.enable_lightvae(
-            use_lightvae=True,
-            vae_path=f"{model_path}/lightvaew2_1.safetensors",
         )
 
 
