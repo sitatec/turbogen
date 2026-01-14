@@ -1,5 +1,3 @@
-import shutil
-from tempfile import TemporaryDirectory
 import os
 from pathlib import Path
 
@@ -76,7 +74,7 @@ def download_wan22_models():
     hf_hub.snapshot_download(
         repo_id="lightx2v/Encoders",
         local_dir=wan22_i2v_path,
-        allow_patterns=["google", "models_t5_umt5-xxl-enc-fp8.safetensors"],
+        allow_patterns=["google/**", "models_t5_umt5-xxl-enc-fp8.safetensors"],
     )
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Autoencoders",
@@ -87,17 +85,6 @@ def download_wan22_models():
         repo_id="sitatech/Wan2.2-FP8-Models",
         filename="config.json",
         local_dir=wan22_i2v_path,
-    )
-
-    _symlink_common_components(
-        wan22_i2v_path,
-        wan22_t2v_path,
-        [
-            "google",
-            "models_t5_umt5-xxl-enc-fp8.safetensors",
-            "lightvaew2_1.safetensors",
-            "config.json",
-        ],
     )
 
     hf_hub.hf_hub_download(
@@ -121,6 +108,17 @@ def download_wan22_models():
         local_dir=wan22_t2v_path / "low_noise_model",
     )
 
+    _symlink_common_components(
+        wan22_i2v_path,
+        wan22_t2v_path,
+        [
+            "google",
+            "models_t5_umt5-xxl-enc-fp8.safetensors",
+            "lightvaew2_1.safetensors",
+            "config.json",
+        ],
+    )
+
     return wan22_i2v_path.resolve(), wan22_t2v_path.resolve()
 
 
@@ -133,4 +131,4 @@ def _symlink_common_components(
         dest = destination_dir / subdir
         src = source_dir / subdir
         if not dest.exists():
-            dest.symlink_to(src, target_is_directory=True)
+            dest.symlink_to(src)
