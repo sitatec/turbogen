@@ -5,6 +5,9 @@ import numpy as np
 
 def image_tensor_to_numpy(tensor: torch.Tensor) -> np.ndarray:
     """Converts an image(s) with the torch.Tensor type to a numpy array"""
+    if tensor.dtype == torch.bfloat16:
+        tensor = tensor.to(torch.float16)
+
     np_image = tensor.detach().cpu().numpy() * 255.0
     np_image = np.clip(np_image, 0, 255).astype(np.uint8)
     return np_image

@@ -80,7 +80,11 @@ class _LightX2VPipeline(LightX2VPipelineBase):
                 }
             )
 
-        return self.runner.run_pipeline(input_info)
+        result = self.runner.run_pipeline(input_info)
+        is_video = self.task.endswith("2v")
+        if is_video:
+            return result["video"]
+        return result[0]
 
 
 class _BaseModel:
