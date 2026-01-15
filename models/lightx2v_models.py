@@ -34,6 +34,7 @@ class LightX2VPipeline(LightX2VPipelineBase):
         width: int | None = None,
         steps: int | None = None,
         guidance_scale: int | None = None,
+        duration_seconds: float | None = None,
     ):
         if seed is None or seed == -1:
             seed = random.randint(1, np.iinfo(np.int32).max)
@@ -60,12 +61,17 @@ class LightX2VPipeline(LightX2VPipelineBase):
             )
         )
 
-        if guidance_scale or steps:
+        if guidance_scale or steps or duration_seconds:
             print(
-                "⚠️WARNING⚠️: guidance_scale and steps params should only be provided during testing or local runs. It will break think in concurrent envs like production inference."
+                "⚠️WARNING⚠️: guidance_scale, duration and steps params should only be provided during testing or local runs. It will break think in concurrent envs like production inference."
             )
             self.runner.set_config(
                 {
+                    "target_video_length": (
+                        int(self.runner.config.fps * duration_seconds) + 1
+                        if duration_seconds
+                        else self.runner.config.target_video_length
+                    ),
                     "infer_steps": steps or self.infer_steps,
                     "sample_guide_scale": guidance_scale or self.sample_guide_scale,
                     "enable_cfg": guidance_scale > 1
@@ -161,6 +167,7 @@ class BaseModel:
         negative_prompt: str | None = None,
         steps: int | None = None,
         guidance_scale: int | None = None,
+        duration_seconds: float | None = None,
     ):
         image_paths_str = ",".join(image_paths)
 
@@ -182,6 +189,7 @@ class BaseModel:
             steps=steps,
             guidance_scale=guidance_scale,
             last_frame_path=last_frame_path,
+            duration_seconds=duration_seconds,
         )
 
 
