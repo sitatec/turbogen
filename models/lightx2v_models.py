@@ -11,7 +11,7 @@ from lightx2v import LightX2VPipeline as LightX2VPipelineBase
 from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
 
 
-class LightX2VPipeline(LightX2VPipelineBase):
+class _LightX2VPipeline(LightX2VPipelineBase):
     def enable_compilation(self, supported_shapes: list[list[int]]):
         pass  # TODO: implement
 
@@ -83,7 +83,7 @@ class LightX2VPipeline(LightX2VPipelineBase):
         return self.runner.run_pipeline(input_info)
 
 
-class BaseModel:
+class _BaseModel:
     def __init__(
         self,
         model_cls: str,
@@ -104,7 +104,7 @@ class BaseModel:
         quantized_model_path: str | None = None,
         quantized_text_encoder_path: str | None = None,
     ):
-        self.pipe = LightX2VPipeline(
+        self.pipe = _LightX2VPipeline(
             model_path=model_path,
             model_cls=model_cls,
             task=generation_type,
@@ -195,7 +195,7 @@ class BaseModel:
         )
 
 
-class QwenImageEdit(BaseModel):
+class QwenImageEdit(_BaseModel):
     def __init__(
         self,
         model_path: str,
@@ -231,7 +231,7 @@ class QwenImageEdit(BaseModel):
         )
 
 
-class QwenImage(BaseModel):
+class QwenImage(_BaseModel):
     def __init__(
         self,
         model_path: str,
@@ -300,7 +300,7 @@ class QwenImage(BaseModel):
         return patched_load_model
 
 
-class ZImageTurbo(BaseModel):
+class ZImageTurbo(_BaseModel):
     def __init__(
         self,
         model_path: str,
@@ -337,7 +337,7 @@ class ZImageTurbo(BaseModel):
         )
 
 
-class Wan22(BaseModel):
+class Wan22(_BaseModel):
     def __init__(
         self,
         model_path: str,
