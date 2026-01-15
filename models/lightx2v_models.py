@@ -160,7 +160,6 @@ class BaseModel:
         prompt: str,
         aspect_ratio: str,
         resolution: str,
-        output_path: str | None = None,
         image_paths: list[str] = [],
         last_frame_path: str | None = None,
         seed: int = -1,  # -1 for random seed
@@ -168,6 +167,8 @@ class BaseModel:
         steps: int | None = None,
         guidance_scale: int | None = None,
         duration_seconds: float | None = None,
+        return_tensor: bool = True,
+        output_path: str | None = None,
     ):
         image_paths_str = ",".join(image_paths)
 
@@ -190,6 +191,7 @@ class BaseModel:
             guidance_scale=guidance_scale,
             last_frame_path=last_frame_path,
             duration_seconds=duration_seconds,
+            return_result_tensor=return_tensor,
         )
 
 
