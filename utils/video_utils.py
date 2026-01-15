@@ -5,8 +5,12 @@ import numpy as np
 
 
 def save_video_tensor(frames_tensor: torch.Tensor, output_path: str, fps: int):
+    assert frames_tensor.dim() == 4 and frames_tensor.shape[-1] == 3, (
+        "Input must be [N, H, W, C] with C=3"
+    )
+
     frames_tensor = (frames_tensor * 255).clamp_(0, 255).to(torch.uint8)
-    frames = frames_tensor.cpu().numpy()  # (N, H, W, 3), RGB
+    frames = frames_tensor.cpu().numpy()
 
     N, H, W, _ = frames.shape
     H2 = H + (H % 2)
