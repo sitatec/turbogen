@@ -1,9 +1,9 @@
+import torch
 import types
 import functools
 from typing import Literal, override
 import random
 
-import torch
 import numpy as np
 
 from lightx2v.utils.input_info import set_input_info
@@ -17,7 +17,7 @@ class LightX2VPipeline(LightX2VPipelineBase):
 
     @override
     @torch.no_grad()
-    def generate(
+    def generate(  # pyrefly: ignore
         self,
         seed,
         prompt,
@@ -35,7 +35,7 @@ class LightX2VPipeline(LightX2VPipelineBase):
         steps: int | None = None,
         guidance_scale: int | None = None,
         duration_seconds: float | None = None,
-    ):
+    ) -> torch.Tensor | None:
         if seed is None or seed == -1:
             seed = random.randint(1, np.iinfo(np.int32).max)
 
@@ -169,7 +169,7 @@ class BaseModel:
         duration_seconds: float | None = None,
         return_tensor: bool = True,
         output_path: str | None = None,
-    ):
+    ) -> torch.Tensor | None:
         image_paths_str = ",".join(image_paths)
 
         if aspect_ratio not in self.aspect_ratios:
@@ -179,7 +179,7 @@ class BaseModel:
 
         width, height = self.aspect_ratios[aspect_ratio][resolution]
 
-        self.pipe.generate(
+        return self.pipe.generate(
             seed=seed,
             image_path=image_paths_str,
             prompt=prompt,
