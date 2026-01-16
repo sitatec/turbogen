@@ -56,11 +56,9 @@ class GenerationPipeline:
             "NSFW detector is required for postprocessing"
         )
 
-        output_dir_path = output_dir_path or mkdtemp()
         model = next(
             (model for model in self.models if model.model_id == model_id), None
         )
-
         if model is None:
             raise ValueError(f"Model {model_id} not found")
 
@@ -75,12 +73,9 @@ class GenerationPipeline:
             steps=steps,
             guidance_scale=guidance_scale,
             duration_seconds=duration_seconds,
-            return_tensor=True,
         )
 
-        if output is None:
-            raise ValueError("Model returned None but output tensor was requested")
-
+        output_dir_path = output_dir_path or mkdtemp()
         if postprocess:
             return self._save_processed_output(
                 output, model.generation_type, output_dir_path, metadata

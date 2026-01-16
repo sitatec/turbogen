@@ -34,7 +34,5 @@ class BaseModel:
         steps: int | None = None,
         guidance_scale: int | None = None,
         duration_seconds: float | None = None,
-        return_tensor: bool = True,
-        output_path: str | None = None,
-    ) -> torch.Tensor | None:
-        pass
+    ) -> torch.Tensor:
+        raise NotImplementedError()

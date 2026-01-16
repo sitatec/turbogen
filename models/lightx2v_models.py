@@ -176,9 +176,7 @@ class _BaseLightx2vModel(BaseModel):
         steps: int | None = None,
         guidance_scale: int | None = None,
         duration_seconds: float | None = None,
-        return_tensor: bool = True,
-        output_path: str | None = None,
-    ) -> torch.Tensor | None:
+    ) -> torch.Tensor:
         image_paths_str = ",".join(image_paths)
 
         if aspect_ratio not in self.aspect_ratios:
@@ -188,19 +186,19 @@ class _BaseLightx2vModel(BaseModel):
 
         width, height = self.aspect_ratios[aspect_ratio][resolution]
 
-        return self.pipe.generate(
+        return self.pipe.generate(  # pyrefly: ignore
             seed=seed,
             image_path=image_paths_str,
             prompt=prompt,
             negative_prompt=negative_prompt or self.default_negative_prompt,
-            save_result_path=output_path,
+            save_result_path=None,
             height=height,
             width=width,
             steps=steps,
             guidance_scale=guidance_scale,
             last_frame_path=last_frame_path,
             duration_seconds=duration_seconds,
-            return_result_tensor=return_tensor,
+            return_result_tensor=True,
         )
 
 
