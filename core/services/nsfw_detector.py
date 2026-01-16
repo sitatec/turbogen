@@ -8,13 +8,22 @@ from PIL import Image
 from transformers import AutoModelForImageClassification
 
 
-class NsfwLevel(str, Enum):
+class NsfwLevel(Enum):
     """Enum for NSFW content levels."""
 
     SAFE = "safe"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+
+    @property
+    def rank(self):
+        return {
+            NsfwLevel.SAFE: 0,
+            NsfwLevel.LOW: 1,
+            NsfwLevel.MEDIUM: 2,
+            NsfwLevel.HIGH: 3,
+        }[self]
 
 
 InputType = Union[

@@ -1,3 +1,4 @@
+from core.base_model import BaseModel, GenerationType
 import torch
 import types
 import functools
@@ -87,12 +88,13 @@ class _LightX2VPipeline(LightX2VPipelineBase):
         return result[0].permute(0, 2, 3, 1).squeeze()
 
 
-class _BaseModel:
+class _BaseLightx2vModel(BaseModel):
     def __init__(
         self,
+        model_id: str,
         model_cls: str,
         model_path: str,
-        generation_type: Literal["t2i", "i2i", "i2v", "t2v"],
+        generation_type: GenerationType,
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
         attention_backend: Literal[
             "flash_attn3", "sage_attn2", "torch_sdpa"
@@ -108,6 +110,11 @@ class _BaseModel:
         quantized_model_path: str | None = None,
         quantized_text_encoder_path: str | None = None,
     ):
+        self.model_id = model_id
+        self.aspect_ratios = aspect_ratios
+        self.default_negative_prompt = default_negative_prompt
+        self.generation_type = generation_type
+
         self.pipe = _LightX2VPipeline(
             model_path=model_path,
             model_cls=model_cls,
@@ -147,9 +154,6 @@ class _BaseModel:
             guidance_scale=guidance_scale,
         )
 
-        self.aspect_ratios = aspect_ratios
-        self.default_negative_prompt = default_negative_prompt
-
         if compile:
             self.pipe.enable_compilation(
                 [
@@ -159,6 +163,7 @@ class _BaseModel:
                 ]
             )
 
+    @override
     def generate(
         self,
         prompt: str,
@@ -199,23 +204,30 @@ class _BaseModel:
         )
 
 
-class QwenImageEdit(_BaseModel):
+class QwenImageEdit(_BaseLightx2vModel):
     def __init__(
         self,
         model_path: str,
         quantized_model_path: str | None = None,
-        lora_configs: list[dict] | None = None,
+        lora_configs: list[dict] = [],
         compile: bool = False,
         enable_cpu_offload: bool = False,
         **kwargs,
     ):
         super().__init__(
+            model_id="k",
             model_cls="qwen-image-edit-2511",
-            generation_type="i2i",
+            generation_type=GenerationType.I2I,
             model_path=model_path,
             compile=compile,
             quantized_model_path=quantized_model_path,
-            lora_configs=lora_configs,
+            lora_configs=[
+                {
+                    "path": f"{model_path}/lora/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-fp32.safetensors",
+                    "strength": 1,
+                },
+                *lora_configs,
+            ],
             enable_cpu_offload=enable_cpu_offload,
             infer_steps=kwargs.pop("infer_steps", 4),
             aspect_ratios={
@@ -235,12 +247,12 @@ class QwenImageEdit(_BaseModel):
         )
 
 
-class QwenImage(_BaseModel):
+class QwenImage(_BaseLightx2vModel):
     def __init__(
         self,
         model_path: str,
         quantized_model_path: str | None = None,
-        lora_configs: list[dict] | None = None,
+        lora_configs: list[dict] = [],
         text_encoder=None,
         vae=None,
         compile: bool = False,
@@ -252,12 +264,19 @@ class QwenImage(_BaseModel):
                 text_encoder, vae
             )
         super().__init__(
+            model_id="l",
             model_cls="qwen-image-2512",
-            generation_type="t2i",
+            generation_type=GenerationType.T2I,
             model_path=model_path,
             compile=compile,
             quantized_model_path=quantized_model_path,
-            lora_configs=lora_configs,
+            lora_configs=[
+                {
+                    "path": f"{model_path}/lora/Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors",
+                    "strength": 1,
+                },
+                *lora_configs,
+            ],
             enable_cpu_offload=enable_cpu_offload,
             infer_steps=kwargs.pop("infer_steps", 4),
             aspect_ratios={
@@ -302,7 +321,7 @@ class QwenImage(_BaseModel):
         return patched_load_model
 
 
-class ZImageTurbo(_BaseModel):
+class ZImageTurbo(_BaseLightx2vModel):
     def __init__(
         self,
         model_path: str,
@@ -313,8 +332,9 @@ class ZImageTurbo(_BaseModel):
         **kwargs,
     ):
         super().__init__(
+            model_id="0",
             model_cls="z_image",
-            generation_type="t2i",
+            generation_type=GenerationType.T2I,
             model_path=model_path,
             compile=compile,
             quantized_model_path=quantized_model_path,
@@ -339,7 +359,7 @@ class ZImageTurbo(_BaseModel):
         )
 
 
-class Wan22(_BaseModel):
+class Wan22(_BaseLightx2vModel):
     def __init__(
         self,
         model_path: str,
@@ -348,10 +368,13 @@ class Wan22(_BaseModel):
         enable_cpu_offload: bool = False,
         quant_scheme: str | None = None,
         text_encoder_quantized: bool = False,
-        generation_type: Literal["i2v", "t2v"] = "i2v",
+        generation_type: Literal[
+            GenerationType.I2V, GenerationType.T2V
+        ] = GenerationType.I2V,
         **kwargs,
     ):
         super().__init__(
+            model_id="m",
             model_cls="wan2.2_moe_distill",
             generation_type=generation_type,
             model_path=model_path,
