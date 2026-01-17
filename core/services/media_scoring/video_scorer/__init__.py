@@ -217,7 +217,9 @@ class VideoScorer:
         assert fps is None or num_frames is None, (
             "fps and num_frames cannot be set at the same time."
         )
-        prompts = prompts or ["A video"] * len(videos_or_paths)
+        prompts = prompts or [
+            "A video with excellent visual quality, motion quality, and aesthetic appeal."
+        ] * len(videos_or_paths)
         batch = self.prepare_batch(
             videos_or_paths, prompts, fps, num_frames, max_pixels
         )

@@ -141,7 +141,9 @@ class ImageScorer:
     def score(
         self, image_or_paths: torch.Tensor | list[str], prompts: list[str] | None = None
     ):
-        prompts = prompts or ["An image"] * len(image_or_paths)
+        prompts = prompts or [
+            "An image with excellent visual quality and aesthetic appeal."
+        ] * len(image_or_paths)
 
         batch = self._prepare_batch(image_or_paths, prompts)
         rewards = self.model(return_dict=True, **batch)["logits"]
