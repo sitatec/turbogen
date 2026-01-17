@@ -28,6 +28,7 @@ class ImageScorer:
                 "MizzenAI/HPSv3",
                 "HPSv3.safetensors",
                 cache_dir=model_dir,
+                revision="4f81e3e",
             )
 
         model, processor = create_model_and_processor(

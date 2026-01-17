@@ -22,7 +22,7 @@ class VideoScorer:
     ):
         if not os.path.exists(model_path):
             model_path = huggingface_hub.snapshot_download(
-                "KlingTeam/VideoReward", local_dir=model_path
+                "KlingTeam/VideoReward", local_dir=model_path, revision="2e08683"
             )
 
         config_path = os.path.join(model_path, "model_config.json")

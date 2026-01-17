@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 import torch
+import torch.nn.functional as F
 from core.base_model import BaseModel, GenerationType
 from core.services.nsfw_detector import NsfwDetector, NsfwLevel
 from core.services.media_scoring import ImageScorer, VideoScorer
@@ -108,7 +109,8 @@ class GenerationPipeline:
             first_frame = image_tensor_to_numpy(output[0])
             thumbnail = self._create_thumbnail(first_frame)
             thumbhash = generate_thumbhash(thumbnail)
-            quality_score = self.video_scorer.score(output)[0]["Overall"]
+            video_at_2fps = self._down_sample_video(output, fps=fps, target_fps=2)
+            quality_score = self.video_scorer.score(video_at_2fps)[0]["Overall"]
 
             save_video_tensor(output, output_path, fps)
             convert_to_webp_with_metadata(
@@ -178,6 +180,16 @@ class GenerationPipeline:
         new_h = int(round(height * scale))
 
         return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+    def _down_sample_video(self, video: torch.Tensor, fps: int, target_fps: int = 2):
+        scale = target_fps / fps
+        T = video.shape[0]
+        new_T = int(round(T * scale))
+        # [T, H, W, C] -> [C, H, W, T]
+        video = video.permute(3, 1, 2, 0).to("cuda")
+        video = F.interpolate(video, size=new_T, mode="linear", align_corners=False)
+
+        return video.permute(3, 1, 2, 0)  # [T, H, W, C]
 
     def _get_nsfw_level(
         self,
