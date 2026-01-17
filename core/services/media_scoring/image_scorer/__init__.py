@@ -1,6 +1,8 @@
+import os
 from collections.abc import Mapping
 
 import torch
+import safetensors.torch
 import huggingface_hub
 from core.services.media_scoring.utils import process_vision_info
 from core.services.media_scoring.image_scorer.utils import (
@@ -17,12 +19,15 @@ class ImageScorer:
     def __init__(
         self,
         model_config: ModelConfig = ModelConfig(),
-        checkpoint_path=None,
+        model_dir: str = "image_scorer_weights_dir",
         device="cuda",
     ):
-        if checkpoint_path is None:
+        checkpoint_path = f"{model_dir}/HPSv3.safetensors"
+        if not os.path.exists(checkpoint_path):
             checkpoint_path = huggingface_hub.hf_hub_download(
-                "MizzenAI/HPSv3", "HPSv3.safetensors", repo_type="model"
+                "MizzenAI/HPSv3",
+                "HPSv3.safetensors",
+                cache_dir=model_dir,
             )
 
         model, processor = create_model_and_processor(
@@ -32,13 +37,7 @@ class ImageScorer:
         self.device = device
         self.use_special_tokens = model_config.use_special_tokens
 
-        if checkpoint_path.endswith(".safetensors"):
-            import safetensors.torch
-
-            state_dict = safetensors.torch.load_file(checkpoint_path, device="cpu")
-        else:
-            state_dict = torch.load(checkpoint_path, map_location="cpu")
-
+        state_dict = safetensors.torch.load_file(checkpoint_path, device="cpu")
         if "model" in state_dict:
             state_dict = state_dict["model"]
         model.load_state_dict(state_dict, strict=True)

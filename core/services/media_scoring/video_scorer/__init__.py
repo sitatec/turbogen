@@ -2,6 +2,7 @@ import os
 from collections.abc import Mapping
 
 import torch
+import huggingface_hub
 from core.services.media_scoring.utils import process_vision_info
 from core.services.media_scoring.video_scorer.utils import build_prompt
 from core.services.media_scoring.video_scorer.utils import (
@@ -16,10 +17,15 @@ from core.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
 class VideoScorer:
     def __init__(
         self,
-        load_from_pretrained,
+        model_path: str = "video_scorer_weights_path",
         device="cuda",
     ):
-        config_path = os.path.join(load_from_pretrained, "model_config.json")
+        if not os.path.exists(model_path):
+            model_path = huggingface_hub.snapshot_download(
+                "KlingTeam/VideoReward", local_dir=model_path
+            )
+
+        config_path = os.path.join(model_path, "model_config.json")
         model_config, data_config, inference_config = load_configs_from_json(
             config_path
         )
@@ -28,7 +34,7 @@ class VideoScorer:
             model_config=model_config, model_class=Qwen2VLRewardModelBT
         )
 
-        checkpoint_path = os.path.join(load_from_pretrained, "checkpoint-11352")
+        checkpoint_path = os.path.join(model_path, "checkpoint-11352")
         full_ckpt = os.path.join(checkpoint_path, "model.pth")
         model_state_dict = torch.load(full_ckpt, map_location="cpu")
         model.load_state_dict(model_state_dict)
