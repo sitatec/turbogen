@@ -18,8 +18,8 @@ from core.services.media_scoring.image_scorer.model import Qwen2VLRewardModelBT
 class ImageScorer:
     def __init__(
         self,
+        model_dir: str,
         model_config: ModelConfig = ModelConfig(),
-        model_dir: str = "image_scorer_weights_dir",
         device="cuda",
     ):
         checkpoint_path = f"{model_dir}/HPSv3.safetensors"

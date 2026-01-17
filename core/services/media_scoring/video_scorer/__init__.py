@@ -17,7 +17,7 @@ from core.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
 class VideoScorer:
     def __init__(
         self,
-        model_path: str = "video_scorer_weights_path",
+        model_path: str,
         device="cuda",
     ):
         if not os.path.exists(model_path):
