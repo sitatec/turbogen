@@ -1,0 +1,1 @@
+[HPSv3](https://github.com/MizzenAI/HPSv3) and [VideoAlign](https://github.com/KwaiVGI/VideoAlign) adapted for inference only, with all the training and unnecessary components and their dependencies removed.

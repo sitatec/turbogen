@@ -12,58 +12,12 @@ class Qwen2VLRewardModelBT(Qwen2VLForConditionalGeneration):
         output_dim=4,
         reward_token="last",
         special_token_ids=None,
-        rm_head_type="default",
-        rm_head_kwargs=None,
+        **kwargs,
     ):
         super().__init__(config)
         # pdb.set_trace()
         self.output_dim = output_dim
-        if rm_head_type == "default":
-            self.rm_head = nn.Linear(config.hidden_size, output_dim, bias=False)
-        elif rm_head_type == "ranknet":
-            if rm_head_kwargs is not None:
-                for layer in range(rm_head_kwargs.get("num_layers", 3)):
-                    if layer == 0:
-                        self.rm_head = nn.Sequential(
-                            nn.Linear(
-                                config.hidden_size, rm_head_kwargs["hidden_size"]
-                            ),
-                            nn.ReLU(),
-                            nn.Dropout(rm_head_kwargs.get("dropout", 0.1)),
-                        )
-                    elif layer < rm_head_kwargs.get("num_layers", 3) - 1:
-                        self.rm_head.add_module(
-                            f"layer_{layer}",
-                            nn.Sequential(
-                                nn.Linear(
-                                    rm_head_kwargs["hidden_size"],
-                                    rm_head_kwargs["hidden_size"],
-                                ),
-                                nn.ReLU(),
-                                nn.Dropout(rm_head_kwargs.get("dropout", 0.1)),
-                            ),
-                        )
-                    else:
-                        self.rm_head.add_module(
-                            f"output_layer",
-                            nn.Linear(
-                                rm_head_kwargs["hidden_size"],
-                                output_dim,
-                                bias=rm_head_kwargs.get("bias", False),
-                            ),
-                        )
-
-            else:
-                self.rm_head = nn.Sequential(
-                    nn.Linear(config.hidden_size, 1024),
-                    nn.ReLU(),
-                    nn.Dropout(0.05),
-                    nn.Linear(1024, 16),
-                    nn.ReLU(),
-                    nn.Linear(16, output_dim),
-                )
-
-        self.rm_head.to(torch.float32)
+        self.rm_head = nn.Linear(config.hidden_size, output_dim, bias=False)
         self.reward_token = reward_token
 
         self.special_token_ids = special_token_ids
@@ -147,8 +101,8 @@ class Qwen2VLRewardModelBT(Qwen2VLForConditionalGeneration):
         )
 
         hidden_states = outputs[0]  # [B, L, D]
-        with torch.autocast(device_type="cuda", dtype=torch.float32):
-            logits = self.rm_head(hidden_states)  # [B, L, N]
+
+        logits = self.rm_head(hidden_states)  # [B, L, N]
 
         if input_ids is not None:
             batch_size = input_ids.shape[0]
@@ -194,15 +148,12 @@ class Qwen2VLRewardModelBT(Qwen2VLForConditionalGeneration):
                 )
             pooled_logits = logits[special_token_mask, ...]
             pooled_logits = pooled_logits.view(
-                batch_size, 1, -1
+                batch_size, 3, -1
             )  # [B, 3, N] assert 3 attributes
+            if self.output_dim == 3:
+                pooled_logits = pooled_logits.diagonal(dim1=1, dim2=2)
             pooled_logits = pooled_logits.view(batch_size, -1)
-
-            # pdb.set_trace()
         else:
             raise ValueError("Invalid reward_token")
 
         return {"logits": pooled_logits}
-
-
-__all__ = [Qwen2VLRewardModelBT]

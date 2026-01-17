@@ -2,26 +2,21 @@ from collections.abc import Mapping
 
 import torch
 import huggingface_hub
-from core.services.media_scoring.vision_processing import process_vision_info
+from core.services.media_scoring.utils import process_vision_info
 from core.services.media_scoring.image_scorer.utils import (
-    create_model_and_processor,
     prompt_with_special_token,
     prompt_without_special_token,
     INSTRUCTION,
+    ModelConfig,
 )
+from core.services.media_scoring.utils import create_model_and_processor
+from core.services.media_scoring.image_scorer.model import Qwen2VLRewardModelBT
 
 
 class ImageScorer:
     def __init__(
         self,
-        model_config={
-            "model_name_or_path": "Qwen/Qwen2-VL-7B-Instruct",
-            "use_special_tokens": True,
-            "output_dim": 2,
-            "reward_token": "special",
-            "rm_head_type": "ranknet",
-            "rm_head_kwargs": {},
-        },
+        model_config: ModelConfig = ModelConfig(),
         checkpoint_path=None,
         device="cuda",
     ):
@@ -30,10 +25,12 @@ class ImageScorer:
                 "MizzenAI/HPSv3", "HPSv3.safetensors", repo_type="model"
             )
 
-        model, processor = create_model_and_processor(model_config)
+        model, processor = create_model_and_processor(
+            model_config, model_class=Qwen2VLRewardModelBT
+        )
 
         self.device = device
-        self.use_special_tokens = model_config["use_special_tokens"]
+        self.use_special_tokens = model_config.use_special_tokens
 
         if checkpoint_path.endswith(".safetensors"):
             import safetensors.torch
