@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from core.base_model import BaseModel, GenerationType
 from core.services.nsfw_detector import NsfwDetector, NsfwLevel
+from core.services.media_scoring import ImageScorer, VideoScorer
 from core.utils.video_utils import save_video_tensor
 from core.utils.image_utils import (
     create_exif_data,
@@ -21,7 +22,8 @@ class ProcessedOutput:
     generated_media_path: str
     thumbnail_path: str
     thumbhash: str
-    nsfwLevel: NsfwLevel | None
+    nsfwLevel: NsfwLevel
+    quality_score: float
 
 
 class GenerationPipeline:
@@ -29,11 +31,15 @@ class GenerationPipeline:
         self,
         models: list[BaseModel],
         nsfw_detector: NsfwDetector | None,
+        image_scorer: ImageScorer | None,
+        video_scorer: VideoScorer | None,
     ):
         assert len(models) > 0, "The models argument cannot be empty"
 
         self.models = models
         self.nsfw_detector = nsfw_detector
+        self.image_scorer = image_scorer
+        self.video_scorer = video_scorer
 
     def generate(
         self,
@@ -77,7 +83,7 @@ class GenerationPipeline:
 
         output_dir_path = output_dir_path or mkdtemp()
         if postprocess:
-            return self._save_processed_output(
+            return self._process_and_save_output(
                 output, model.generation_type, output_dir_path, metadata
             )
 
@@ -85,7 +91,7 @@ class GenerationPipeline:
             output, model.generation_type, output_dir_path, metadata
         )
 
-    def _save_processed_output(
+    def _process_and_save_output(
         self,
         output: torch.Tensor,
         generation_type: GenerationType,
@@ -94,6 +100,7 @@ class GenerationPipeline:
         fps: int = 16,
         thumbnail_quality: int = 90,
     ) -> ProcessedOutput:
+        assert self.video_scorer and self.image_scorer
         if generation_type.is_video:
             output_path = f"{output_dir_path}/output.mp4"
             thumbnail_path = f"{output_dir_path}/thumbnail.webp"
@@ -101,6 +108,7 @@ class GenerationPipeline:
             first_frame = image_tensor_to_numpy(output[0])
             thumbnail = self._create_thumbnail(first_frame)
             thumbhash = generate_thumbhash(thumbnail)
+            quality_score = self.video_scorer.score(output)[0]["Overall"]
 
             save_video_tensor(output, output_path, fps)
             convert_to_webp_with_metadata(
@@ -116,6 +124,7 @@ class GenerationPipeline:
             image = image_tensor_to_numpy(output)
             thumbnail = self._create_thumbnail(image)
             thumbhash = generate_thumbhash(thumbnail)
+            quality_score = self.image_scorer.score(output)[0]
 
             convert_to_webp_with_metadata(image, metadata, output_path=output_path)
             convert_to_webp_with_metadata(
@@ -130,6 +139,7 @@ class GenerationPipeline:
             thumbnail_path=thumbnail_path,
             thumbhash=thumbhash,
             nsfwLevel=self._get_nsfw_level(output, generation_type),
+            quality_score=quality_score,
         )
 
     def _save_output(

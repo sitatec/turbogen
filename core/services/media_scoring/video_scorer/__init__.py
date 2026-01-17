@@ -195,8 +195,8 @@ class VideoScorer:
 
     def score(
         self,
-        video_paths,
-        prompts,
+        videos_or_paths: torch.Tensor | list[str],
+        prompts: list[str] | None = None,
         fps=None,
         num_frames=None,
         max_pixels=None,
@@ -204,7 +204,7 @@ class VideoScorer:
     ):
         """
         Inputs:
-            video_paths: List[str], B paths of the videos.
+            videos_or_paths: List[str], B videos or paths of the videos.
             prompts: List[str], B prompts for the videos.
             eval_dims: List[str], N evaluation dimensions.
             fps: float, sample rate of the videos. If None, use the default value in the config.
@@ -217,8 +217,10 @@ class VideoScorer:
         assert fps is None or num_frames is None, (
             "fps and num_frames cannot be set at the same time."
         )
-
-        batch = self.prepare_batch(video_paths, prompts, fps, num_frames, max_pixels)
+        prompts = prompts or ["A video"] * len(videos_or_paths)
+        batch = self.prepare_batch(
+            videos_or_paths, prompts, fps, num_frames, max_pixels
+        )
         rewards = self.model(return_dict=True, **batch)["logits"]
 
         rewards = [

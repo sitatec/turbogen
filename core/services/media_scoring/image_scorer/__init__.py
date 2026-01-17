@@ -137,7 +137,11 @@ class ImageScorer:
         return batch
 
     @torch.inference_mode()
-    def score(self, prompts: list[str], image_or_paths: torch.Tensor | list[str]):
+    def score(
+        self, image_or_paths: torch.Tensor | list[str], prompts: list[str] | None = None
+    ):
+        prompts = prompts or ["An image"] * len(image_or_paths)
+
         batch = self._prepare_batch(image_or_paths, prompts)
         rewards = self.model(return_dict=True, **batch)["logits"]
         scores = [reward[0].item() for reward in rewards]  # Extract mu values
