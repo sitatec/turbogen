@@ -5,19 +5,14 @@ from __future__ import annotations
 import base64
 import logging
 import math
-import os
-import sys
 import time
-import warnings
-from functools import lru_cache
 from io import BytesIO
 
 import requests
 import torch
-import torchvision
-from packaging import version
+import decord
 from PIL import Image
-from torchvision import io, transforms
+from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
 
@@ -241,44 +236,16 @@ def smart_nframes(
         nframes = total_frames
     if not (FRAME_FACTOR <= nframes and nframes <= total_frames):
         raise ValueError(
-            f"nframes should in interval [{FRAME_FACTOR}, {total_frames}], but got {nframes}."
+            f"nframes should be in interval [{FRAME_FACTOR}, {total_frames}], but got {nframes}."
         )
     return nframes
 
 
-def _read_video_torchvision(
+def get_resampling_idx(
     ele: dict,
-) -> torch.Tensor:
-    """read video using torchvision.io.read_video
-
-    Args:
-        ele (dict): a dict contains the configuration of video.
-        support keys:
-            - video: the path of video. support "file://", "http://", "https://" and local path.
-            - video_start: the start time of video.
-            - video_end: the end time of video.
-    Returns:
-        torch.Tensor: the video tensor with shape (T, C, H, W).
-    """
-    video_path = ele["video"]
-    if version.parse(torchvision.__version__) < version.parse("0.19.0"):
-        if "http://" in video_path or "https://" in video_path:
-            warnings.warn(
-                "torchvision < 0.19.0 does not support http/https video path, please upgrade to 0.19.0."
-            )
-        if "file://" in video_path:
-            video_path = video_path[7:]
-    st = time.time()
-    video, audio, info = io.read_video(
-        video_path,
-        start_pts=ele.get("video_start", 0.0),
-        end_pts=ele.get("video_end", None),
-        pts_unit="sec",
-        output_format="TCHW",
-    )
-
-    total_frames, video_fps = video.size(0), info["video_fps"]
-    # logger.info(f"torchvision:  {video_path=}, {total_frames=}, {video_fps=}, time={time.time() - st:.3f}s")
+    total_frames: int,
+    video_fps: int | float,
+) -> list[int]:
     if ele["sample_type"] == "uniform":
         nframes = smart_nframes(ele, total_frames=total_frames, video_fps=video_fps)
         idx = torch.linspace(0, total_frames - 1, nframes).round().long().tolist()
@@ -299,15 +266,9 @@ def _read_video_torchvision(
             idx.extend(
                 frames_idx[pt - frames_each_pts // 2 : pt + frames_each_pts // 2]
             )
-
-    video = video[idx]
-    return video
-
-
-def is_decord_available() -> bool:
-    import importlib.util
-
-    return importlib.util.find_spec("decord") is not None
+    else:
+        raise ValueError(f"Unsupported sample_type: {ele['sample_type']}")
+    return idx
 
 
 def _read_video_decord(
@@ -324,7 +285,6 @@ def _read_video_decord(
     Returns:
         torch.Tensor: the video tensor with shape (T, C, H, W).
     """
-    import decord
 
     video_path = ele["video"]
     st = time.time()
@@ -336,60 +296,27 @@ def _read_video_decord(
         )
     total_frames, video_fps = len(vr), vr.get_avg_fps()
     # logger.info(f"decord:  {video_path=}, {total_frames=}, {video_fps=}, time={time.time() - st:.3f}s")
-    if ele["sample_type"] == "uniform":
-        nframes = smart_nframes(ele, total_frames=total_frames, video_fps=video_fps)
-        # nframes = max(nframes, 8)
-        # import pdb; pdb.set_trace()
-        idx = torch.linspace(0, total_frames - 1, nframes).round().long().tolist()
-    elif ele["sample_type"] == "multi_pts":
-        frames_each_pts = 6
-        num_pts = 4
-        fps = 8
-        nframes = int(total_frames * fps // video_fps)
-        frames_idx = (
-            torch.linspace(0, total_frames - 1, nframes).round().long().tolist()
-        )
-
-        start_pt = int(frames_each_pts // 2)
-        end_pt = int(nframes - frames_each_pts // 2 - 1)
-        pts = torch.linspace(start_pt, end_pt, num_pts).round().long().tolist()
-        idx = []
-        for pt in pts:
-            idx.extend(
-                frames_idx[pt - frames_each_pts // 2 : pt + frames_each_pts // 2]
-            )
+    idx = get_resampling_idx(ele, total_frames, video_fps)
     video = vr.get_batch(idx).asnumpy()
     video = torch.tensor(video).permute(0, 3, 1, 2)  # Convert to TCHW format
     return video
 
 
-VIDEO_READER_BACKENDS = {
-    "decord": _read_video_decord,
-    "torchvision": _read_video_torchvision,
-}
-
-FORCE_QWENVL_VIDEO_READER = os.getenv("FORCE_QWENVL_VIDEO_READER", None)
-
-
-@lru_cache(maxsize=1)
-def get_video_reader_backend() -> str:
-    if FORCE_QWENVL_VIDEO_READER is not None:
-        video_reader_backend = FORCE_QWENVL_VIDEO_READER
-    elif is_decord_available():
-        video_reader_backend = "decord"
-    else:
-        video_reader_backend = "torchvision"
-    print(f"qwen-vl-utils using {video_reader_backend} to read video.", file=sys.stderr)
-    return video_reader_backend
-
-
 def fetch_video(
     ele: dict, image_factor: int = IMAGE_FACTOR
 ) -> torch.Tensor | list[Image.Image]:
-    if isinstance(ele["video"], str):
-        video_reader_backend = get_video_reader_backend()
-        video = VIDEO_READER_BACKENDS[video_reader_backend](ele)
-        # import pdb; pdb.set_trace()
+    if isinstance(ele["video"], (str, torch.Tensor)):
+        if isinstance(ele["video"], str):
+            video = _read_video_decord(ele)
+        else:
+            video = ele["video"]
+            total_frames = video.shape[0]
+            video_fps = ele.get("video_fps", FPS)
+            idx = get_resampling_idx(ele, total_frames, video_fps)
+            video = video[idx]
+            # [T, H, W, C] -> [T, C, H, W]
+            video = video.permute(0, 3, 1, 2)
+
         nframes, _, height, width = video.shape
 
         min_pixels = ele.get("min_pixels", VIDEO_MIN_PIXELS)

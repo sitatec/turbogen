@@ -114,7 +114,7 @@ class VideoScorer:
 
     def prepare_batch(
         self,
-        video_paths,
+        videos_or_paths,
         prompts,
         fps=None,
         num_frames=None,
@@ -134,7 +134,7 @@ class VideoScorer:
                         "content": [
                             {
                                 "type": "video",
-                                "video": f"file://{video_path}",
+                                "video": video_or_path,
                                 "max_pixels": max_pixels,
                                 "fps": fps,
                                 "sample_type": self.data_config.sample_type,
@@ -150,7 +150,7 @@ class VideoScorer:
                         ],
                     },
                 ]
-                for video_path, prompt in zip(video_paths, prompts)
+                for video_or_path, prompt in zip(videos_or_paths, prompts)
             ]
         else:
             chat_data = [
@@ -160,7 +160,7 @@ class VideoScorer:
                         "content": [
                             {
                                 "type": "video",
-                                "video": f"file://{video_path}",
+                                "video": video_or_path,
                                 "max_pixels": max_pixels,
                                 "nframes": num_frames,
                                 "sample_type": self.data_config.sample_type,
@@ -176,7 +176,7 @@ class VideoScorer:
                         ],
                     },
                 ]
-                for video_path, prompt in zip(video_paths, prompts)
+                for video_or_path, prompt in zip(videos_or_paths, prompts)
             ]
         image_inputs, video_inputs = process_vision_info(chat_data)
 
