@@ -1,15 +1,15 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class ModelConfig:
     model_name_or_path: str = "Qwen/Qwen2-VL-7B-Instruct"
     use_special_tokens: bool = True
-    special_tokens: list[str] = ["<|Reward|>"]
+    special_tokens: list[str] = field(default_factory=lambda: ["<|Reward|>"])
     output_dim: int = 2
     reward_token: str = "special"
     rm_head_type: str = "ranknet"
-    rm_head_kwargs: dict = {}
+    rm_head_kwargs: dict = field(default_factory=lambda: {})
 
 
 INSTRUCTION = """

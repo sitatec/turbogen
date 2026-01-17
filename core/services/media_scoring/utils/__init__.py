@@ -1,19 +1,23 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 import torch
 from transformers import AutoProcessor, AttentionInterface, AutoConfig
-from core.services.media_scoring.image_scorer.model import (
-    Qwen2VLRewardModelBT as Qwen2VLRewardModelBTImage,
-)
-from core.services.media_scoring.image_scorer.utils import (
-    ModelConfig as ModelConfigImage,
-)
-
-from core.services.media_scoring.video_scorer.model import (
-    Qwen2VLRewardModelBT as Qwen2VLRewardModelBTVideo,
-)
-from core.services.media_scoring.video_scorer.utils import (
-    ModelConfig as ModelConfigVideo,
-)
 from .vision_processing import process_vision_info
+
+if TYPE_CHECKING:
+    from core.services.media_scoring.image_scorer.model import (
+        Qwen2VLRewardModelBT as Qwen2VLRewardModelBTImage,
+    )
+    from core.services.media_scoring.image_scorer.utils import (
+        ModelConfig as ModelConfigImage,
+    )
+    from core.services.media_scoring.video_scorer.model import (
+        Qwen2VLRewardModelBT as Qwen2VLRewardModelBTVideo,
+    )
+    from core.services.media_scoring.video_scorer.utils import (
+        ModelConfig as ModelConfigVideo,
+    )
 
 
 attn_backend = "sdpa"
@@ -72,13 +76,12 @@ def create_model_and_processor(
         "reward_token": model_config.reward_token,
         "special_token_ids": special_token_ids,
     }
-    if isinstance(model_config, ModelConfigImage):
-        model_params.update(
-            {
-                "rm_head_type": model_config.rm_head_type,
-                "rm_head_kwargs": model_config.rm_head_kwargs,
-            }
-        )
+
+    if hasattr(model_config, "rm_head_type"):
+        model_params["rm_head_type"] = model_config.rm_head_type
+    if hasattr(model_config, "rm_head_kwargs"):
+        model_params["rm_head_kwargs"] = model_config.rm_head_kwargs
+
     model = model_class(config, **model_params)
 
     if model_config.use_special_tokens:

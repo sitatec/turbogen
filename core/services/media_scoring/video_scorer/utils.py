@@ -6,12 +6,12 @@ from dataclasses import dataclass, field
 @dataclass
 class ModelConfig:
     model_name_or_path: str = "Qwen/Qwen2-VL-2B-Instruct"
-    model_revision: str = "main"
-
     output_dim: int = 1
 
     use_special_tokens: bool = False
-    special_tokens: list[str] = ["<|VQ_reward|>", "<|MQ_reward|>", "<|TA_reward|>"]
+    special_tokens: list[str] = field(
+        default_factory=lambda: ["<|VQ_reward|>", "<|MQ_reward|>", "<|TA_reward|>"]
+    )
 
     freeze_vision_tower: bool = field(default=False)
     freeze_llm: bool = field(default=False)
