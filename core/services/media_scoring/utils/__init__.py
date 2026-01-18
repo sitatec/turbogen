@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     )
 
 
-attn_backend = "sdpa"
+attention_backend = "sdpa"
 
 major, minor = torch.cuda.get_device_capability(0)
 is_hopper = major == 9
@@ -29,11 +29,11 @@ if is_hopper:
     try:
         import flash_attn_3
 
-        attn_backend = "flash_attention_3"
+        attention_backend = "flash_attention_3"
     except ImportError:
         print("FlashAttention-3 not installed. Checking SageAttention.")
 
-if attn_backend == "sdpa":
+if attention_backend == "sdpa":
     try:
         from sageattention import sageattn
 
@@ -41,7 +41,7 @@ if attn_backend == "sdpa":
             return sageattn(query_states, key_states, value_states, tensor_layout="HND")
 
         AttentionInterface.register("sage_attention", sage_attention)
-        attn_backend = "sage_attention"
+        attention_backend = "sage_attention"
     except ImportError:
         print("SageAttention not installed. Falling back to SDPA.")
 
@@ -68,7 +68,7 @@ def create_model_and_processor(
         model_config.model_name_or_path,
         trust_remote_code=True,
         cache_dir=cache_dir,
-        attn_implementation=attn_backend,
+        attn_implementation=attention_backend,
     )
 
     config.torch_dtype = torch.bfloat16
@@ -95,4 +95,4 @@ def create_model_and_processor(
     return model, processor
 
 
-__all__ = [create_model_and_processor, process_vision_info]
+__all__ = [create_model_and_processor, process_vision_info, attention_backend]

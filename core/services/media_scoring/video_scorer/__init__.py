@@ -3,6 +3,7 @@ from collections.abc import Mapping
 
 import torch
 import huggingface_hub
+from transformers import AutoProcessor
 from core.services.media_scoring.utils import process_vision_info
 from core.services.media_scoring.video_scorer.utils import build_prompt
 from core.services.media_scoring.video_scorer.utils import (
@@ -10,7 +11,10 @@ from core.services.media_scoring.video_scorer.utils import (
     ModelConfig,
     DataConfig,
 )
-from core.services.media_scoring.utils import create_model_and_processor
+from core.services.media_scoring.utils import (
+    create_model_and_processor,
+    attention_backend,
+)
 from core.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
 
 
@@ -21,10 +25,8 @@ class VideoScorer:
         device="cuda",
     ):
         if not os.path.exists(model_path):
-            model_path = huggingface_hub.snapshot_download(
-                "sitatech/VideoReward",
-                local_dir=model_path,
-                allow_patterns=["model.safetensors", "reward_model_config.json"],
+            huggingface_hub.snapshot_download(
+                "sitatech/VideoReward", local_dir=model_path
             )
 
         config_path = os.path.join(model_path, "reward_model_config.json")
@@ -36,9 +38,20 @@ class VideoScorer:
             model_config=model_config, model_class=Qwen2VLRewardModelBT
         )
 
-        checkpoint_path = os.path.join(model_path, "model.safetensors")
-        model_state_dict = torch.load(checkpoint_path, map_location="cpu")
-        model.load_state_dict(model_state_dict)
+        processor = AutoProcessor.from_pretrained(
+            model_config.model_name_or_path, padding_side="right"
+        )
+        model = Qwen2VLRewardModelBT.from_pretrained(
+            model_path,
+            attn_implementation=attention_backend,
+            output_dim=model_config.output_dim,
+            reward_token=model_config.reward_token,
+            special_token_ids=processor.tokenizer.additional_special_tokens_ids,
+            torch_dtype=torch.bfloat16,
+        )
+        model.config.tokenizer_padding_side = processor.tokenizer.padding_side
+        model.config.pad_token_id = processor.tokenizer.pad_token_id
+
         model.eval()
 
         self.data_config = DataConfig(**data_config)
