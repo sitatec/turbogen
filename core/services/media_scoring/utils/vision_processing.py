@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import logging
 import math
-import time
+import tempfile
 from io import BytesIO
 
 import requests
@@ -271,6 +271,20 @@ def get_resampling_idx(
     return idx
 
 
+def _video_reader_to_tensor(vr: decord.VideoReader, ele: dict) -> torch.Tensor:
+    # TODO: support start_pts and end_pts
+    if "video_start" in ele or "video_end" in ele:
+        raise NotImplementedError(
+            "not support start_pts and end_pts in decord for now."
+        )
+    total_frames, video_fps = len(vr), vr.get_avg_fps()
+    # logger.info(f"decord:  {total_frames=}, {video_fps=}")
+    idx = get_resampling_idx(ele, total_frames, video_fps)
+    video = vr.get_batch(idx).asnumpy()
+    video = torch.tensor(video).permute(0, 3, 1, 2)  # Convert to TCHW format
+    return video
+
+
 def _read_video_decord(
     ele: dict,
 ) -> torch.Tensor:
@@ -287,19 +301,30 @@ def _read_video_decord(
     """
 
     video_path = ele["video"]
-    st = time.time()
+    if video_path.startswith("file://"):
+        video_path = video_path[7:]
+        vr = decord.VideoReader(video_path)
+        return _video_reader_to_tensor(vr, ele)
+    elif video_path.startswith("http://") or video_path.startswith("https://"):
+        with tempfile.NamedTemporaryFile() as tmp_video:
+            response = requests.get(video_path, stream=True)
+            response.raise_for_status()
+            for chunk in response.iter_content(chunk_size=8192):
+                tmp_video.write(chunk)
+            tmp_video.flush()
+            vr = decord.VideoReader(tmp_video.name)
+            return _video_reader_to_tensor(vr, ele)
+    elif video_path.startswith("data:video") and "base64," in video_path:
+        _, base64_data = video_path.split("base64,", 1)
+        data = base64.b64decode(base64_data)
+        with tempfile.NamedTemporaryFile() as tmp_video:
+            tmp_video.write(data)
+            tmp_video.flush()
+            vr = decord.VideoReader(tmp_video.name)
+            return _video_reader_to_tensor(vr, ele)
+
     vr = decord.VideoReader(video_path)
-    # TODO: support start_pts and end_pts
-    if "video_start" in ele or "video_end" in ele:
-        raise NotImplementedError(
-            "not support start_pts and end_pts in decord for now."
-        )
-    total_frames, video_fps = len(vr), vr.get_avg_fps()
-    # logger.info(f"decord:  {video_path=}, {total_frames=}, {video_fps=}, time={time.time() - st:.3f}s")
-    idx = get_resampling_idx(ele, total_frames, video_fps)
-    video = vr.get_batch(idx).asnumpy()
-    video = torch.tensor(video).permute(0, 3, 1, 2)  # Convert to TCHW format
-    return video
+    return _video_reader_to_tensor(vr, ele)
 
 
 def fetch_video(
