@@ -22,10 +22,12 @@ class VideoScorer:
     ):
         if not os.path.exists(model_path):
             model_path = huggingface_hub.snapshot_download(
-                "KlingTeam/VideoReward", local_dir=model_path, revision="2e08683"
+                "sitatech/VideoReward",
+                local_dir=model_path,
+                allow_patterns=["model.safetensors", "reward_model_config.json"],
             )
 
-        config_path = os.path.join(model_path, "model_config.json")
+        config_path = os.path.join(model_path, "reward_model_config.json")
         model_config, data_config, inference_config = load_configs_from_json(
             config_path
         )
@@ -34,9 +36,8 @@ class VideoScorer:
             model_config=model_config, model_class=Qwen2VLRewardModelBT
         )
 
-        checkpoint_path = os.path.join(model_path, "checkpoint-11352")
-        full_ckpt = os.path.join(checkpoint_path, "model.pth")
-        model_state_dict = torch.load(full_ckpt, map_location="cpu")
+        checkpoint_path = os.path.join(model_path, "model.safetensors")
+        model_state_dict = torch.load(checkpoint_path, map_location="cpu")
         model.load_state_dict(model_state_dict)
         model.eval()
 

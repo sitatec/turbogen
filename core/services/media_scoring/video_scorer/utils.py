@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 @dataclass
 class ModelConfig:
     model_name_or_path: str = "Qwen/Qwen2-VL-2B-Instruct"
+    model_revision: str | None = None
     output_dim: int = 1
 
     use_special_tokens: bool = False

@@ -5,7 +5,7 @@ import huggingface_hub as hf_hub
 
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
-_ROOT_DIR = Path(__file__).parent
+_ROOT_DIR = Path(__file__).parent / "_model_weights"
 
 SCORING_MODELS_DIR = _ROOT_DIR / "scoring_models"
 
@@ -22,10 +22,8 @@ def download_qwen_models() -> tuple[Path, Path]:
     Returns:
         tuple[Path, Path]: [image edit path, image path].
     """
-    qwen_image_edit_2511_path = (
-        _ROOT_DIR / "_model_weights/Qwen-Image-Edit-2511-Lightning"
-    )
-    qwen_image_2512_path = _ROOT_DIR / "_model_weights/Qwen-Image-2512-Lightning"
+    qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
+    qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
 
     # Qwen-Image-Edit-2511-Lightning
     hf_hub.hf_hub_download(
@@ -58,7 +56,7 @@ def download_qwen_models() -> tuple[Path, Path]:
 
 
 def download_zimage_models():
-    zimage_turbo_path = _ROOT_DIR / "_model_weights/Z-Image-Turbo"
+    zimage_turbo_path = _ROOT_DIR / "Z-Image-Turbo"
 
     hf_hub.snapshot_download(
         repo_id="Tongyi-MAI/Z-Image-Turbo",
@@ -70,8 +68,8 @@ def download_zimage_models():
 
 
 def download_wan22_models():
-    wan22_i2v_path = _ROOT_DIR / "_model_weights/Wan2.2-I2V"
-    wan22_t2v_path = _ROOT_DIR / "_model_weights/Wan2.2-T2V"
+    wan22_i2v_path = _ROOT_DIR / "Wan2.2-I2V"
+    wan22_t2v_path = _ROOT_DIR / "Wan2.2-T2V"
 
     hf_hub.snapshot_download(
         repo_id="lightx2v/Encoders",

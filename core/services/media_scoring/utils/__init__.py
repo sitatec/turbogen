@@ -68,13 +68,15 @@ def create_model_and_processor(
         model_config.model_name_or_path,
         trust_remote_code=True,
         cache_dir=cache_dir,
+        attn_implementation=attn_backend,
     )
-    config._attn_implementation = attn_backend
+
     config.torch_dtype = torch.bfloat16
     model_params = {
         "output_dim": model_config.output_dim,
         "reward_token": model_config.reward_token,
         "special_token_ids": special_token_ids,
+        "torch_dtype": torch.bfloat16,
     }
 
     if hasattr(model_config, "rm_head_type"):
