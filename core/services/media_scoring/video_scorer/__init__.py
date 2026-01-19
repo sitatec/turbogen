@@ -38,9 +38,7 @@ class VideoScorer:
             model_config=model_config, model_class=Qwen2VLRewardModelBT
         )
 
-        processor = AutoProcessor.from_pretrained(
-            model_config.model_name_or_path, padding_side="right"
-        )
+        processor = AutoProcessor.from_pretrained(model_path, padding_side="right")
         model = Qwen2VLRewardModelBT.from_pretrained(
             model_path,
             attn_implementation=attention_backend,
