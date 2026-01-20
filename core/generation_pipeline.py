@@ -110,7 +110,7 @@ class GenerationPipeline:
             thumbnail = self._create_thumbnail(first_frame)
             thumbhash = generate_thumbhash(thumbnail)
             video_at_2fps = self._down_sample_video(output, fps=fps, target_fps=2)
-            quality_score = self.video_scorer.score(video_at_2fps)[0]["Overall"]
+            quality_score = self.video_scorer.score(video_at_2fps)[0]
 
             save_video_tensor(output, output_path, fps)
             convert_to_webp_with_metadata(

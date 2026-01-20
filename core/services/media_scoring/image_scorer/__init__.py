@@ -1,4 +1,5 @@
 import os
+import math
 from collections.abc import Mapping
 
 import torch
@@ -147,7 +148,23 @@ class ImageScorer:
 
         batch = self._prepare_batch(image_or_paths, prompts)
         rewards = self.model(return_dict=True, **batch)["logits"]
-        scores = [reward[0].item() for reward in rewards]  # Extract mu values
+
+        scores = []
+        for reward in rewards:
+            mu = reward[0].item()
+            sigma = reward[1].item()
+
+            # numerical safety
+            sigma = max(sigma, 1e-6)
+            # standardized confidence score
+            z = mu / sigma
+            z = max(min(z, 3.0), -3.0)  # clamp
+            # standard normal CDF → [0, 1]
+            p = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+
+            score = 10.0 * p  # map to 0–10
+            scores.append(score)
+
         return scores
 
 

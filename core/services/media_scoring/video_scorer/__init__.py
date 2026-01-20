@@ -1,4 +1,5 @@
 import os
+import math
 from collections.abc import Mapping
 
 import torch
@@ -241,14 +242,20 @@ class VideoScorer:
             {"VQ": reward[0].item(), "MQ": reward[1].item(), "TA": reward[2].item()}
             for reward in rewards
         ]
-        for i in range(len(rewards)):
-            if use_norm:
-                rewards[i] = self._norm(rewards[i])
-            rewards[i]["Overall"] = (
-                rewards[i]["VQ"] + rewards[i]["MQ"] + rewards[i]["TA"]
-            )
 
-        return rewards
+        scores = []
+        for reward in rewards:
+            reward = self._norm(reward)
+            z_overall = 0.35 * reward["VQ"] + 0.35 * reward["MQ"] + 0.3 * reward["TA"]
+
+            # standard normal CDF → [0, 1]
+            p_overall = 0.5 * (1.0 + math.erf(z_overall / math.sqrt(2.0)))
+            # map to 0–10
+            score_0_10 = 10.0 * p_overall
+
+            scores.append(score_0_10)
+
+        return scores
 
 
 __all__ = [VideoScorer]
