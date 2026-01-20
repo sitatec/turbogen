@@ -7,7 +7,7 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
 _ROOT_DIR = Path(__file__).parent / "_model_weights"
 
-SCORING_MODELS_DIR = _ROOT_DIR / "scoring_models"
+SCORING_MODELS_DIR = (_ROOT_DIR / "scoring_models").resolve()
 
 
 def download_qwen_models() -> tuple[Path, Path]:
