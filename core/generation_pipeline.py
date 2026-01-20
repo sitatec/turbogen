@@ -167,8 +167,8 @@ class GenerationPipeline:
     def _create_thumbnail(
         self,
         img: np.ndarray,
-        target_width: int = 512,
-        min_height: int = 400,
+        target_width: int = 480,
+        min_height: int = 360,
     ):
         height, width = img.shape[:2]
 
