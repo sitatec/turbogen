@@ -3,9 +3,8 @@ import math
 from collections.abc import Mapping
 
 import torch
-import safetensors.torch
 import huggingface_hub
-from transformers import AutoProcessor, AutoConfig
+from transformers import AutoProcessor
 from core.services.media_scoring.utils import process_vision_info, attention_backend
 from core.services.media_scoring.image_scorer.utils import (
     prompt_with_special_token,
@@ -19,34 +18,35 @@ from core.services.media_scoring.image_scorer.model import Qwen2VLRewardModelBT
 class ImageScorer:
     def __init__(
         self,
-        model_dir: str,
+        model_path: str,
         model_config: ModelConfig = ModelConfig(),
         device="cuda",
     ):
-        checkpoint_path = f"{model_dir}/HPSv3.safetensors"
-        if not os.path.exists(checkpoint_path):
-            checkpoint_path = huggingface_hub.hf_hub_download(
-                "MizzenAI/HPSv3",
-                "HPSv3.safetensors",
-                cache_dir=model_dir,
-                revision="4f81e3e",
-            )
+        if not os.path.exists(model_path):
+            huggingface_hub.snapshot_download("sitatech/HPSv3", local_dir=model_path)
 
-        model, processor = create_model_and_processor(model_config)
+        processor = AutoProcessor.from_pretrained(model_path, padding_side="right")
+        model = Qwen2VLRewardModelBT.from_pretrained(
+            model_path,
+            attn_implementation=attention_backend,
+            output_dim=model_config.output_dim,
+            reward_token=model_config.reward_token,
+            special_token_ids=processor.tokenizer.additional_special_tokens_ids,
+            rm_head_type=model_config.rm_head_type,
+            rm_head_kwargs=model_config.rm_head_kwargs,
+            dtype=torch.bfloat16,
+            device_map=device,
+        )
+        model.config.tokenizer_padding_side = processor.tokenizer.padding_side
+        model.config.pad_token_id = processor.tokenizer.pad_token_id
+
+        model.eval()
 
         self.device = device
         self.use_special_tokens = model_config.use_special_tokens
 
-        state_dict = safetensors.torch.load_file(checkpoint_path, device="cpu")
-        if "model" in state_dict:
-            state_dict = state_dict["model"]
-        model.load_state_dict(state_dict, strict=True)
-        model.eval()
-
         self.model = model
         self.processor = processor
-
-        self.model.to(self.device)
 
     def _pad_sequence(self, sequences, attention_mask, max_len, padding_side="right"):
         """
@@ -164,50 +164,6 @@ class ImageScorer:
             scores.append(score)
 
         return scores
-
-
-def create_model_and_processor(
-    model_config: ModelConfig,
-    cache_dir=None,
-):
-    # create processor and set padding
-    processor = AutoProcessor.from_pretrained(
-        model_config.model_name_or_path, padding_side="right", cache_dir=cache_dir
-    )
-
-    special_token_ids = None
-    if model_config.use_special_tokens:
-        special_tokens = model_config.special_tokens
-        processor.tokenizer.add_special_tokens(
-            {"additional_special_tokens": special_tokens}
-        )
-        special_token_ids = processor.tokenizer.convert_tokens_to_ids(special_tokens)
-
-    config = AutoConfig.from_pretrained(
-        model_config.model_name_or_path,
-        trust_remote_code=True,
-        cache_dir=cache_dir,
-        attn_implementation=attention_backend,
-    )
-
-    config.dtype = torch.bfloat16
-    model_params = {
-        "output_dim": model_config.output_dim,
-        "reward_token": model_config.reward_token,
-        "special_token_ids": special_token_ids,
-        "rm_head_type": model_config.rm_head_type,
-        "rm_head_kwargs": model_config.rm_head_kwargs,
-    }
-
-    model = Qwen2VLRewardModelBT(config, **model_params)
-
-    if model_config.use_special_tokens:
-        model.resize_token_embeddings(len(processor.tokenizer))
-
-    model.config.tokenizer_padding_side = processor.tokenizer.padding_side
-    model.config.pad_token_id = processor.tokenizer.pad_token_id
-
-    return model, processor
 
 
 __all__ = [ImageScorer]

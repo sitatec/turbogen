@@ -41,6 +41,7 @@ class VideoScorer:
             reward_token=model_config.reward_token,
             special_token_ids=processor.tokenizer.additional_special_tokens_ids,
             dtype=torch.bfloat16,
+            device_map=device,
         )
         model.config.tokenizer_padding_side = processor.tokenizer.padding_side
         model.config.pad_token_id = processor.tokenizer.pad_token_id
@@ -52,7 +53,6 @@ class VideoScorer:
         self.inference_config = inference_config
         self.processor = processor
         self.model = model
-        self.model.to(self.device)
 
     def _norm(self, reward):
         if self.inference_config is None:
