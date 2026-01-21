@@ -5,14 +5,14 @@ from collections.abc import Mapping
 import torch
 import safetensors.torch
 import huggingface_hub
-from core.services.media_scoring.utils import process_vision_info
+from transformers import AutoProcessor, AutoConfig
+from core.services.media_scoring.utils import process_vision_info, attention_backend
 from core.services.media_scoring.image_scorer.utils import (
     prompt_with_special_token,
     prompt_without_special_token,
     INSTRUCTION,
     ModelConfig,
 )
-from core.services.media_scoring.utils import create_model_and_processor
 from core.services.media_scoring.image_scorer.model import Qwen2VLRewardModelBT
 
 
@@ -32,9 +32,7 @@ class ImageScorer:
                 revision="4f81e3e",
             )
 
-        model, processor = create_model_and_processor(
-            model_config, model_class=Qwen2VLRewardModelBT
-        )
+        model, processor = create_model_and_processor(model_config)
 
         self.device = device
         self.use_special_tokens = model_config.use_special_tokens
@@ -166,6 +164,50 @@ class ImageScorer:
             scores.append(score)
 
         return scores
+
+
+def create_model_and_processor(
+    model_config: ModelConfig,
+    cache_dir=None,
+):
+    # create processor and set padding
+    processor = AutoProcessor.from_pretrained(
+        model_config.model_name_or_path, padding_side="right", cache_dir=cache_dir
+    )
+
+    special_token_ids = None
+    if model_config.use_special_tokens:
+        special_tokens = model_config.special_tokens
+        processor.tokenizer.add_special_tokens(
+            {"additional_special_tokens": special_tokens}
+        )
+        special_token_ids = processor.tokenizer.convert_tokens_to_ids(special_tokens)
+
+    config = AutoConfig.from_pretrained(
+        model_config.model_name_or_path,
+        trust_remote_code=True,
+        cache_dir=cache_dir,
+        attn_implementation=attention_backend,
+    )
+
+    config.dtype = torch.bfloat16
+    model_params = {
+        "output_dim": model_config.output_dim,
+        "reward_token": model_config.reward_token,
+        "special_token_ids": special_token_ids,
+        "rm_head_type": model_config.rm_head_type,
+        "rm_head_kwargs": model_config.rm_head_kwargs,
+    }
+
+    model = Qwen2VLRewardModelBT(config, **model_params)
+
+    if model_config.use_special_tokens:
+        model.resize_token_embeddings(len(processor.tokenizer))
+
+    model.config.tokenizer_padding_side = processor.tokenizer.padding_side
+    model.config.pad_token_id = processor.tokenizer.pad_token_id
+
+    return model, processor
 
 
 __all__ = [ImageScorer]

@@ -12,10 +12,7 @@ from core.services.media_scoring.video_scorer.utils import (
     ModelConfig,
     DataConfig,
 )
-from core.services.media_scoring.utils import (
-    create_model_and_processor,
-    attention_backend,
-)
+from core.services.media_scoring.utils import attention_backend
 from core.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
 
 
@@ -35,9 +32,6 @@ class VideoScorer:
             config_path
         )
         model_config = ModelConfig(**model_config)
-        model, processor = create_model_and_processor(
-            model_config=model_config, model_class=Qwen2VLRewardModelBT
-        )
 
         processor = AutoProcessor.from_pretrained(model_path, padding_side="right")
         model = Qwen2VLRewardModelBT.from_pretrained(
@@ -46,7 +40,7 @@ class VideoScorer:
             output_dim=model_config.output_dim,
             reward_token=model_config.reward_token,
             special_token_ids=processor.tokenizer.additional_special_tokens_ids,
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
         )
         model.config.tokenizer_padding_side = processor.tokenizer.padding_side
         model.config.pad_token_id = processor.tokenizer.pad_token_id
@@ -206,14 +200,14 @@ class VideoScorer:
         batch = self._prepare_inputs(batch)
         return batch
 
+    @torch.inference_mode()
     def score(
         self,
         videos_or_paths: torch.Tensor | list[str],
         prompts: list[str] | None = None,
-        fps=None,
+        fps=2,
         num_frames=None,
         max_pixels=None,
-        use_norm=True,
     ):
         """
         Inputs:
@@ -223,9 +217,8 @@ class VideoScorer:
             fps: float, sample rate of the videos. If None, use the default value in the config.
             num_frames: int, number of frames of the videos. If None, use the default value in the config.
             max_pixels: int, maximum pixels of the videos. If None, use the default value in the config.
-            use_norm: bool, whether to rescale the output rewards
         Outputs:
-            Rewards: List[dict], N + 1 rewards of the B videos.
+            Scores: List[float]
         """
         assert fps is None or num_frames is None, (
             "fps and num_frames cannot be set at the same time."
