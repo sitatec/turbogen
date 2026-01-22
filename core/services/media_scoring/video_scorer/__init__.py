@@ -239,7 +239,7 @@ class VideoScorer:
         scores = []
         for reward in rewards:
             reward = self._norm(reward)
-            z_overall = 0.35 * reward["VQ"] + 0.35 * reward["MQ"] + 0.3 * reward["TA"]
+            z_overall = reward["VQ"] + reward["MQ"]
 
             # standard normal CDF → [0, 1]
             p_overall = 0.5 * (1.0 + math.erf(z_overall / math.sqrt(2.0)))
