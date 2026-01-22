@@ -1,1 +1,2 @@
-[HPSv3](https://github.com/MizzenAI/HPSv3) and [VideoAlign](https://github.com/KwaiVGI/VideoAlign) adapted for inference only, with all the training and unnecessary components and their dependencies removed.
+- video_scorer/: [VideoAlign](https://github.com/KwaiVGI/VideoAlign) adapted for inference only, with all the training and unnecessary components and their dependencies removed.
+- image_scorer/: [VisualQuality-R1-7B](https://huggingface.co/TianheWu/VisualQuality-R1-7B) and [improved-aesthetic-predictor](https://github.com/christophschuhmann/improved-aesthetic-predictor) combined
