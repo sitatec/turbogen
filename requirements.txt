@@ -7,7 +7,6 @@ transformers>=4.57.3
 hf-transfer
 huggingface-hub
 piexif
-aiohttp
 sgl-kernel==0.3.18
 triton>=3.0.0
 decord
