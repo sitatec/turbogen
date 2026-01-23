@@ -1,6 +1,11 @@
-from enum import Enum
+from __future__ import annotations
 
-import torch
+from enum import Enum
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from torch import Tensor
 
 
 class GenerationType(Enum):
@@ -20,7 +25,12 @@ class GenerationType(Enum):
 
 class BaseModel:
     model_id: str
+    model_name: str
     generation_type: GenerationType
+    supported_aspect_ratios: dict[str, dict[str, tuple[int, int]]]
+    default_negative_prompt: str | None
+    default_inference_steps: int
+    default_guidance_scale: float
 
     def generate(
         self,
@@ -32,7 +42,7 @@ class BaseModel:
         seed: int = -1,  # -1 for random seed
         negative_prompt: str | None = None,
         steps: int | None = None,
-        guidance_scale: int | None = None,
+        guidance_scale: float | None = None,
         duration_seconds: float | None = None,
-    ) -> torch.Tensor:
+    ) -> Tensor:
         raise NotImplementedError()

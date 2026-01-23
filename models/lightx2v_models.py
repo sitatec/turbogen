@@ -1,3 +1,4 @@
+from pathlib import Path
 from core.base_model import BaseModel, GenerationType
 import torch
 import types
@@ -34,7 +35,7 @@ class _LightX2VPipeline(LightX2VPipelineBase):
         height: int | None = None,
         width: int | None = None,
         steps: int | None = None,
-        guidance_scale: int | None = None,
+        guidance_scale: float | None = None,
         duration_seconds: float | None = None,
     ) -> torch.Tensor | None:
         if seed is None or seed == -1:
@@ -92,6 +93,7 @@ class _BaseLightx2vModel(BaseModel):
     def __init__(
         self,
         model_id: str,
+        model_name: str,
         model_cls: str,
         model_path: str,
         generation_type: GenerationType,
@@ -111,9 +113,12 @@ class _BaseLightx2vModel(BaseModel):
         quantized_text_encoder_path: str | None = None,
     ):
         self.model_id = model_id
-        self.aspect_ratios = aspect_ratios
+        self.model_name = model_name
+        self.supported_aspect_ratios = aspect_ratios
         self.default_negative_prompt = default_negative_prompt
         self.generation_type = generation_type
+        self.default_inference_steps = infer_steps
+        self.default_guidance_scale = guidance_scale
 
         self.pipe = _LightX2VPipeline(
             model_path=model_path,
@@ -174,17 +179,17 @@ class _BaseLightx2vModel(BaseModel):
         seed: int = -1,  # -1 for random seed
         negative_prompt: str | None = None,
         steps: int | None = None,
-        guidance_scale: int | None = None,
+        guidance_scale: float | None = None,
         duration_seconds: float | None = None,
     ) -> torch.Tensor:
         image_paths_str = ",".join(image_paths)
 
-        if aspect_ratio not in self.aspect_ratios:
+        if aspect_ratio not in self.supported_aspect_ratios:
             raise ValueError(f"Invalid aspect ratio: {aspect_ratio}")
-        if resolution not in self.aspect_ratios[aspect_ratio]:
+        if resolution not in self.supported_aspect_ratios[aspect_ratio]:
             raise ValueError(f"Invalid resolution: {resolution}")
 
-        width, height = self.aspect_ratios[aspect_ratio][resolution]
+        width, height = self.supported_aspect_ratios[aspect_ratio][resolution]
 
         return self.pipe.generate(  # pyrefly: ignore
             seed=seed,
@@ -202,10 +207,10 @@ class _BaseLightx2vModel(BaseModel):
         )
 
 
-class QwenImageEdit(_BaseLightx2vModel):
+class QwenImageEditLite(_BaseLightx2vModel):
     def __init__(
         self,
-        model_path: str,
+        model_path: Path,
         quantized_model_path: str | None = None,
         lora_configs: list[dict] = [],
         compile: bool = False,
@@ -214,9 +219,10 @@ class QwenImageEdit(_BaseLightx2vModel):
     ):
         super().__init__(
             model_id="k",
+            model_name="Qwen Image Edit 2511",
             model_cls="qwen-image-edit-2511",
             generation_type=GenerationType.I2I,
-            model_path=model_path,
+            model_path=str(model_path),
             compile=compile,
             quantized_model_path=quantized_model_path,
             lora_configs=[
@@ -244,11 +250,13 @@ class QwenImageEdit(_BaseLightx2vModel):
             **kwargs,
         )
 
+        self.max_input_images = 3
 
-class QwenImage(_BaseLightx2vModel):
+
+class QwenImageLite(_BaseLightx2vModel):
     def __init__(
         self,
-        model_path: str,
+        model_path: Path,
         quantized_model_path: str | None = None,
         lora_configs: list[dict] = [],
         text_encoder=None,
@@ -263,9 +271,10 @@ class QwenImage(_BaseLightx2vModel):
             )
         super().__init__(
             model_id="l",
+            model_name="Qwen Image 2512",
             model_cls="qwen-image-2512",
             generation_type=GenerationType.T2I,
-            model_path=model_path,
+            model_path=str(model_path),
             compile=compile,
             quantized_model_path=quantized_model_path,
             lora_configs=[
@@ -322,7 +331,7 @@ class QwenImage(_BaseLightx2vModel):
 class ZImageTurbo(_BaseLightx2vModel):
     def __init__(
         self,
-        model_path: str,
+        model_path: Path,
         quantized_model_path: str | None = None,
         lora_configs: list[dict] | None = None,
         compile: bool = False,
@@ -331,9 +340,10 @@ class ZImageTurbo(_BaseLightx2vModel):
     ):
         super().__init__(
             model_id="0",
+            model_name="Z-Image-Turbo",
             model_cls="z_image",
             generation_type=GenerationType.T2I,
-            model_path=model_path,
+            model_path=str(model_path),
             compile=compile,
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
@@ -357,10 +367,10 @@ class ZImageTurbo(_BaseLightx2vModel):
         )
 
 
-class Wan22(_BaseLightx2vModel):
+class Wan22Lite(_BaseLightx2vModel):
     def __init__(
         self,
-        model_path: str,
+        model_path: Path,
         lora_configs: list[dict] | None = None,
         compile: bool = False,
         enable_cpu_offload: bool = False,
@@ -373,9 +383,10 @@ class Wan22(_BaseLightx2vModel):
     ):
         super().__init__(
             model_id="m",
+            model_name="Wan 2.2 A14B",
             model_cls="wan2.2_moe_distill",
             generation_type=generation_type,
-            model_path=model_path,
+            model_path=str(model_path),
             compile=compile,
             attention_backend="sage_attn2",
             quant_scheme=quant_scheme,
@@ -403,4 +414,4 @@ class _AttrDict(dict):
     __delattr__ = dict.__delitem__
 
 
-__all__ = [Wan22, ZImageTurbo, QwenImage, QwenImageEdit]
+__all__ = [Wan22Lite, ZImageTurbo, QwenImageLite, QwenImageEditLite]

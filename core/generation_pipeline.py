@@ -52,7 +52,7 @@ class GenerationPipeline:
         seed: int = -1,  # -1 for random seed
         negative_prompt: str | None = None,
         steps: int | None = None,
-        guidance_scale: int | None = None,
+        guidance_scale: float | None = None,
         duration_seconds: float | None = None,
         postprocess: bool = True,
         output_dir_path: str | None = None,
@@ -126,7 +126,7 @@ class GenerationPipeline:
             image = image_tensor_to_numpy(output)
             thumbnail = self._create_thumbnail(image)
             thumbhash = generate_thumbhash(thumbnail)
-            quality_score = self.image_scorer.score(output)[0]
+            quality_score = self.image_scorer.score(output)
 
             convert_to_webp_with_metadata(image, metadata, output_path=output_path)
             convert_to_webp_with_metadata(
@@ -236,3 +236,6 @@ class GenerationPipeline:
         interval = int(duration_interval * fps)
         indices = slice(0, num_frames, interval)
         return output[indices]
+
+
+__all__ = [ProcessedOutput, GenerationPipeline]

@@ -3,6 +3,7 @@ torch==2.8.0
 Pillow
 numpy
 fast-thumbhash
+aiohttp
 transformers>=4.57.3
 hf-transfer
 huggingface-hub

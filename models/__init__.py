@@ -1,3 +1,8 @@
-from models.lightx2v_models import QwenImage, QwenImageEdit, ZImageTurbo, Wan22
+from models.lightx2v_models import (
+    QwenImageLite,
+    QwenImageEditLite,
+    ZImageTurbo,
+    Wan22Lite,
+)
 
-__all__ = [QwenImage, QwenImageEdit, ZImageTurbo, Wan22]
+__all__ = [QwenImageLite, QwenImageEditLite, ZImageTurbo, Wan22Lite]
