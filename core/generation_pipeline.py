@@ -58,9 +58,11 @@ class GenerationPipeline:
         output_dir_path: str | None = None,
         metadata: dict | None = None,
     ) -> ProcessedOutput | str:
-        assert not postprocess or self.nsfw_detector, (
-            "NSFW detector is required for postprocessing"
-        )
+        assert (
+            not postprocess
+            or self.nsfw_detector
+            and (self.video_scorer or self.image_scorer)
+        ), "NSFW detector and at least one media scorer are required for postprocessing"
 
         model = next(
             (model for model in self.models if model.model_id == model_id), None
@@ -170,14 +172,27 @@ class GenerationPipeline:
         target_width: int = 480,
         min_height: int = 360,
     ):
+        """Resize to [target_width] while preventing the new height from being smaller than [min_height]"""
         height, width = img.shape[:2]
-
         scale = max(target_width / width, min_height / height)
+
+        if scale >= 1.0:  # Avoid upscaling
+            return img
 
         new_w = int(round(width * scale))
         new_h = int(round(height * scale))
 
-        return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        # If source is much larger, downscale to 1.5x target using INTER_AREA as a first pass.
+        # This removes high-frequency noise and prevents Lanczos "ringing" (halos).
+        if scale < 0.6:
+            img = cv2.resize(
+                img,
+                (int(new_w * 1.5), int(new_h * 1.5)),
+                interpolation=cv2.INTER_AREA,
+            )
+
+        # Final low scale resize to target using Lanczos for nice acuity
+        return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
 
     def _get_nsfw_level(
         self,
@@ -205,11 +220,19 @@ class GenerationPipeline:
         self,
         output: torch.Tensor,
         fps: int,
-        duration_interval: float = 2,
     ) -> torch.Tensor:
         assert output.dim() == 4
 
         num_frames = output.shape[0]
+        video_duration = num_frames / fps
+
+        if video_duration >= 60:
+            duration_interval = 4
+        elif video_duration >= 30:
+            duration_interval = 3
+        else:
+            duration_interval = 2
+
         interval = int(duration_interval * fps)
-        indices = range(0, num_frames, interval)
-        return torch.tensor([output[:, i, :, :] for i in indices])
+        indices = slice(0, num_frames, interval)
+        return output[indices]
