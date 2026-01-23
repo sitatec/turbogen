@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
-import huggingface_hub
 from transformers import (
     Qwen2_5_VLForConditionalGeneration,
     AutoProcessor,
@@ -36,10 +35,6 @@ class ImageScorer:
 
     def _create_vq_model(self, models_dir: Path):
         vq_model_path = models_dir / "visual_quality_r1"
-        if not vq_model_path.exists():
-            huggingface_hub.snapshot_download(
-                "TianheWu/VisualQuality-R1-7B", local_dir=vq_model_path
-            )
 
         model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             vq_model_path,
@@ -54,10 +49,6 @@ class ImageScorer:
 
     def _create_clip_model(self, models_dir: Path):
         clip_model_path = models_dir / "clip-vit-l14"
-        if not clip_model_path.exists():
-            huggingface_hub.snapshot_download(
-                "openai/clip-vit-large-patch14-336", local_dir=clip_model_path
-            )
 
         clip_model: CLIPModel = CLIPModel.from_pretrained(
             clip_model_path, device_map=self.device
@@ -68,12 +59,6 @@ class ImageScorer:
     def _create_aesthetic_model(self, models_dir: Path):
         model_name = "sac+logos+ava1-l14-linearMSE.pth"
         model_path = models_dir / model_name
-        if not model_path.exists():
-            huggingface_hub.hf_hub_download(
-                "sitatech/aesthetic-predictor-v2",
-                filename=model_name,
-                local_dir=models_dir,
-            )
 
         aesthetic_model = AestheticModel(device=self.device)
         state_dict = torch.load(model_path, map_location=self.device)

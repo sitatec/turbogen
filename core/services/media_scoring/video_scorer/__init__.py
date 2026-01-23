@@ -1,9 +1,9 @@
 import os
 import math
+from pathlib import Path
 from collections.abc import Mapping
 
 import torch
-import huggingface_hub
 from transformers import AutoProcessor
 from core.services.media_scoring.utils import process_vision_info
 from core.services.media_scoring.video_scorer.utils import build_prompt
@@ -19,17 +19,12 @@ from core.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
 class VideoScorer:
     def __init__(
         self,
-        model_path: str,
+        model_path: Path,
         device="cuda",
     ):
-        if not os.path.exists(model_path):
-            huggingface_hub.snapshot_download(
-                "sitatech/VideoReward", local_dir=model_path
-            )
-
-        config_path = os.path.join(model_path, "reward_model_config.json")
+        config_path = model_path / "reward_model_config.json"
         model_config, data_config, inference_config = load_configs_from_json(
-            config_path
+            str(config_path)
         )
         model_config = ModelConfig(**model_config)
 
