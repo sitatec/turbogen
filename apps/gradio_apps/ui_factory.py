@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING
 import spaces
 import aiohttp
 import gradio as gr
-from core.base_model import GenerationType
+from core.models.base_model import GenerationType
 
 if TYPE_CHECKING:
-    from core.base_model import BaseModel
+    from core.models.base_model import BaseModel
     from core.generation_pipeline import GenerationPipeline, ProcessedOutput
 
 

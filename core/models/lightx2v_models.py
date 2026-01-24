@@ -1,5 +1,5 @@
 from pathlib import Path
-from core.base_model import BaseModel, GenerationType
+from core.models.base_model import BaseModel, GenerationType
 import torch
 import types
 import functools

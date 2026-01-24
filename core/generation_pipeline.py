@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 import torch
-from core.base_model import BaseModel, GenerationType
+from core.models.base_model import BaseModel, GenerationType
 from core.services.nsfw_detector import NsfwDetector, NsfwLevel
 from core.services.media_scoring import ImageScorer, VideoScorer
 from core.utils.video_utils import save_video_tensor

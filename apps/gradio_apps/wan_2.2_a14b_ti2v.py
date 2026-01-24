@@ -11,8 +11,8 @@ sys.path.insert(
 )
 
 from model_downloads import download_wan22_models, download_video_scorer
-from models.lightx2v_models import Wan22Lite
-from core.base_model import GenerationType
+from core.models import Wan22Lite
+from core.models.base_model import GenerationType
 from core.generation_pipeline import GenerationPipeline
 from core.services.media_scoring.video_scorer import VideoScorer
 from core.services.nsfw_detector import NsfwDetector

@@ -11,7 +11,7 @@ sys.path.insert(
 )
 
 from model_downloads import download_qwen_models, download_image_scorer
-from models.lightx2v_models import QwenImageLite, QwenImageEditLite
+from core.models import QwenImageLite, QwenImageEditLite
 from core.generation_pipeline import GenerationPipeline
 from core.services.media_scoring.image_scorer import ImageScorer
 from core.services.nsfw_detector import NsfwDetector
