@@ -1,23 +1,23 @@
-from core.services.media_scoring.image_scorer import ImageScorer
-from core.services.nsfw_detector import NsfwDetector
-import asyncio
+from __future__ import annotations
+
 import shutil
-import sys
+import asyncio
 from pathlib import Path
 from tempfile import mkdtemp
+from typing import TYPE_CHECKING
+
 
 import spaces
 import aiohttp
 import gradio as gr
+from core.base_model import GenerationType
 
-sys.path.insert(0, ".")
-
-from model_downloads import download_qwen_models, download_image_scorer
-from core.generation_pipeline import GenerationPipeline, ProcessedOutput
-from models.lightx2v_models import QwenImageLite, QwenImageEditLite
+if TYPE_CHECKING:
+    from core.base_model import BaseModel
+    from core.generation_pipeline import GenerationPipeline, ProcessedOutput
 
 
-async def download_image(session: aiohttp.ClientSession, url: str, output_path: str):
+async def download_file(session: aiohttp.ClientSession, url: str, output_path: str):
     """Download a single image from URL asynchronously."""
     async with session.get(url.strip()) as response:
         response.raise_for_status()
@@ -26,62 +26,93 @@ async def download_image(session: aiohttp.ClientSession, url: str, output_path: 
         return output_path
 
 
-async def download_images_async(urls: list[str], request_dir: str) -> list[str]:
+async def download_files(urls: list[str], request_dir: str) -> list[str]:
     """Download multiple images asynchronously."""
     async with aiohttp.ClientSession() as session:
         tasks = []
         for i, url in enumerate(urls):
             ext = Path(url.split("?")[0]).suffix
             output_path = f"{request_dir}/input_{i}{ext}"
-            tasks.append(download_image(session, url, output_path))
+            tasks.append(download_file(session, url, output_path))
         return await asyncio.gather(*tasks)
 
 
 def create_model_interface(
     pipeline: GenerationPipeline,
     model_id: str,
+    model: BaseModel,
     default_negative_prompt: str | None,
     aspect_ratios: dict[str, dict[str, tuple[int, int]]],
     max_input_images: int = 0,
     postprocessing_supported: bool = False,
 ):
     """
-    Create a reusable Gradio interface for image generation models.
+    Create a reusable Gradio interface for image and video generation models.
 
     Args:
         pipeline: The generation pipeline instance
         model_id: Model identifier for the pipeline
         default_negative_prompt: Default negative prompt from model
         aspect_ratios: Dictionary of available aspect ratios and resolutions
-        max_input_images: Maximum number of input images (0 for text-to-image models)
+        max_input_images: Maximum number of input images
         postprocessing_supported: Whether postprocessing (NSFW, quality scoring,...) is supported
     """
+
+    is_video = model.generation_type.is_video
+    media_type_label = "Video" if is_video else "Image"
 
     aspect_ratio_choices = list(aspect_ratios.keys())
     default_aspect_ratio = aspect_ratio_choices[0] if aspect_ratio_choices else "1:1"
     default_resolution = list(aspect_ratios[default_aspect_ratio].keys())[0]
+
     with gr.Row():
         with gr.Column():
             input_mode = None
-            input_images_upload = None
-            input_images_url = None
+            input_image_upload = None
+            input_image_url = None
+            last_frame_upload = None
+            last_frame_url = None
 
             if max_input_images > 0:
                 with gr.Group():
-                    input_images_upload = gr.File(
-                        label=f"Input Images (max {max_input_images})",
-                        file_count="multiple" if max_input_images > 1 else "single",
-                        file_types=["image"],
-                        type="filepath",
-                        visible=True,
-                    )
+                    if is_video:
+                        input_image_upload = gr.Image(
+                            label="First Frame",
+                            type="filepath",
+                            visible=True,
+                        )
+                        input_image_url = gr.Textbox(
+                            label="First Frame URL",
+                            placeholder="https://gen.ai/first_frame.jpg",
+                            visible=False,
+                        )
+                        with gr.Accordion("Last Frame (Optional)", open=False):
+                            last_frame_upload = gr.Image(
+                                label="Last Frame",
+                                type="filepath",
+                                visible=True,
+                            )
+                            last_frame_url = gr.Textbox(
+                                label="Last Frame URL",
+                                placeholder="https://gen.ai/last_frame.jpg",
+                                visible=False,
+                            )
+                    else:
+                        # For image, we have multi-input images
+                        input_image_upload = gr.File(
+                            label=f"Input Images (max {max_input_images})",
+                            file_count="multiple" if max_input_images > 1 else "single",
+                            file_types=["image"],
+                            type="filepath",
+                            visible=True,
+                        )
+                        input_image_url = gr.Textbox(
+                            label=f"Image URLs (comma-separated, max {max_input_images})",
+                            placeholder="https://gen.ai/img1.jpg, https://gen.ai/img2.jpg",
+                            lines=2,
+                            visible=False,
+                        )
 
-                    input_images_url = gr.Textbox(
-                        label=f"Image URLs (comma-separated, max {max_input_images})",
-                        placeholder="https://gen.ai/img1.jpg, https://gen.ai/img2.jpg",
-                        lines=2,
-                        visible=False,
-                    )
                     input_mode = gr.Radio(
                         label="Input Mode",
                         choices=["File Upload", "Image URL"],
@@ -91,7 +122,7 @@ def create_model_interface(
             with gr.Group():
                 prompt = gr.Textbox(
                     label="Prompt",
-                    placeholder="Describe the image you want to generate...",
+                    placeholder=f"Describe the {media_type_label.lower()} you want to generate...",
                     lines=3,
                     max_lines=5,
                 )
@@ -118,7 +149,7 @@ def create_model_interface(
                 )
                 negative_prompt = gr.Textbox(
                     label="Negative Prompt",
-                    placeholder="What to avoid in the image...",
+                    placeholder="What to avoid in the generation...",
                     lines=2,
                     value=default_negative_prompt,
                 )
@@ -131,20 +162,25 @@ def create_model_interface(
                     )
 
             generate_btn = gr.Button(
-                "✨ Generate",
+                f"✨ Generate {media_type_label}",
                 variant="primary",
                 size="lg",
             )
 
         with gr.Column():
-            output_image = gr.Image(
-                label="Generated Image",
-                type="filepath",
-            )
+            if is_video:
+                output_media = gr.Video(
+                    label=f"Generated {media_type_label}",
+                )
+            else:
+                output_media = gr.Image(
+                    label=f"Generated {media_type_label}",
+                    type="filepath",
+                )
 
             # Postprocessing outputs (only visible when postprocessing is enabled)
             with gr.Row(visible=False) as postprocess_row:
-                thumbnail_image = gr.Image(
+                thumbnail = gr.Image(
                     label="Thumbnail",
                     type="filepath",
                     scale=1,
@@ -163,31 +199,41 @@ def create_model_interface(
                         interactive=False,
                     )
 
-        # Toggle visibility of input image components based on mode
+        # Toggle visibility of input components based on mode
         if input_mode is not None:
 
             def toggle_input_mode(mode):
-                return [
+                updates = [
                     gr.update(visible=(mode == "File Upload")),
                     gr.update(visible=(mode == "Image URL")),
                 ]
+                if is_video:
+                    updates.extend(
+                        [
+                            gr.update(visible=(mode == "File Upload")),
+                            gr.update(visible=(mode == "Image URL")),
+                        ]
+                    )
+                return updates
+
+            outputs = [input_image_upload, input_image_url]
+            if is_video:
+                outputs.extend([last_frame_upload, last_frame_url])
 
             input_mode.change(
                 fn=toggle_input_mode,
                 inputs=[input_mode],
-                outputs=[input_images_upload, input_images_url],
+                outputs=outputs,  # pyrefly: ignore
             )
 
         # Update resolution choices when aspect ratio changes
         def update_resolution_choices(aspect_ratio_value, current_resolution):
             new_resolutions = list(aspect_ratios[aspect_ratio_value].keys())
-
             resolution = (
                 current_resolution
                 if current_resolution in new_resolutions
                 else new_resolutions[0]
             )
-
             return gr.Dropdown(choices=new_resolutions, value=resolution)
 
         aspect_ratio.change(
@@ -204,49 +250,70 @@ def create_model_interface(
             seed_value,
             postprocess_value,
             input_mode_value=None,
-            input_images_upload_value=None,
-            input_images_url_value=None,
+            input_image_upload_value=None,
+            input_image_url_value=None,
+            last_frame_upload_value=None,
+            last_frame_url_value=None,
         ):
-            """Validate inputs and download images if needed."""
+            """Validate inputs and download media if needed."""
             if not prompt_value:
                 raise gr.Error("Please provide a prompt!")
 
             request_dir = mkdtemp()
-
             image_paths = []
+            last_frame_path = None
+
             if max_input_images > 0:
-                if input_mode_value == "URL":
-                    if not input_images_url_value:
-                        raise gr.Error("Please provide image URLs!")
+                if input_mode_value == "Image URL":
+                    if not input_image_url_value:
+                        raise gr.Error("Please provide media URLs!")
 
                     urls = [
                         url.strip()
-                        for url in input_images_url_value.split(",")
+                        for url in input_image_url_value.split(",")
                         if url.strip()
                     ]
                     if not urls:
-                        raise gr.Error("Please provide valid image URLs!")
+                        raise gr.Error("Please provide valid media URLs!")
 
-                    urls = urls[:max_input_images]
-
-                    try:
-                        image_paths = await download_images_async(urls, request_dir)
-                    except Exception as e:
-                        if Path(request_dir).exists():
-                            shutil.rmtree(request_dir)
-                        raise gr.Error(f"Failed to download images: {str(e)}")
-                else:  # Upload mode
-                    if not input_images_upload_value:
+                    if is_video:
+                        if last_frame_url_value:
+                            urls.append(last_frame_url_value)
+                        try:
+                            downloaded_paths = await download_files(urls, request_dir)
+                            image_paths = [downloaded_paths[0]]
+                            if len(downloaded_paths) > 1:
+                                last_frame_path = downloaded_paths[1]
+                        except Exception as e:
+                            if Path(request_dir).exists():
+                                shutil.rmtree(request_dir)
+                            raise gr.Error(f"Failed to download media: {str(e)}")
+                    else:
+                        # For image, all URLs are input images
+                        urls = urls[:max_input_images]
+                        try:
+                            image_paths = await download_files(urls, request_dir)
+                        except Exception as e:
+                            if Path(request_dir).exists():
+                                shutil.rmtree(request_dir)
+                            raise gr.Error(f"Failed to download images: {str(e)}")
+                else:  # File Upload mode
+                    if not input_image_upload_value:
                         raise gr.Error("Please upload at least one image!")
 
-                    if isinstance(input_images_upload_value, list):
-                        image_paths = input_images_upload_value[:max_input_images]
+                    if is_video:
+                        image_paths = [input_image_upload_value]
+                        last_frame_path = last_frame_upload_value
                     else:
-                        image_paths = [input_images_upload_value]
+                        if isinstance(input_image_upload_value, list):
+                            image_paths = input_image_upload_value[:max_input_images]
+                        else:
+                            image_paths = [input_image_upload_value]
 
             return {
                 "request_dir": request_dir,
                 "image_paths": image_paths,
+                "last_frame_path": last_frame_path,
                 "prompt": prompt_value,
                 "aspect_ratio": aspect_ratio_value,
                 "resolution": resolution_value,
@@ -265,6 +332,7 @@ def create_model_interface(
                 aspect_ratio=prepared_inputs["aspect_ratio"],
                 resolution=prepared_inputs["resolution"],
                 image_paths=prepared_inputs["image_paths"],
+                last_frame_path=prepared_inputs["last_frame_path"],
                 seed=prepared_inputs["seed"],
                 negative_prompt=prepared_inputs["negative_prompt"],
                 postprocess=prepared_inputs["postprocess"],
@@ -279,8 +347,10 @@ def create_model_interface(
             seed_value,
             postprocess_value=False,
             input_mode_value=None,
-            input_images_upload_value=None,
-            input_images_url_value=None,
+            input_image_upload_value=None,
+            input_image_url_value=None,
+            last_frame_upload_value=None,
+            last_frame_url_value=None,
         ):
             """Main generation function that coordinates preprocessing and GPU execution."""
             request_dir = None
@@ -293,12 +363,13 @@ def create_model_interface(
                     seed_value,
                     postprocess_value,
                     input_mode_value,
-                    input_images_upload_value,
-                    input_images_url_value,
+                    input_image_upload_value,
+                    input_image_url_value,
+                    last_frame_upload_value,
+                    last_frame_url_value,
                 )
 
                 request_dir = prepared_inputs["request_dir"]
-
                 result = generate_on_gpu(prepared_inputs)
 
                 if isinstance(result, ProcessedOutput):
@@ -311,7 +382,6 @@ def create_model_interface(
                         result.thumbhash,
                     )
                 else:
-                    # No postprocessing - just return the image path
                     return (
                         result,
                         gr.update(visible=False),
@@ -323,7 +393,6 @@ def create_model_interface(
             except Exception as e:
                 raise gr.Error(f"Generation failed: {str(e)}")
             finally:
-                # Clean up temporary directory
                 if request_dir and Path(request_dir).exists():
                     try:
                         shutil.rmtree(request_dir)
@@ -342,15 +411,28 @@ def create_model_interface(
             inputs_list.append(postprocess_checkbox)
 
         if max_input_images > 0:
-            inputs_list.extend([input_mode, input_images_upload, input_images_url])
+            inputs_list.extend(
+                [
+                    input_mode,
+                    input_image_upload,
+                    input_image_url,
+                ]
+            )
+            if is_video:
+                inputs_list.extend(
+                    [
+                        last_frame_upload,
+                        last_frame_url,
+                    ]
+                )
 
         generate_btn.click(
             fn=generate,
             inputs=inputs_list,
             outputs=[
-                output_image,
+                output_media,
                 postprocess_row,
-                thumbnail_image,
+                thumbnail,
                 nsfw_level,
                 quality_score,
                 thumbhash,
@@ -365,25 +447,34 @@ def create_model_interface(
         "seed": seed,
         "postprocess_checkbox": postprocess_checkbox,
         "input_mode": input_mode,
-        "input_images_upload": input_images_upload,
-        "input_images_url": input_images_url,
-        "output_image": output_image,
+        "input_image_upload": input_image_upload,
+        "input_image_url": input_image_url,
+        "output_media": output_media,
     }
 
 
-def create_app(
+def create_gradio_app(
     pipeline: GenerationPipeline,
-    title: gr.Component,
+    title: str,
     postprocessing_supported: bool = False,
 ):
     """Create the main Gradio application with tabs for different models."""
 
     with gr.Blocks(theme=gr.themes.Soft()) as app:
-        title
+        gr.Markdown(
+            title,
+            elem_classes=["text-center"],
+        )
 
         with gr.Tabs():
             for model in pipeline.models:
                 max_input_images = getattr(model, "max_input_images", 0)
+
+                if max_input_images == 0 and model.generation_type in [
+                    GenerationType.I2I,
+                    GenerationType.I2V,
+                ]:
+                    max_input_images = 1
 
                 with gr.Tab(model.model_name):
                     create_model_interface(
@@ -393,34 +484,10 @@ def create_app(
                         max_input_images=max_input_images,
                         default_negative_prompt=model.default_negative_prompt,
                         postprocessing_supported=postprocessing_supported,
+                        model=model,
                     )
 
     return app
 
 
-if __name__ == "__main__":
-    qwen_image_edit_path, qwen_image_path = download_qwen_models()
-    image_scorer_path = download_image_scorer()
-
-    qwen_image = QwenImageLite(qwen_image_path)
-    qwen_image_edit = QwenImageEditLite(qwen_image_edit_path)
-
-    pipeline = GenerationPipeline(
-        models=[qwen_image, qwen_image_edit],
-        nsfw_detector=NsfwDetector(),
-        image_scorer=ImageScorer(image_scorer_path),
-        video_scorer=None,
-    )
-
-    app = create_app(
-        pipeline,
-        postprocessing_supported=False,
-        title=gr.Markdown(
-            """
-            # 🎨 Qwen Image Generation and Editing
-            Create stunning images with the latest Qwen models
-            """,
-            elem_classes=["text-center"],
-        ),
-    )
-    app.launch()
+__all__ = [create_gradio_app]
