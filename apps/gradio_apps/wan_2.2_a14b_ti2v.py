@@ -1,6 +1,14 @@
 import sys
+from pathlib import Path
 
-sys.path.insert(0, ".")
+sys.path.insert(
+    0,
+    str(
+        next(
+            parent for parent in Path(__file__).parents if parent.name == "turbogen"
+        ).resolve()
+    ),
+)
 
 from model_downloads import download_wan22_models, download_video_scorer
 from models.lightx2v_models import Wan22Lite
