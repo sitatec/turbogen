@@ -27,8 +27,8 @@ if __name__ == "__main__":
         pipeline,
         postprocessing_supported=True,
         title="""
-            # 🎨 Z-Image-Turbo 
-            Lightning fast image generation with the Z-Image-Turbo model
+            # 🎨 Z-Image 
+            Lightning fast image generation with the Z-Image models
             """,
     )
     app.launch()

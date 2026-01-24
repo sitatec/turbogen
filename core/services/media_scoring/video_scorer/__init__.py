@@ -1,4 +1,3 @@
-import os
 import math
 from pathlib import Path
 from collections.abc import Mapping
@@ -95,12 +94,6 @@ class VideoScorer:
             return type(data)(self._prepare_input(v) for v in data)
         elif isinstance(data, torch.Tensor):
             kwargs = {"device": self.device}
-            ## TODO: Maybe need to add dtype
-            # if self.is_deepspeed_enabled and (torch.is_floating_point(data) or torch.is_complex(data)):
-            #     # NLP models inputs are int/uint and those get adjusted to the right dtype of the
-            #     # embedding. Other models such as wav2vec2's inputs are already float and thus
-            #     # may need special handling to match the dtypes of the model
-            #     kwargs.update({"dtype": self.accelerator.state.deepspeed_plugin.hf_ds_config.dtype()})
             return data.to(**kwargs)
         return data
 
