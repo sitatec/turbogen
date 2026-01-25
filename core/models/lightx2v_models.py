@@ -383,7 +383,7 @@ class Wan22Lite(_BaseLightx2vModel):
     ):
         super().__init__(
             model_id="m",
-            model_name="Wan 2.2 A14B",
+            model_name=f"Wan 2.2 A14B {generation_type.value.upper()}",
             model_cls="wan2.2_moe_distill",
             generation_type=generation_type,
             model_path=str(model_path),

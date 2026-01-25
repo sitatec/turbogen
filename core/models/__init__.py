@@ -1,4 +1,4 @@
-from core.models import (
+from core.models.lightx2v_models import (
     QwenImageLite,
     QwenImageEditLite,
     ZImageTurbo,

@@ -14,20 +14,25 @@ sys.path.insert(
 
 from cog import BasePredictor, Input, Path as CogPath
 from core.generation_pipeline import GenerationPipeline
-from core.models import QwenImageLite, QwenImageEditLite
-from model_downloads import download_qwen_models
+from core.models.base_model import GenerationType
+from core.models import Wan22Lite
+from model_downloads import download_wan22_models
 
 
 class Model(BasePredictor):
     # pyrefly: ignore
     def setup(self) -> None:
-        qwen_image_edit_path, qwen_image_path = download_qwen_models()
+        wan22_i2v_path, wan22_t2v_path = download_wan22_models()
 
-        self.qwen_image = QwenImageLite(model_path=qwen_image_path)
-        self.qwen_image_edit = QwenImageEditLite(model_path=qwen_image_edit_path)
+        self.wan22_t2v = Wan22Lite(
+            model_path=wan22_t2v_path, generation_type=GenerationType.T2V
+        )
+        self.wan22_i2v = Wan22Lite(
+            model_path=wan22_i2v_path, generation_type=GenerationType.I2V
+        )
 
         self.pipeline = GenerationPipeline(
-            models=[self.qwen_image, self.qwen_image_edit],
+            models=[self.wan22_t2v, self.wan22_i2v],
             nsfw_detector=None,
             image_scorer=None,
             video_scorer=None,
@@ -36,24 +41,21 @@ class Model(BasePredictor):
     # pyrefly: ignore
     def predict(
         self,
-        prompt: str = Input(description="Description of the image"),
-        images: list[CogPath] = Input(
-            description="Input image for image editing with. If provided, the edit model will be used.",
+        prompt: str = Input(description="Description of the video"),
+        image: CogPath = Input(
+            description="Input image for Image-To-Video",
             default=None,
         ),
         aspect_ratio: str = Input(
-            default="1:1",
-            choices=[
-                "1:1",
-                "16:9",
-                "9:16",
-                "4:3",
-                "3:4",
-                "3:2",
-                "2:3",
-                "5:4",
-                "4:5",
-            ],
+            default="16:9",
+            choices=["16:9", "9:16"],
+        ),
+        resolution: str = Input(
+            default="720p",
+            choices=["480p", "720p"],
+        ),
+        last_frame: CogPath = Input(
+            default=None,
         ),
         seed: int = Input(
             description="Random seed. Set to -1 for random.",
@@ -62,19 +64,17 @@ class Model(BasePredictor):
     ) -> CogPath:
         t = time.perf_counter()
 
-        if images:
-            model_id = self.qwen_image_edit.model_id
-            resolution = "1K"
-            image_paths = [str(image) for image in images]
+        if image:
+            model_id = self.wan22_i2v.model_id
+            image_paths = [str(image)]
             print(
-                f"Generating with model={self.qwen_image_edit.model_name}, aspect_ratio={aspect_ratio}..."
+                f"Generating with model={self.wan22_i2v.model_name}, resolution={resolution}, aspect_ratio={aspect_ratio}..."
             )
         else:
-            model_id = self.qwen_image.model_id
-            resolution = "1.3K"
+            model_id = self.wan22_t2v.model_id
             image_paths = []
             print(
-                f"Generating with model={self.qwen_image.model_name}, aspect_ratio={aspect_ratio}..."
+                f"Generating with model={self.wan22_t2v.model_name}, resolution={resolution}, aspect_ratio={aspect_ratio}..."
             )
 
         output_path = self.pipeline.generate(
@@ -82,6 +82,7 @@ class Model(BasePredictor):
             prompt=prompt,
             aspect_ratio=aspect_ratio,
             image_paths=image_paths,
+            last_frame_path=str(last_frame) if last_frame else None,
             seed=seed,
             resolution=resolution,
             postprocess=False,
