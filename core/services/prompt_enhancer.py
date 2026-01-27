@@ -291,7 +291,15 @@ Return a single JSON object that strictly follows this JSON schema:
 """
 
 
+class SafetyViolationError(Exception):
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(f"Safety violation: {reason}")
+
+
 class PromptEnhancer:
+    """Serves as a Prompt Enhancer and Safety Guard"""
+
     def __init__(self, model_path: Path):
         self.model = Qwen3VLForConditionalGeneration.from_pretrained(
             model_path,
@@ -303,7 +311,7 @@ class PromptEnhancer:
 
     def enhance_prompt(
         self, prompt: str, generation_type: GenerationType, images: list[str] = []
-    ) -> dict:
+    ) -> str:
         messages = [
             {
                 "role": "system",
@@ -331,7 +339,12 @@ class PromptEnhancer:
             clean_up_tokenization_spaces=False,
         )[0]
 
-        return self._parse_json(output_text)
+        parsed = self._parse_json(output_text)
+        if not parsed["is_safe"]:
+            reason = parsed.get("unsafe_reason") or "Unknown"
+            raise SafetyViolationError(reason)
+
+        return parsed["enhanced_prompt"]
 
     def _get_user_message(self, prompt: str, images: list[str]) -> dict:
         user_content = []
@@ -349,10 +362,16 @@ class PromptEnhancer:
             case GenerationType.T2I:
                 return IMAGE_GENERATION_SYS_PROMPT + output_format
             case GenerationType.I2I:
+                assert num_images > 0, (
+                    "At least one image is required for image editing"
+                )
                 return IMAGE_EDITING_SYS_PROMPT + output_format
             case GenerationType.T2V:
                 return TEXT_TO_VIDEO_SYS_PROMPT + output_format
             case GenerationType.I2V:
+                assert num_images > 0, (
+                    "At least one image is required for image to video"
+                )
                 if num_images == 2:
                     return FIRST_LAST_FRAME_SYS_PROMPT + output_format
                 else:
@@ -361,26 +380,32 @@ class PromptEnhancer:
                 raise Exception(f"Unsupported generation type: {generation_type}")
 
     def _parse_json(self, text: str) -> dict:
+        json_data = {}
         try:
-            # Naive parsing
-            return json.loads(text)
+            json_data = json.loads(text)
         except json.JSONDecodeError:
             # Try to find JSON block
             match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
             if match:
                 try:
-                    return json.loads(match.group(1))
+                    json_data = json.loads(match.group(1))
                 except json.JSONDecodeError:
                     pass
             # Try finding first { and last }
             match = re.search(r"\{.*\}", text, re.DOTALL)
             if match:
                 try:
-                    return json.loads(match.group(0))
+                    json_data = json.loads(match.group(0))
                 except json.JSONDecodeError:
                     pass
 
-            raise Exception("Failed to parse json")
+        if (
+            not isinstance(json_data.get("is_safe"), bool)
+            or not json_data.get("enhanced_prompt", "").strip()
+        ):
+            raise Exception("Failed to enhance prompt")
+
+        return json_data
 
 
 __all__ = ["PromptEnhancer"]

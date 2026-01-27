@@ -10,10 +10,15 @@ sys.path.insert(
     ),
 )
 
-from model_downloads import download_qwen_models, download_image_scorer
+from model_downloads import (
+    download_qwen_models,
+    download_image_scorer,
+    download_prompt_enhancer,
+)
 from core.models import QwenImageLite, QwenImageEditLite
 from core.generation_pipeline import GenerationPipeline
 from core.services.media_scoring.image_scorer import ImageScorer
+from core.services.prompt_enhancer import PromptEnhancer
 from core.services.nsfw_detector import NsfwDetector
 from apps.gradio_apps.ui_factory import create_gradio_app
 
@@ -21,6 +26,7 @@ from apps.gradio_apps.ui_factory import create_gradio_app
 if __name__ == "__main__":
     qwen_image_edit_path, qwen_image_path = download_qwen_models()
     image_scorer_path = download_image_scorer()
+    prompt_enhancer_path = download_prompt_enhancer()
 
     qwen_image = QwenImageLite(qwen_image_path)
     qwen_image_edit = QwenImageEditLite(qwen_image_edit_path)
@@ -29,7 +35,7 @@ if __name__ == "__main__":
         models=[qwen_image, qwen_image_edit],
         nsfw_detector=NsfwDetector(),
         image_scorer=ImageScorer(image_scorer_path),
-        video_scorer=None,
+        prompt_enhancer=PromptEnhancer(prompt_enhancer_path),
     )
 
     app = create_gradio_app(

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 import torch
 from transformers import AutoProcessor
-from core.services.media_scoring.utils import process_vision_info
+from core.services.media_scoring.qwen2_vision_processing import process_vision_info
 from core.services.media_scoring.video_scorer.utils import build_prompt
 from core.services.media_scoring.video_scorer.utils import (
     load_configs_from_json,

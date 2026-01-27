@@ -31,12 +31,7 @@ class Model(BasePredictor):
             model_path=wan22_i2v_path, generation_type=GenerationType.I2V
         )
 
-        self.pipeline = GenerationPipeline(
-            models=[self.wan22_t2v, self.wan22_i2v],
-            nsfw_detector=None,
-            image_scorer=None,
-            video_scorer=None,
-        )
+        self.pipeline = GenerationPipeline(models=[self.wan22_t2v, self.wan22_i2v])
 
     # pyrefly: ignore
     def predict(

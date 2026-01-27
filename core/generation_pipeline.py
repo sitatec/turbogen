@@ -7,6 +7,7 @@ import torch
 from core.models.base_model import BaseModel, GenerationType
 from core.services.nsfw_detector import NsfwDetector, NsfwLevel
 from core.services.media_scoring import ImageScorer, VideoScorer
+from core.services.prompt_enhancer import PromptEnhancer
 from core.utils.video_utils import save_video_tensor
 from core.utils.image_utils import (
     create_exif_data,
@@ -30,9 +31,10 @@ class GenerationPipeline:
     def __init__(
         self,
         models: list[BaseModel],
-        nsfw_detector: NsfwDetector | None,
-        image_scorer: ImageScorer | None,
-        video_scorer: VideoScorer | None,
+        prompt_enhancer: PromptEnhancer | None = None,
+        nsfw_detector: NsfwDetector | None = None,
+        image_scorer: ImageScorer | None = None,
+        video_scorer: VideoScorer | None = None,
     ):
         assert len(models) > 0, "The models argument cannot be empty"
 
@@ -40,6 +42,7 @@ class GenerationPipeline:
         self.nsfw_detector = nsfw_detector
         self.image_scorer = image_scorer
         self.video_scorer = video_scorer
+        self.prompt_enhancer = prompt_enhancer
 
     def generate(
         self,
@@ -54,7 +57,8 @@ class GenerationPipeline:
         steps: int | None = None,
         guidance_scale: float | None = None,
         duration_seconds: float | None = None,
-        postprocess: bool = True,
+        postprocess: bool = False,
+        enhance_prompt: bool = False,
         output_dir_path: str | None = None,
         metadata: dict | None = None,
     ) -> ProcessedOutput | str:
@@ -69,6 +73,12 @@ class GenerationPipeline:
         )
         if model is None:
             raise ValueError(f"Model {model_id} not found")
+
+        if enhance_prompt:
+            assert self.prompt_enhancer is not None, "Prompt Enhancer not initialized"
+            prompt = self.prompt_enhancer.enhance_prompt(
+                prompt, model.generation_type, image_paths
+            )
 
         output = model.generate(
             prompt=prompt,

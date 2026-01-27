@@ -12,7 +12,7 @@ from transformers import (
     CLIPModel,
 )
 
-from core.services.media_scoring.utils import process_vision_info
+from core.services.media_scoring.qwen2_vision_processing import process_vision_info
 from core.utils import attention_backend
 
 

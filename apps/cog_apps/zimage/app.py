@@ -25,12 +25,7 @@ class Model(BasePredictor):
 
         self.zimage = ZImageTurbo(model_path=zimage_path)
 
-        self.pipeline = GenerationPipeline(
-            models=[self.zimage],
-            nsfw_detector=None,
-            image_scorer=None,
-            video_scorer=None,
-        )
+        self.pipeline = GenerationPipeline(models=[self.zimage])
 
     # pyrefly: ignore
     def predict(

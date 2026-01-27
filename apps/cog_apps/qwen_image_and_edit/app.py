@@ -27,10 +27,7 @@ class Model(BasePredictor):
         self.qwen_image_edit = QwenImageEditLite(model_path=qwen_image_edit_path)
 
         self.pipeline = GenerationPipeline(
-            models=[self.qwen_image, self.qwen_image_edit],
-            nsfw_detector=None,
-            image_scorer=None,
-            video_scorer=None,
+            models=[self.qwen_image, self.qwen_image_edit]
         )
 
     # pyrefly: ignore
