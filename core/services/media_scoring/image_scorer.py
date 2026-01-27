@@ -12,7 +12,8 @@ from transformers import (
     CLIPModel,
 )
 
-from core.services.media_scoring.utils import process_vision_info, attention_backend
+from core.services.media_scoring.utils import process_vision_info
+from core.utils import attention_backend
 
 
 class ImageScorer:

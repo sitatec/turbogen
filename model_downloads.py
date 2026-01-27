@@ -7,7 +7,7 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
 _ROOT_DIR = Path(__file__).parent / "_model_weights"
 
-SCORING_MODELS_DIR = (_ROOT_DIR / "scoring_models").resolve()
+_SCORING_MODELS_DIR = (_ROOT_DIR / "scoring_models").resolve()
 
 
 def download_qwen_models() -> tuple[Path, Path]:
@@ -124,9 +124,9 @@ def download_wan22_models():
 
 def download_video_scorer() -> Path:
     """
-    Download VideoReward model.
+    Download the VideoReward model.
     """
-    video_reward_path = SCORING_MODELS_DIR / "VideoReward"
+    video_reward_path = _SCORING_MODELS_DIR / "VideoReward"
 
     hf_hub.snapshot_download(
         repo_id="sitatech/VideoReward",
@@ -138,23 +138,20 @@ def download_video_scorer() -> Path:
 
 def download_image_scorer() -> Path:
     """
-    Download Image Scorer models.
+    Download the TianheWu/VisualQuality-R1-7B, aesthetic-predictor-v2 and clip-vit-large-patch14-336 models.
     """
-    image_scorer_path = SCORING_MODELS_DIR / "image_scorer"
+    image_scorer_path = _SCORING_MODELS_DIR / "image_scorer"
 
-    # Visual Quality R1
     hf_hub.snapshot_download(
         repo_id="TianheWu/VisualQuality-R1-7B",
         local_dir=image_scorer_path / "visual_quality_r1",
     )
 
-    # CLIP ViT-L/14
     hf_hub.snapshot_download(
         repo_id="openai/clip-vit-large-patch14-336",
         local_dir=image_scorer_path / "clip-vit-l14",
     )
 
-    # Aesthetic Predictor V2
     hf_hub.hf_hub_download(
         repo_id="sitatech/aesthetic-predictor-v2",
         filename="sac+logos+ava1-l14-linearMSE.pth",
@@ -162,6 +159,20 @@ def download_image_scorer() -> Path:
     )
 
     return image_scorer_path.resolve()
+
+
+def download_prompt_enhancer() -> Path:
+    """
+    Download the Qwen3-VL-8B-Instruct model.
+    """
+    model_path = _ROOT_DIR / "prompt_enhancer"
+
+    hf_hub.snapshot_download(
+        repo_id="Qwen/Qwen3-VL-8B-Instruct",
+        local_dir=model_path,
+    )
+
+    return model_path.resolve()
 
 
 def _symlink_common_components(

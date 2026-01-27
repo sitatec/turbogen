@@ -11,7 +11,7 @@ from core.services.media_scoring.video_scorer.utils import (
     ModelConfig,
     DataConfig,
 )
-from core.services.media_scoring.utils import attention_backend
+from core.utils import attention_backend
 from core.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
 
 
