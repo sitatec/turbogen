@@ -1,3 +1,4 @@
+from lightx2v.models.runners.default_runner import DefaultRunner
 from pathlib import Path
 from core.models.base_model import BaseModel, GenerationType
 import torch
@@ -106,6 +107,7 @@ class _BaseLightx2vModel(BaseModel):
         compile: bool = False,
         default_negative_prompt: str | None = None,
         lora_configs: list[dict] | None = None,
+        supports_last_frame: bool = False,  # Only relevant for I2V gen type
         enable_cpu_offload: bool = False,
         quant_scheme: str | None = None,
         text_encoder_quantized: bool = False,
@@ -166,6 +168,18 @@ class _BaseLightx2vModel(BaseModel):
                     for resolutions in aspect_ratios.values()
                     for shape in resolutions.values()
                 ]
+            )
+
+        if generation_type == GenerationType.I2V and supports_last_frame:
+
+            def encode_input(self: DefaultRunner):
+                if self.input_info and self.input_info.last_frame_path:
+                    return self._run_input_encoder_local_flf2v()
+
+                return self._run_input_encoder_local_i2v()
+
+            self.pipe.runner.run_input_encoder = types.MethodType(
+                encode_input, self.pipe.runner
             )
 
     @override
@@ -386,6 +400,7 @@ class Wan22Lite(_BaseLightx2vModel):
             model_name=f"Wan 2.2 A14B {generation_type.value.upper()}",
             model_cls="wan2.2_moe_distill",
             generation_type=generation_type,
+            supports_last_frame=True,
             model_path=str(model_path),
             compile=compile,
             attention_backend="sage_attn2",

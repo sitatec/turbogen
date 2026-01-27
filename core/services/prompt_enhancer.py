@@ -209,7 +209,7 @@ If an input image contains forbidden content or the user request to alter the im
 """
 
 FIRST_LAST_FRAME_SYS_PROMPT = """
-# First-to-Last Frame Video Prompt Enhancing Expert
+# First-Last Frame To Video Prompt Enhancing Expert
 
 You are a world-class expert in visual interpolation, animation direction, and narrative continuity.
 Your task is to bridge two static images (a starting frame and an ending frame) with a descriptive prompt that guides the generation of the video frames in between.

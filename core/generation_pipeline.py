@@ -75,9 +75,11 @@ class GenerationPipeline:
             raise ValueError(f"Model {model_id} not found")
 
         if enhance_prompt:
-            assert self.prompt_enhancer is not None, "Prompt Enhancer not initialized"
-            prompt = self.prompt_enhancer.enhance_prompt(
-                prompt, model.generation_type, image_paths
+            prompt = self._enhance_prompt(
+                prompt,
+                model.generation_type,
+                image_paths,
+                last_frame_path,
             )
 
         output = model.generate(
@@ -101,6 +103,27 @@ class GenerationPipeline:
 
         return self._save_output(
             output, model.generation_type, output_dir_path, metadata
+        )
+
+    def _enhance_prompt(
+        self,
+        prompt: str,
+        generation_type: GenerationType,
+        image_paths: list[str],
+        last_frame_path: str | None,
+    ):
+        assert self.prompt_enhancer is not None, "Prompt Enhancer not initialized"
+        input_images = image_paths
+
+        if generation_type == GenerationType.I2V:
+            assert len(input_images) == 1, (
+                "Only 1 input image is supported for I2V, if you want to provide a last frame, use the last_frame_path instead"
+            )
+            if last_frame_path:
+                input_images.append(last_frame_path)
+
+        return self.prompt_enhancer.enhance_prompt(
+            prompt, generation_type, input_images
         )
 
     def _process_and_save_output(
