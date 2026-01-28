@@ -81,6 +81,8 @@ class GenerationPipeline:
                 image_paths,
                 last_frame_path,
             )
+            if metadata:
+                metadata["enhanced_prompt"] = prompt
 
         output = model.generate(
             prompt=prompt,

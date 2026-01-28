@@ -4,7 +4,7 @@ import shutil
 import asyncio
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 
 import spaces
@@ -45,6 +45,8 @@ def create_model_interface(
     aspect_ratios: dict[str, dict[str, tuple[int, int]]],
     max_input_images: int = 0,
     postprocessing_supported: bool = False,
+    pre_gen_hook: Callable[[dict], dict | None] | None = None,
+    post_gen_hook: Callable[[ProcessedOutput | str], None] | None = None,
 ):
     """
     Create a reusable Gradio interface for image and video generation models.
@@ -56,6 +58,8 @@ def create_model_interface(
         aspect_ratios: Dictionary of available aspect ratios and resolutions
         max_input_images: Maximum number of input images
         postprocessing_supported: Whether postprocessing (NSFW, quality scoring,...) is supported
+        pre_gen_hook: Called before generation starts (can be for used to prepare metadata for e.g.), this was added for internal use, it is currently not used in this repo, but feel free to use it.
+        post_gen_hook: Called after generation ends, this was added for internal use, it is currently not used in this repo, but feel free to use it.
     """
 
     is_video = model.generation_type.is_video
@@ -249,6 +253,8 @@ def create_model_interface(
             negative_prompt_value,
             seed_value,
             postprocess_value,
+            request,
+            model,
             input_mode_value=None,
             input_image_upload_value=None,
             input_image_url_value=None,
@@ -263,6 +269,10 @@ def create_model_interface(
             image_paths = []
             last_frame_path = None
 
+            # We preserve the original urls for metadata.
+            image_urls = None
+            last_frame_url = None
+
             if max_input_images > 0:
                 if input_mode_value == "Image URL":
                     if not input_image_url_value:
@@ -275,9 +285,10 @@ def create_model_interface(
                     ]
                     if not urls:
                         raise gr.Error("Please provide valid media URLs!")
-
+                    image_urls = urls
                     if is_video:
                         if last_frame_url_value:
+                            last_frame_url = last_frame_url_value
                             urls.append(last_frame_url_value)
                         try:
                             downloaded_paths = await download_files(urls, request_dir)
@@ -310,7 +321,7 @@ def create_model_interface(
                         else:
                             image_paths = [input_image_upload_value]
 
-            return {
+            prepared_inputs = {
                 "request_dir": request_dir,
                 "image_paths": image_paths,
                 "last_frame_path": last_frame_path,
@@ -324,8 +335,23 @@ def create_model_interface(
                 "postprocess": postprocess_value if postprocessing_supported else False,
             }
 
+            if pre_gen_hook:
+                metadata = pre_gen_hook(
+                    {
+                        "model": model,
+                        "request": request,
+                        "image_urls": image_urls,
+                        "last_frame_url": last_frame_url,
+                        **prepared_inputs,
+                    }
+                )
+                if metadata:
+                    prepared_inputs["metadata"] = metadata
+
+            return prepared_inputs
+
         @spaces.GPU
-        def generate_on_gpu(prepared_inputs):
+        def generate_on_gpu(prepared_inputs: dict):
             return pipeline.generate(
                 model_id=model_id,
                 prompt=prepared_inputs["prompt"],
@@ -337,6 +363,7 @@ def create_model_interface(
                 negative_prompt=prepared_inputs["negative_prompt"],
                 postprocess=prepared_inputs["postprocess"],
                 output_dir_path=prepared_inputs["request_dir"],
+                metadata=prepared_inputs.get("metadata"),
             )
 
         async def generate(
@@ -351,6 +378,8 @@ def create_model_interface(
             input_image_url_value=None,
             last_frame_upload_value=None,
             last_frame_url_value=None,
+            request: gr.Request = gr.Request(),
+            progress=gr.Progress(track_tqdm=True),
         ):
             """Main generation function that coordinates preprocessing and GPU execution."""
             request_dir = None
@@ -362,6 +391,8 @@ def create_model_interface(
                     negative_prompt_value,
                     seed_value,
                     postprocess_value,
+                    request,
+                    model,
                     input_mode_value,
                     input_image_upload_value,
                     input_image_url_value,
@@ -371,6 +402,9 @@ def create_model_interface(
 
                 request_dir = prepared_inputs["request_dir"]
                 result = generate_on_gpu(prepared_inputs)
+
+                if post_gen_hook:
+                    post_gen_hook(result)
 
                 if isinstance(result, ProcessedOutput):
                     return (
@@ -428,6 +462,7 @@ def create_model_interface(
 
         generate_btn.click(
             fn=generate,
+            show_progress_on=output_media,
             inputs=inputs_list,
             outputs=[
                 output_media,
@@ -457,6 +492,8 @@ def create_gradio_app(
     pipeline: GenerationPipeline,
     title: str,
     postprocessing_supported: bool = False,
+    pre_gen_hook: Callable[[dict], dict | None] | None = None,
+    post_gen_hook: Callable[[ProcessedOutput | str], None] | None = None,
 ):
     """Create the main Gradio application with tabs for different models."""
 
@@ -485,6 +522,8 @@ def create_gradio_app(
                         default_negative_prompt=model.default_negative_prompt,
                         postprocessing_supported=postprocessing_supported,
                         model=model,
+                        pre_gen_hook=pre_gen_hook,
+                        post_gen_hook=post_gen_hook,
                     )
 
     return app
