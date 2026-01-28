@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import os
+import uuid
 import shutil
 import asyncio
+import random
 from pathlib import Path
-from tempfile import mkdtemp
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Any
 
 
 import spaces
 import aiohttp
 import gradio as gr
+import numpy as np
 from core.models.base_model import GenerationType
 
 if TYPE_CHECKING:
@@ -26,7 +29,7 @@ async def download_file(session: aiohttp.ClientSession, url: str, output_path: s
         return output_path
 
 
-async def download_files(urls: list[str], request_dir: str) -> list[str]:
+async def download_files(urls: list[str], request_dir: str | Path) -> list[str]:
     """Download multiple images asynchronously."""
     async with aiohttp.ClientSession() as session:
         tasks = []
@@ -35,6 +38,13 @@ async def download_files(urls: list[str], request_dir: str) -> list[str]:
             output_path = f"{request_dir}/input_{i}{ext}"
             tasks.append(download_file(session, url, output_path))
         return await asyncio.gather(*tasks)
+
+
+async def call_callback(callback, *args, **kwargs):
+    if asyncio.iscoroutinefunction(callback):
+        return await callback(*args, **kwargs)
+    else:
+        return callback(*args, **kwargs)
 
 
 def create_model_interface(
@@ -46,7 +56,9 @@ def create_model_interface(
     max_input_images: int = 0,
     postprocessing_supported: bool = False,
     pre_gen_hook: Callable[[dict], dict | None] | None = None,
-    post_gen_hook: Callable[[ProcessedOutput | str], None] | None = None,
+    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None]
+    | None = None,
+    inference_dir: str = "/tmp/inference_requests",
 ):
     """
     Create a reusable Gradio interface for image and video generation models.
@@ -158,6 +170,14 @@ def create_model_interface(
                     value=default_negative_prompt,
                 )
 
+                num_outputs = gr.Slider(
+                    label="Number of Outputs",
+                    minimum=1,
+                    maximum=4,
+                    step=1,
+                    value=1,
+                )
+
                 postprocess_checkbox = None
                 if postprocessing_supported:
                     postprocess_checkbox = gr.Checkbox(
@@ -172,15 +192,13 @@ def create_model_interface(
             )
 
         with gr.Column():
-            if is_video:
-                output_media = gr.Video(
-                    label=f"Generated {media_type_label}",
-                )
-            else:
-                output_media = gr.Image(
-                    label=f"Generated {media_type_label}",
-                    type="filepath",
-                )
+            output_media = gr.Gallery(
+                label=f"Generated {media_type_label}s",
+                columns=2,
+                rows=2,
+                height="auto",
+                object_fit="contain",
+            )
 
             # Postprocessing outputs (only visible when postprocessing is enabled)
             with gr.Row(visible=False) as postprocess_row:
@@ -253,6 +271,7 @@ def create_model_interface(
             negative_prompt_value,
             seed_value,
             postprocess_value,
+            num_outputs_value,
             request,
             model,
             input_mode_value=None,
@@ -265,7 +284,8 @@ def create_model_interface(
             if not prompt_value:
                 raise gr.Error("Please provide a prompt!")
 
-            request_dir = mkdtemp()
+            request_dir = Path(f"{inference_dir}/{uuid.uuid4()}")
+            request_dir.mkdir(parents=True, exist_ok=True)
             image_paths = []
             last_frame_path = None
 
@@ -305,7 +325,7 @@ def create_model_interface(
                         try:
                             image_paths = await download_files(urls, request_dir)
                         except Exception as e:
-                            if Path(request_dir).exists():
+                            if request_dir.exists():
                                 shutil.rmtree(request_dir)
                             raise gr.Error(f"Failed to download images: {str(e)}")
                 else:  # File Upload mode
@@ -332,18 +352,20 @@ def create_model_interface(
                 if negative_prompt_value
                 else None,
                 "seed": int(seed_value),
+                "num_outputs": int(num_outputs_value),
                 "postprocess": postprocess_value if postprocessing_supported else False,
             }
 
             if pre_gen_hook:
-                metadata = pre_gen_hook(
+                metadata = await call_callback(
+                    pre_gen_hook,
                     {
                         "model": model,
                         "request": request,
                         "image_urls": image_urls,
                         "last_frame_url": last_frame_url,
                         **prepared_inputs,
-                    }
+                    },
                 )
                 if metadata:
                     prepared_inputs["metadata"] = metadata
@@ -351,39 +373,55 @@ def create_model_interface(
             return prepared_inputs
 
         def get_gen_duration(inputs: dict):
-            """Shorter durations can increase the priority of the request in the GPU queue."""
-
+            num_outputs = inputs.get("num_outputs", 1)
+            duration = 50
+            init_time = 10
             model_name = model.model_name.lower()
             if model_name.startswith("qwen"):
                 if model.generation_type == GenerationType.T2I:
-                    return 10
-                return 15
+                    duration = 4
+                else:
+                    duration = 6
             elif model_name.startswith("wan"):
                 if inputs["resolution"] == "480p":
-                    return 30
-                return 60
+                    duration = 20
+                else:
+                    duration = 50
             elif model_name.startswith("z-image-turbo"):
                 if inputs["resolution"] == "1k":
-                    return 10
-                return 15
+                    duration = 5
+                else:
+                    duration = 7
 
-            return 60
+            return duration * num_outputs + init_time
 
         @spaces.GPU(duration=get_gen_duration)
         def generate_on_gpu(prepared_inputs: dict):
-            return pipeline.generate(
-                model_id=model_id,
-                prompt=prepared_inputs["prompt"],
-                aspect_ratio=prepared_inputs["aspect_ratio"],
-                resolution=prepared_inputs["resolution"],
-                image_paths=prepared_inputs["image_paths"],
-                last_frame_path=prepared_inputs["last_frame_path"],
-                seed=prepared_inputs["seed"],
-                negative_prompt=prepared_inputs["negative_prompt"],
-                postprocess=prepared_inputs["postprocess"],
-                output_dir_path=prepared_inputs["request_dir"],
-                metadata=prepared_inputs.get("metadata"),
-            )
+            num_outputs = prepared_inputs.get("num_outputs", 1)
+
+            seed = prepared_inputs.get("seed", -1)
+            if seed == -1:
+                seed = random.randint(1, np.iinfo(np.int32).max)
+
+            for i in range(num_outputs):
+                output_dir = prepared_inputs["request_dir"] / f"output_{i}"
+                output_dir.mkdir(parents=True, exist_ok=True)
+
+                yield pipeline.generate(
+                    model_id=model_id,
+                    prompt=prepared_inputs["prompt"],
+                    aspect_ratio=prepared_inputs["aspect_ratio"],
+                    resolution=prepared_inputs["resolution"],
+                    image_paths=prepared_inputs["image_paths"],
+                    last_frame_path=prepared_inputs["last_frame_path"],
+                    seed=seed,
+                    negative_prompt=prepared_inputs["negative_prompt"],
+                    postprocess=prepared_inputs["postprocess"],
+                    output_dir_path=output_dir,
+                    metadata=prepared_inputs.get("metadata"),
+                )
+
+                seed += 1
 
         async def generate(
             prompt_value,
@@ -391,6 +429,7 @@ def create_model_interface(
             resolution_value,
             negative_prompt_value,
             seed_value,
+            num_outputs_value,
             postprocess_value=False,
             input_mode_value=None,
             input_image_upload_value=None,
@@ -410,6 +449,7 @@ def create_model_interface(
                     negative_prompt_value,
                     seed_value,
                     postprocess_value,
+                    num_outputs_value,
                     request,
                     model,
                     input_mode_value,
@@ -420,29 +460,32 @@ def create_model_interface(
                 )
 
                 request_dir = prepared_inputs["request_dir"]
-                result = generate_on_gpu(prepared_inputs)
+
+                all_outputs = []
+                for output in generate_on_gpu(prepared_inputs):
+                    all_outputs.append(output)
+
+                    if isinstance(output, ProcessedOutput):
+                        yield (
+                            [out.generated_media_path for out in all_outputs],
+                            gr.update(visible=True),
+                            output.thumbnail_path,
+                            output.nsfwLevel.value,
+                            output.quality_score,
+                            output.thumbhash,
+                        )
+                    else:
+                        yield (
+                            all_outputs,
+                            gr.update(visible=False),
+                            None,
+                            None,
+                            None,
+                            None,
+                        )
 
                 if post_gen_hook:
-                    post_gen_hook(result)
-
-                if isinstance(result, ProcessedOutput):
-                    return (
-                        result.generated_media_path,
-                        gr.update(visible=True),
-                        result.thumbnail_path,
-                        result.nsfwLevel.value,
-                        result.quality_score,
-                        result.thumbhash,
-                    )
-                else:
-                    return (
-                        result,
-                        gr.update(visible=False),
-                        None,
-                        None,
-                        None,
-                        None,
-                    )
+                    await call_callback(post_gen_hook, all_outputs, request, None)
             except Exception as e:
                 raise gr.Error(f"Generation failed: {str(e)}")
             finally:
@@ -458,6 +501,7 @@ def create_model_interface(
             resolution,
             negative_prompt,
             seed,
+            num_outputs,
         ]
 
         if postprocessing_supported:
@@ -499,6 +543,7 @@ def create_model_interface(
         "resolution": resolution,
         "negative_prompt": negative_prompt,
         "seed": seed,
+        "num_outputs": num_outputs,
         "postprocess_checkbox": postprocess_checkbox,
         "input_mode": input_mode,
         "input_image_upload": input_image_upload,
@@ -512,7 +557,9 @@ def create_gradio_app(
     title: str,
     postprocessing_supported: bool = False,
     pre_gen_hook: Callable[[dict], dict | None] | None = None,
-    post_gen_hook: Callable[[ProcessedOutput | str], None] | None = None,
+    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None]
+    | None = None,
+    inference_dir: str = "/tmp/inference_requests",
 ):
     """Create the main Gradio application with tabs for different models."""
 
@@ -543,7 +590,10 @@ def create_gradio_app(
                         model=model,
                         pre_gen_hook=pre_gen_hook,
                         post_gen_hook=post_gen_hook,
+                        inference_dir=inference_dir,
                     )
+
+    os.environ["GRADIO_ALLOWED_PATHS"] = inference_dir
 
     return app
 
