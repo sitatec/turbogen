@@ -24,27 +24,28 @@ from core.services.nsfw_detector import NsfwDetector
 from apps.gradio_apps.ui_factory import create_gradio_app
 
 
+wan22_i2v_path, wan22_t2v_path = download_wan22_models()
+video_scorer_path = download_video_scorer()
+prompt_enhancer_path = download_prompt_enhancer()
+
+wan22_i2v = Wan22Lite(wan22_i2v_path, generation_type=GenerationType.I2V)
+wan22_t2v = Wan22Lite(wan22_t2v_path, generation_type=GenerationType.T2V)
+
+pipeline = GenerationPipeline(
+    models=[wan22_i2v, wan22_t2v],
+    nsfw_detector=NsfwDetector(),
+    video_scorer=VideoScorer(video_scorer_path),
+    prompt_enhancer=PromptEnhancer(prompt_enhancer_path),
+)
+
+app = create_gradio_app(
+    pipeline,
+    postprocessing_supported=True,
+    title="""
+        # 🎨 Wan 2.2 A14B Image-To-Video & Text-To-Video
+        Create stunning videos in a flash
+        """,
+)
+
 if __name__ == "__main__":
-    wan22_i2v_path, wan22_t2v_path = download_wan22_models()
-    video_scorer_path = download_video_scorer()
-    prompt_enhancer_path = download_prompt_enhancer()
-
-    wan22_i2v = Wan22Lite(wan22_i2v_path, generation_type=GenerationType.I2V)
-    wan22_t2v = Wan22Lite(wan22_t2v_path, generation_type=GenerationType.T2V)
-
-    pipeline = GenerationPipeline(
-        models=[wan22_i2v, wan22_t2v],
-        nsfw_detector=NsfwDetector(),
-        video_scorer=VideoScorer(video_scorer_path),
-        prompt_enhancer=PromptEnhancer(prompt_enhancer_path),
-    )
-
-    app = create_gradio_app(
-        pipeline,
-        postprocessing_supported=True,
-        title="""
-            # 🎨 Wan 2.2 A14B Image-To-Video & Text-To-Video
-            Create stunning videos in a flash
-            """,
-    )
     app.launch()

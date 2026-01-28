@@ -23,26 +23,27 @@ from core.services.nsfw_detector import NsfwDetector
 from apps.gradio_apps.ui_factory import create_gradio_app
 
 
+zimage_turbo_path = download_zimage_models()
+image_scorer_path = download_image_scorer()
+prompt_enhancer_path = download_prompt_enhancer()
+
+zimage_turbo = ZImageTurbo(zimage_turbo_path)
+
+pipeline = GenerationPipeline(
+    models=[zimage_turbo],
+    nsfw_detector=NsfwDetector(),
+    image_scorer=ImageScorer(image_scorer_path),
+    prompt_enhancer=PromptEnhancer(prompt_enhancer_path),
+)
+
+app = create_gradio_app(
+    pipeline,
+    postprocessing_supported=True,
+    title="""
+        # 🎨 Z-Image 
+        Lightning fast image generation with the Z-Image models
+        """,
+)
+
 if __name__ == "__main__":
-    zimage_turbo_path = download_zimage_models()
-    image_scorer_path = download_image_scorer()
-    prompt_enhancer_path = download_prompt_enhancer()
-
-    zimage_turbo = ZImageTurbo(zimage_turbo_path)
-
-    pipeline = GenerationPipeline(
-        models=[zimage_turbo],
-        nsfw_detector=NsfwDetector(),
-        image_scorer=ImageScorer(image_scorer_path),
-        prompt_enhancer=PromptEnhancer(prompt_enhancer_path),
-    )
-
-    app = create_gradio_app(
-        pipeline,
-        postprocessing_supported=True,
-        title="""
-            # 🎨 Z-Image 
-            Lightning fast image generation with the Z-Image models
-            """,
-    )
     app.launch()
