@@ -350,7 +350,26 @@ def create_model_interface(
 
             return prepared_inputs
 
-        @spaces.GPU
+        def get_gen_duration(inputs: dict):
+            """Shorter durations can increase the priority of the request in the GPU queue."""
+
+            model_name = model.model_name.lower()
+            if model_name.startswith("qwen"):
+                if model.generation_type == GenerationType.T2I:
+                    return 10
+                return 15
+            elif model_name.startswith("wan"):
+                if inputs["resolution"] == "480p":
+                    return 30
+                return 60
+            elif model_name.startswith("z-image-turbo"):
+                if inputs["resolution"] == "1k":
+                    return 10
+                return 15
+
+            return 60
+
+        @spaces.GPU(duration=get_gen_duration)
         def generate_on_gpu(prepared_inputs: dict):
             return pipeline.generate(
                 model_id=model_id,
