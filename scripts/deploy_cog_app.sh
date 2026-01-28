@@ -26,7 +26,7 @@ ensure_command() {
 if [ "$1" == "qwen" ]; then
     cog_app_dir="./apps/qwen_image_and_edit"
 elif [ "$1" == "wan" ]; then
-    cog_app_dir="./apps/wan2.2_a14b_ti2v"
+    cog_app_dir="./apps/wan22_a14b"
 elif [ "$1" == "zimage" ]; then
     cog_app_dir="./apps/zimage"
 fi
