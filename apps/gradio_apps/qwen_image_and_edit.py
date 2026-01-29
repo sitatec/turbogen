@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -10,9 +9,6 @@ sys.path.insert(
         ).resolve()
     ),
 )
-
-if "SPACE_TITLE" in os.environ and "SPACE_REPO_NAME" in os.environ:
-    os.environ["SKIP_PLATFORM_CHECK"] = "1"  # Do not check cuda devices on HF zero GPUs
 
 from apps.gradio_apps.ui_factory import (
     create_gradio_app,  # must be imported first to init ZeroGPU when importing `spaces`
