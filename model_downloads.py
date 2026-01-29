@@ -143,7 +143,7 @@ def download_image_scorer() -> Path:
     image_scorer_path = _SCORING_MODELS_DIR / "image_scorer"
 
     hf_hub.snapshot_download(
-        repo_id="TianheWu/VisualQuality-R1-7B",
+        repo_id="sitatech/VisualQuality-R1-7B-FP8",
         local_dir=image_scorer_path / "visual_quality_r1",
     )
 

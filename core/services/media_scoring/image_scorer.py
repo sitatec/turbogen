@@ -39,7 +39,7 @@ class ImageScorer:
 
         model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             vq_model_path,
-            dtype=torch.bfloat16,
+            dtype="auto",
             attn_implementation=attention_backend,
             device_map=self.device,
         )

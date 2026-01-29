@@ -2,7 +2,6 @@ import re
 import json
 from pathlib import Path
 
-import torch
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 from core.models.base_model import GenerationType
 from core.utils import attention_backend
