@@ -128,7 +128,7 @@ class _BaseLightx2vModel(BaseModel):
         self.pipe = _LightX2VPipeline(
             model_path=model_path,
             model_cls=model_cls,
-            task=generation_type,
+            task=generation_type.value,
         )
 
         if enable_cpu_offload:
