@@ -168,7 +168,7 @@ def download_prompt_enhancer() -> Path:
     model_path = _ROOT_DIR / "prompt_enhancer"
 
     hf_hub.snapshot_download(
-        repo_id="Qwen/Qwen3-VL-8B-Instruct",
+        repo_id="Qwen/Qwen3-VL-8B-Instruct-FP8",
         local_dir=model_path,
     )
 
