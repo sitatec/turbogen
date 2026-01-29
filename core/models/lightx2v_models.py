@@ -9,7 +9,7 @@ import random
 
 import numpy as np
 
-from lightx2v.utils.input_info import set_input_info
+from lightx2v.utils.input_info import init_empty_input_info, update_input_info_from_dict
 from lightx2v import LightX2VPipeline as LightX2VPipelineBase
 from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
 
@@ -42,7 +42,10 @@ class _LightX2VPipeline(LightX2VPipelineBase):
         if seed is None or seed == -1:
             seed = random.randint(1, np.iinfo(np.int32).max)
 
-        input_info = set_input_info(
+        input_info = init_empty_input_info(self.task)
+
+        update_input_info_from_dict(
+            input_info,
             _AttrDict(
                 {
                     **super().__dict__,
@@ -61,7 +64,7 @@ class _LightX2VPipeline(LightX2VPipelineBase):
                         "return_result_tensor": return_result_tensor,
                     },
                 }
-            )
+            ),
         )
 
         if guidance_scale or steps or duration_seconds:
@@ -84,7 +87,7 @@ class _LightX2VPipeline(LightX2VPipelineBase):
             )
 
         result = self.runner.run_pipeline(input_info)
-        is_video = self.task.endswith("2v")
+        is_video = self.task.endswith("2v") or self.task.endswith("2av")
         if is_video:
             return result["video"]
         return result[0].permute(0, 2, 3, 1).squeeze()
