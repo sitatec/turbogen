@@ -14,6 +14,9 @@ sys.path.insert(
 if "SPACE_TITLE" in os.environ and "SPACE_REPO_NAME" in os.environ:
     os.environ["SKIP_PLATFORM_CHECK"] = "1"  # Do not check cuda devices on HF zero GPUs
 
+from apps.gradio_apps.ui_factory import (
+    create_gradio_app,  # must be imported first to init ZeroGPU when importing `spaces`
+)
 from model_downloads import (
     download_wan22_models,
     download_video_scorer,
@@ -25,7 +28,6 @@ from core.generation_pipeline import GenerationPipeline
 from core.services.media_scoring.video_scorer import VideoScorer
 from core.services.prompt_enhancer import PromptEnhancer
 from core.services.nsfw_detector import NsfwDetector
-from apps.gradio_apps.ui_factory import create_gradio_app
 
 
 wan22_i2v_path, wan22_t2v_path = download_wan22_models()

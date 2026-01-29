@@ -14,6 +14,9 @@ sys.path.insert(
 if "SPACE_TITLE" in os.environ and "SPACE_REPO_NAME" in os.environ:
     os.environ["SKIP_PLATFORM_CHECK"] = "1"  # Do not check cuda devices on HF zero GPUs
 
+from apps.gradio_apps.ui_factory import (
+    create_gradio_app,  # must be imported first to init ZeroGPU when importing `spaces`
+)
 from model_downloads import (
     download_qwen_models,
     download_image_scorer,
@@ -24,7 +27,6 @@ from core.generation_pipeline import GenerationPipeline
 from core.services.media_scoring.image_scorer import ImageScorer
 from core.services.prompt_enhancer import PromptEnhancer
 from core.services.nsfw_detector import NsfwDetector
-from apps.gradio_apps.ui_factory import create_gradio_app
 
 
 qwen_image_edit_path, qwen_image_path = download_qwen_models()
