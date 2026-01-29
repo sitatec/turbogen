@@ -28,7 +28,7 @@ def download_qwen_models() -> tuple[Path, Path]:
     # Qwen-Image-Edit-2511-Lightning
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
-        filename="Qwen-Image-Edit-2511-Lightning-8steps-V1.0-fp32.safetensors",
+        filename="Qwen-Image-Edit-2511-Lightning-4steps-V1.0-fp32.safetensors",
         local_dir=qwen_image_edit_2511_path / "lora",
     )
     hf_hub.snapshot_download(
