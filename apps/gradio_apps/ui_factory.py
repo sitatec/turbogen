@@ -13,7 +13,6 @@ import spaces
 import aiohttp
 import gradio as gr
 import numpy as np
-from core.models.base_model import GenerationType
 
 if TYPE_CHECKING:
     from core.models.base_model import BaseModel
@@ -33,7 +32,7 @@ def get_gen_duration(inputs: dict):
 
     model_name = model.model_name.lower()
     if model_name.startswith("qwen"):
-        if model.generation_type == GenerationType.T2I:
+        if model.generation_type.value.lower() == "t2i":
             duration = 4
         else:
             duration = 6
@@ -587,9 +586,9 @@ def create_gradio_app(
             for model in pipeline.models:
                 max_input_images = getattr(model, "max_input_images", 0)
 
-                if max_input_images == 0 and model.generation_type in [
-                    GenerationType.I2I,
-                    GenerationType.I2V,
+                if max_input_images == 0 and model.generation_type.value.lower() in [
+                    "i2i",
+                    "i2v",
                 ]:
                     max_input_images = 1
 
