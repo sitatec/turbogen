@@ -157,6 +157,13 @@ class _BaseLightx2vModel(BaseModel):
         if lora_configs:
             self.pipe.enable_lora(lora_configs)
 
+        if model_cls.startswith("qwen-image"):
+            self.pipe.text_encoder_type = "lightllm_kernel"  # pyrefly: ignore
+            self.pipe.lightllm_config = {  # pyrefly: ignore
+                "use_flash_attention_kernel": "flash_attention_3",
+                "use_rmsnorm_kernel": True,
+            }
+
         self.pipe.create_generator(
             attn_mode=attention_backend,
             resize_mode="adaptive" if generation_type == "i2i" else None,
@@ -174,7 +181,7 @@ class _BaseLightx2vModel(BaseModel):
             )
 
         if generation_type == GenerationType.I2V and supports_last_frame:
-
+            # Add support for First-Last-Frame To Video
             def encode_input(self: DefaultRunner):
                 if self.input_info and self.input_info.last_frame_path:
                     return self._run_input_encoder_local_flf2v()
@@ -391,8 +398,8 @@ class Wan22Lite(_BaseLightx2vModel):
         lora_configs: list[dict] | None = None,
         compile: bool = False,
         enable_cpu_offload: bool = False,
-        quant_scheme: str | None = None,
-        text_encoder_quantized: bool = False,
+        quant_scheme: str | None = "fp8-sgl",
+        text_encoder_quantized: bool = True,
         generation_type: Literal[
             GenerationType.I2V, GenerationType.T2V
         ] = GenerationType.I2V,
