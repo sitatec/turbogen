@@ -20,6 +20,63 @@ if TYPE_CHECKING:
     from core.generation_pipeline import GenerationPipeline, ProcessedOutput
 
 
+def get_gen_duration(pipeline: GenerationPipeline, inputs: dict):
+    num_outputs = inputs.get("num_outputs", 1)
+    duration = 50
+    init_time = 10
+    model = next(
+        (model for model in pipeline.models if model.model_id == inputs["model_id"]),
+    )
+
+    model_name = model.model_name.lower()
+    if model_name.startswith("qwen"):
+        if model.generation_type == GenerationType.T2I:
+            duration = 4
+        else:
+            duration = 6
+    elif model_name.startswith("wan"):
+        if inputs["resolution"] == "480p":
+            duration = 20
+        else:
+            duration = 50
+    elif model_name.startswith("z-image-turbo"):
+        if inputs["resolution"] == "1k":
+            duration = 5
+        else:
+            duration = 7
+
+    return duration * num_outputs + init_time
+
+
+@spaces.GPU(duration=get_gen_duration)
+def generate_on_gpu(pipeline: GenerationPipeline, prepared_inputs: dict):
+    num_outputs = prepared_inputs.get("num_outputs", 1)
+
+    seed = prepared_inputs.get("seed", -1)
+    if seed == -1:
+        seed = random.randint(1, np.iinfo(np.int32).max)
+
+    for i in range(num_outputs):
+        output_dir = prepared_inputs["request_dir"] / f"output_{i}"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        yield pipeline.generate(
+            model_id=prepared_inputs["model_id"],
+            prompt=prepared_inputs["prompt"],
+            aspect_ratio=prepared_inputs["aspect_ratio"],
+            resolution=prepared_inputs["resolution"],
+            image_paths=prepared_inputs["image_paths"],
+            last_frame_path=prepared_inputs["last_frame_path"],
+            seed=seed,
+            negative_prompt=prepared_inputs["negative_prompt"],
+            postprocess=prepared_inputs["postprocess"],
+            output_dir_path=output_dir,
+            metadata=prepared_inputs.get("metadata"),
+        )
+
+        seed += 1
+
+
 async def download_file(session: aiohttp.ClientSession, url: str, output_path: str):
     """Download a single image from URL asynchronously."""
     async with session.get(url.strip()) as response:
@@ -342,6 +399,7 @@ def create_model_interface(
                             image_paths = [input_image_upload_value]
 
             prepared_inputs = {
+                "model_id": model_id,
                 "request_dir": request_dir,
                 "image_paths": image_paths,
                 "last_frame_path": last_frame_path,
@@ -371,57 +429,6 @@ def create_model_interface(
                     prepared_inputs["metadata"] = metadata
 
             return prepared_inputs
-
-        def get_gen_duration(inputs: dict):
-            num_outputs = inputs.get("num_outputs", 1)
-            duration = 50
-            init_time = 10
-            model_name = model.model_name.lower()
-            if model_name.startswith("qwen"):
-                if model.generation_type == GenerationType.T2I:
-                    duration = 4
-                else:
-                    duration = 6
-            elif model_name.startswith("wan"):
-                if inputs["resolution"] == "480p":
-                    duration = 20
-                else:
-                    duration = 50
-            elif model_name.startswith("z-image-turbo"):
-                if inputs["resolution"] == "1k":
-                    duration = 5
-                else:
-                    duration = 7
-
-            return duration * num_outputs + init_time
-
-        @spaces.GPU(duration=get_gen_duration)
-        def generate_on_gpu(prepared_inputs: dict):
-            num_outputs = prepared_inputs.get("num_outputs", 1)
-
-            seed = prepared_inputs.get("seed", -1)
-            if seed == -1:
-                seed = random.randint(1, np.iinfo(np.int32).max)
-
-            for i in range(num_outputs):
-                output_dir = prepared_inputs["request_dir"] / f"output_{i}"
-                output_dir.mkdir(parents=True, exist_ok=True)
-
-                yield pipeline.generate(
-                    model_id=model_id,
-                    prompt=prepared_inputs["prompt"],
-                    aspect_ratio=prepared_inputs["aspect_ratio"],
-                    resolution=prepared_inputs["resolution"],
-                    image_paths=prepared_inputs["image_paths"],
-                    last_frame_path=prepared_inputs["last_frame_path"],
-                    seed=seed,
-                    negative_prompt=prepared_inputs["negative_prompt"],
-                    postprocess=prepared_inputs["postprocess"],
-                    output_dir_path=output_dir,
-                    metadata=prepared_inputs.get("metadata"),
-                )
-
-                seed += 1
 
         async def generate(
             prompt_value,
@@ -462,7 +469,7 @@ def create_model_interface(
                 request_dir = prepared_inputs["request_dir"]
 
                 all_outputs = []
-                for output in generate_on_gpu(prepared_inputs):
+                for output in generate_on_gpu(pipeline, prepared_inputs):
                     all_outputs.append(output)
 
                     if isinstance(output, ProcessedOutput):
