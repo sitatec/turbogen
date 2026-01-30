@@ -34,7 +34,7 @@ def download_qwen_models() -> tuple[Path, Path]:
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
-        ignore_patterns=["text_encoder"],
+        ignore_patterns=["text_encoder/**"],
     )
     # FP8 text encoder
     hf_hub.snapshot_download(
