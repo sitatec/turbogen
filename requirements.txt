@@ -10,6 +10,7 @@ transformers
 accelerate
 hf-transfer
 huggingface-hub
+timm
 piexif
 sgl-kernel
 triton
