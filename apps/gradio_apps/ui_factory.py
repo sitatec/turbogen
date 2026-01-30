@@ -19,13 +19,16 @@ if TYPE_CHECKING:
     from core.models.base_model import BaseModel
     from core.generation_pipeline import GenerationPipeline, ProcessedOutput
 
+pipe: GenerationPipeline | None = None
 
-def get_gen_duration(pipeline: GenerationPipeline, inputs: dict):
+
+def get_gen_duration(inputs: dict):
+    assert pipe is not None
     num_outputs = inputs.get("num_outputs", 1)
     duration = 50
-    init_time = 10
+    initialization_time = 10  # Estimated Zero GPU initialization time
     model = next(
-        (model for model in pipeline.models if model.model_id == inputs["model_id"]),
+        (model for model in pipe.models if model.model_id == inputs["model_id"]),
     )
 
     model_name = model.model_name.lower()
@@ -45,11 +48,13 @@ def get_gen_duration(pipeline: GenerationPipeline, inputs: dict):
         else:
             duration = 7
 
-    return duration * num_outputs + init_time
+    return duration * num_outputs + initialization_time
 
 
 @spaces.GPU(duration=get_gen_duration)
-def generate_on_gpu(pipeline: GenerationPipeline, prepared_inputs: dict):
+def generate_on_gpu(prepared_inputs: dict):
+    assert pipe is not None
+
     num_outputs = prepared_inputs.get("num_outputs", 1)
 
     seed = prepared_inputs.get("seed", -1)
@@ -60,7 +65,7 @@ def generate_on_gpu(pipeline: GenerationPipeline, prepared_inputs: dict):
         output_dir = prepared_inputs["request_dir"] / f"output_{i}"
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        yield pipeline.generate(
+        yield pipe.generate(
             model_id=prepared_inputs["model_id"],
             prompt=prepared_inputs["prompt"],
             aspect_ratio=prepared_inputs["aspect_ratio"],
@@ -469,7 +474,7 @@ def create_model_interface(
                 request_dir = prepared_inputs["request_dir"]
 
                 all_outputs = []
-                for output in generate_on_gpu(pipeline, prepared_inputs):
+                for output in generate_on_gpu(prepared_inputs):
                     all_outputs.append(output)
 
                     if isinstance(output, ProcessedOutput):
@@ -569,6 +574,8 @@ def create_gradio_app(
     inference_dir: str = "/tmp/inference_requests",
 ):
     """Create the main Gradio application with tabs for different models."""
+    global pipe
+    pipe = pipeline
 
     with gr.Blocks(theme=gr.themes.Soft()) as app:
         gr.Markdown(
