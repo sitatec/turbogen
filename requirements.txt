@@ -1,6 +1,6 @@
---index-url https://download.pytorch.org/whl/cu129
---extra-index-url https://pypi.org/simple
 torch==2.9.1
+torchvision==0.24.1,
+torchaudio==2.9.1,
 opencv-python-headless
 Pillow
 numpy
@@ -15,6 +15,6 @@ piexif
 sgl-kernel
 triton
 decord
-https://huggingface.co/sitatech/sageattantion-wheels/resolve/main/sageattention-2.2.0%2Btorch2.9.1.cuda12.9.hopper-cp312-cp312-linux_x86_64.whl
-https://github.com/windreamer/flash-attention3-wheels/releases/download/2026.01.26-f6c4937/flash_attn_3-3.0.0b1%2B20260126.cu129torch291cxx11abitrue.438325-cp39-abi3-linux_x86_64.whl
+#https://huggingface.co/sitatech/sageattantion-wheels/resolve/main/sageattention-2.2.0%2Btorch2.9.1.cuda12.9.hopper-cp312-cp312-linux_x86_64.whl
+https://github.com/windreamer/flash-attention3-wheels/releases/download/2026.01.19-8b0dc47/flash_attn_3-3.0.0b1%2B20260119.cu128torch291cxx11abitrue.a0f9f4-cp39-abi3-linux_x86_64.whl
 git+https://github.com/sitatec/LightX2V.git@torch2.9.1
