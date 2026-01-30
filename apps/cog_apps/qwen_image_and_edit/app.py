@@ -23,8 +23,12 @@ class Model(BasePredictor):
     def setup(self) -> None:
         qwen_image_edit_path, qwen_image_path = download_qwen_models()
 
-        self.qwen_image = QwenImageLite(model_path=qwen_image_path)
-        self.qwen_image_edit = QwenImageEditLite(model_path=qwen_image_edit_path)
+        self.qwen_image_edit = QwenImageEditLite(qwen_image_edit_path)
+        self.qwen_image = QwenImageLite(
+            qwen_image_path,
+            vae=self.qwen_image_edit.pipe.runner.vae,
+            text_encoder=self.qwen_image_edit.pipe.runner.text_encoders,
+        )
 
         self.pipeline = GenerationPipeline(
             models=[self.qwen_image, self.qwen_image_edit]

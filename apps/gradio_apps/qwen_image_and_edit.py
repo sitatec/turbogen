@@ -29,8 +29,12 @@ qwen_image_edit_path, qwen_image_path = download_qwen_models()
 image_scorer_path = download_image_scorer()
 prompt_enhancer_path = download_prompt_enhancer()
 
-qwen_image = QwenImageLite(qwen_image_path)
 qwen_image_edit = QwenImageEditLite(qwen_image_edit_path)
+qwen_image = QwenImageLite(
+    qwen_image_path,
+    vae=qwen_image_edit.pipe.runner.vae,
+    text_encoder=qwen_image_edit.pipe.runner.text_encoders,
+)
 
 pipeline = GenerationPipeline(
     models=[qwen_image, qwen_image_edit],
