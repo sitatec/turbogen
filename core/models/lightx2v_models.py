@@ -251,7 +251,7 @@ class QwenImageEditLite(_BaseLightx2vModel):
             quantized_model_path=quantized_model_path,
             lora_configs=[
                 {
-                    "path": f"{model_path}/lora/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-fp32.safetensors",
+                    "path": f"{model_path}/lora/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
                     "strength": 1,
                 },
                 *lora_configs,
@@ -303,7 +303,7 @@ class QwenImageLite(_BaseLightx2vModel):
             quantized_model_path=quantized_model_path,
             lora_configs=[
                 {
-                    "path": f"{model_path}/lora/Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors",
+                    "path": f"{model_path}/lora/Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors",
                     "strength": 1,
                 },
                 *lora_configs,
