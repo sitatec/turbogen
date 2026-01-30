@@ -28,7 +28,7 @@ def download_qwen_models() -> tuple[Path, Path]:
     # Qwen-Image-Edit-2511-Lightning
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
-        filename="Qwen-Image-Edit-2511-Lightning-4steps-V1.0-fp32.safetensors",
+        filename="Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
         local_dir=qwen_image_edit_2511_path / "lora",
     )
     hf_hub.snapshot_download(
@@ -44,7 +44,7 @@ def download_qwen_models() -> tuple[Path, Path]:
     # Qwen-Image-2512-Lightning
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-2512-Lightning",
-        filename="Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors",
+        filename="Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors",
         local_dir=qwen_image_2512_path / "lora",
     )
     hf_hub.snapshot_download(
@@ -59,6 +59,52 @@ def download_qwen_models() -> tuple[Path, Path]:
     )
 
     return qwen_image_edit_2511_path.resolve(), qwen_image_2512_path.resolve()
+
+
+def download_qwen_image() -> Path:
+    qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
+
+    hf_hub.snapshot_download(
+        repo_id="Qwen/Qwen-Image-2512",
+        local_dir=qwen_image_2512_path,
+        ignore_patterns=["text_encoder/**"],
+    )
+    # FP8 text encoder
+    hf_hub.snapshot_download(
+        repo_id="sitatech/QwenImage-TextEncoder-FP8",
+        local_dir=qwen_image_2512_path / "text_encoder",
+    )
+    # Qwen-Image-2512-Lightning
+    hf_hub.hf_hub_download(
+        repo_id="lightx2v/Qwen-Image-2512-Lightning",
+        filename="Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors",
+        local_dir=qwen_image_2512_path / "lora",
+    )
+
+    return qwen_image_2512_path.resolve()
+
+
+def download_qwen_image_edit() -> Path:
+    qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
+
+    hf_hub.snapshot_download(
+        repo_id="Qwen/Qwen-Image-Edit-2511",
+        local_dir=qwen_image_edit_2511_path,
+        ignore_patterns=["text_encoder/**"],
+    )
+    # FP8 text encoder
+    hf_hub.snapshot_download(
+        repo_id="sitatech/QwenImage-TextEncoder-FP8",
+        local_dir=qwen_image_edit_2511_path / "text_encoder",
+    )
+    # Qwen-Image-Edit-2511-Lightning
+    hf_hub.hf_hub_download(
+        repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
+        filename="Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+        local_dir=qwen_image_edit_2511_path / "lora",
+    )
+
+    return qwen_image_edit_2511_path.resolve()
 
 
 def download_zimage_models():

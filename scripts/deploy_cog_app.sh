@@ -1,9 +1,9 @@
 #!/bin/bash
 
-if [ -z "$1" ] || { [ "$1" != "qwen" ] && [ "$1" != "wan" ] && [ "$1" != "zimage" ]; }; then
+if [ -z "$1" ] || { [ "$1" != "qwen" ] && [ "$1" != "wan" ] && [ "$1" != "zimage" ] && [ "$1" != "qwen_img" ] && [ "$1" != "qwen_img_edit" ]; }; then
     echo "Usage:"
     echo "  ./scripts/deploy_cog_inference.sh model"
-    echo " model: One of qwen or wan or zimage"
+    echo " model: One of qwen (for both image and edit) or wan or zimage or qwen_img or qwen_img_edit"
     exit 1
 fi
 
@@ -29,6 +29,10 @@ elif [ "$1" == "wan" ]; then
     cog_app_dir="./apps/wan22_a14b"
 elif [ "$1" == "zimage" ]; then
     cog_app_dir="./apps/zimage"
+elif [ "$1" == "qwen_img" ]; then
+    cog_app_dir="./apps/qwen_image"
+elif [ "$1" == "qwen_img_edit" ]; then
+    cog_app_dir="./apps/qwen_image_edit"
 fi
 
 # Ensure the required commands are available
