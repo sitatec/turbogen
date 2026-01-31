@@ -1,14 +1,15 @@
-from lightx2v.models.runners.default_runner import DefaultRunner
-from pathlib import Path
-from core.models.base_model import BaseModel, GenerationType
-import torch
 import types
-import functools
-from typing import Literal, override
 import random
+import functools
+from pathlib import Path
+from typing import Literal, override
 
+import torch
 import numpy as np
 
+from core.utils import attention_backend as available_attn_backend
+from core.models.base_model import BaseModel, GenerationType
+from lightx2v.models.runners.default_runner import DefaultRunner
 from lightx2v.utils.input_info import init_empty_input_info, update_input_info_from_dict
 from lightx2v import LightX2VPipeline as LightX2VPipelineBase
 from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
@@ -104,7 +105,11 @@ class _BaseLightx2vModel(BaseModel):
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
         attention_backend: Literal[
             "flash_attn3", "sage_attn2", "torch_sdpa"
-        ] = "flash_attn3",
+        ] = "flash_attn3"
+        if available_attn_backend == "flash_attention_3"
+        else "sage_attn2"
+        if available_attn_backend == "sage_attention"
+        else "torch_sdpa",
         infer_steps: int = 4,
         guidance_scale: float = 1,
         compile: bool = False,
