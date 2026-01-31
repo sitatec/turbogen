@@ -6,6 +6,8 @@ Pillow
 numpy
 fast-thumbhash
 aiohttp
+diffusers
+torchao
 transformers
 accelerate
 hf-transfer

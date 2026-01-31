@@ -14,7 +14,7 @@ sys.path.insert(
 
 from cog import BasePredictor, Input, Path as CogPath
 from core.generation_pipeline import GenerationPipeline
-from core.models import ZImageTurbo
+from core.models.lightx2v_models import ZImageTurbo
 from model_downloads import download_zimage_models
 
 

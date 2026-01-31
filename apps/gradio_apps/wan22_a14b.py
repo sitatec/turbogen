@@ -18,7 +18,7 @@ from model_downloads import (
     download_video_scorer,
     download_prompt_enhancer,
 )
-from core.models import Wan22Lite
+from core.models.lightx2v_models import Wan22Lite
 from core.models.base_model import GenerationType
 from core.generation_pipeline import GenerationPipeline
 from core.services.media_scoring.video_scorer import VideoScorer

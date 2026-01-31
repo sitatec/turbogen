@@ -444,4 +444,4 @@ class _AttrDict(dict):
     __delattr__ = dict.__delitem__
 
 
-__all__ = [Wan22Lite, ZImageTurbo, QwenImageLite, QwenImageEditLite]
+__all__ = ["Wan22Lite", "ZImageTurbo", "QwenImageLite", "QwenImageEditLite"]

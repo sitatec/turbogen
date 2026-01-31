@@ -18,7 +18,7 @@ from model_downloads import (
     download_image_scorer,
     download_prompt_enhancer,
 )
-from core.models import ZImageTurbo
+from core.models.lightx2v_models import ZImageTurbo
 from core.generation_pipeline import GenerationPipeline
 from core.services.media_scoring.image_scorer import ImageScorer
 from core.services.prompt_enhancer import PromptEnhancer

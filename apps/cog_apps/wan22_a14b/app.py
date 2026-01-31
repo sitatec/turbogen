@@ -15,7 +15,7 @@ sys.path.insert(
 from cog import BasePredictor, Input, Path as CogPath
 from core.generation_pipeline import GenerationPipeline
 from core.models.base_model import GenerationType
-from core.models import Wan22Lite
+from core.models.lightx2v_models import Wan22Lite
 from model_downloads import download_wan22_models
 
 
