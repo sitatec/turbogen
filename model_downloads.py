@@ -1,3 +1,4 @@
+from typing import Literal
 import os
 from pathlib import Path
 
@@ -213,14 +214,18 @@ def download_image_scorer() -> Path:
     return image_scorer_path.resolve()
 
 
-def download_prompt_enhancer() -> Path:
+def download_prompt_enhancer(variant: Literal["8b", "4b"] = "4b") -> Path:
     """
-    Download the Qwen3-VL-8B-Instruct model.
+    Download the Qwen3-VL-[8B/4B]-Instruct-FP8 model.
     """
+    assert variant.lower() in ["8b", "4b"], (
+        f"Expect one of {['8b', '4b']}, but got {variant}"
+    )
+
     model_path = _ROOT_DIR / "prompt_enhancer"
 
     hf_hub.snapshot_download(
-        repo_id="Qwen/Qwen3-VL-8B-Instruct-FP8",
+        repo_id=f"Qwen/Qwen3-VL-{variant.upper()}-Instruct-FP8",
         local_dir=model_path,
     )
 
