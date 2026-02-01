@@ -26,6 +26,8 @@ def get_gen_duration(inputs: dict):
     num_outputs = inputs.get("num_outputs", 1)
     duration = 50
     initialization_time = 15  # Estimated Zero GPU initialization time
+    if inputs.get("enhance_prompt"):
+        initialization_time += 15
     model = next(
         (model for model in pipe.models if model.model_id == inputs["model_id"]),
     )
