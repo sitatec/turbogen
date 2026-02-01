@@ -137,8 +137,8 @@ class GenerationPipeline:
         fps: int = 16,
         thumbnail_quality: int = 90,
     ) -> ProcessedOutput:
-        assert self.video_scorer and self.image_scorer
         if generation_type.is_video:
+            assert self.video_scorer is not None
             output_path = f"{output_dir_path}/output.mp4"
             thumbnail_path = f"{output_dir_path}/thumbnail.webp"
 
@@ -155,6 +155,7 @@ class GenerationPipeline:
                 quality=thumbnail_quality,
             )
         else:
+            assert self.image_scorer is not None
             output_path = f"{output_dir_path}/output.webp"
             thumbnail_path = f"{output_dir_path}/thumbnail.webp"
 

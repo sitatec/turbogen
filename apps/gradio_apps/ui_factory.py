@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 pipe: GenerationPipeline | None = None
 
 
-def get_gen_duration(inputs: dict, progress):
+def get_gen_duration(inputs: dict):
     assert pipe is not None
     num_outputs = inputs.get("num_outputs", 1)
     duration = 50
@@ -51,7 +51,7 @@ def get_gen_duration(inputs: dict, progress):
 
 
 @spaces.GPU(duration=get_gen_duration)
-def generate_on_gpu(prepared_inputs: dict, progress=gr.Progress(track_tqdm=True)):
+def generate_on_gpu(prepared_inputs: dict):
     assert pipe is not None
 
     num_outputs = prepared_inputs.get("num_outputs", 1)
@@ -245,7 +245,7 @@ def create_model_interface(
                 prompt_enhancer_checkbox = None
                 if prompt_enhancing_supported:
                     prompt_enhancer_checkbox = gr.Checkbox(
-                        label="Enable Prompt Enhancer",
+                        label="Enhance Prompt",
                         value=True,
                     )
 
@@ -455,8 +455,8 @@ def create_model_interface(
             negative_prompt_value,
             seed_value,
             num_outputs_value,
-            postprocess_value=False,
             prompt_enhancer_value=False,
+            postprocess_value=False,
             input_mode_value=None,
             input_image_upload_value=None,
             input_image_url_value=None,
@@ -489,19 +489,10 @@ def create_model_interface(
                 request_dir = prepared_inputs["request_dir"]
 
                 all_outputs = []
-                for output in generate_on_gpu(prepared_inputs, progress):
+                for output in generate_on_gpu(prepared_inputs):
                     all_outputs.append(output)
 
-                    if isinstance(output, ProcessedOutput):
-                        yield (
-                            [out.generated_media_path for out in all_outputs],
-                            gr.update(visible=True),
-                            output.thumbnail_path,
-                            output.nsfwLevel.value,
-                            output.quality_score,
-                            output.thumbhash,
-                        )
-                    else:
+                    if isinstance(output, str):
                         yield (
                             all_outputs,
                             gr.update(visible=False),
@@ -509,6 +500,15 @@ def create_model_interface(
                             None,
                             None,
                             None,
+                        )
+                    else:
+                        yield (
+                            [out.generated_media_path for out in all_outputs],
+                            gr.update(visible=True),
+                            output.thumbnail_path,
+                            output.nsfwLevel.value,
+                            output.quality_score,
+                            output.thumbhash,
                         )
 
                 if post_gen_hook:
