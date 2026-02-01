@@ -21,11 +21,11 @@ if TYPE_CHECKING:
 pipe: GenerationPipeline | None = None
 
 
-def get_gen_duration(inputs: dict):
+def get_gen_duration(inputs: dict, progress):
     assert pipe is not None
     num_outputs = inputs.get("num_outputs", 1)
     duration = 50
-    initialization_time = 10  # Estimated Zero GPU initialization time
+    initialization_time = 15  # Estimated Zero GPU initialization time
     model = next(
         (model for model in pipe.models if model.model_id == inputs["model_id"]),
     )
@@ -51,7 +51,7 @@ def get_gen_duration(inputs: dict):
 
 
 @spaces.GPU(duration=get_gen_duration)
-def generate_on_gpu(prepared_inputs: dict):
+def generate_on_gpu(prepared_inputs: dict, progress=gr.Progress(track_tqdm=True)):
     assert pipe is not None
 
     num_outputs = prepared_inputs.get("num_outputs", 1)
@@ -74,6 +74,7 @@ def generate_on_gpu(prepared_inputs: dict):
             seed=seed,
             negative_prompt=prepared_inputs["negative_prompt"],
             postprocess=prepared_inputs["postprocess"],
+            enhance_prompt=prepared_inputs["enhance_prompt"],
             output_dir_path=output_dir,
             metadata=prepared_inputs.get("metadata"),
         )
@@ -116,6 +117,7 @@ def create_model_interface(
     aspect_ratios: dict[str, dict[str, tuple[int, int]]],
     max_input_images: int = 0,
     postprocessing_supported: bool = False,
+    prompt_enhancing_supported: bool = False,
     pre_gen_hook: Callable[[dict], dict | None] | None = None,
     post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None]
     | None = None,
@@ -131,6 +133,7 @@ def create_model_interface(
         aspect_ratios: Dictionary of available aspect ratios and resolutions
         max_input_images: Maximum number of input images
         postprocessing_supported: Whether postprocessing (NSFW, quality scoring,...) is supported
+        prompt_enhancing_supported: Whether or not user can choose to enhance the input prompt.
         pre_gen_hook: Called before generation starts (can be for used to prepare metadata for e.g.), this was added for internal use, it is currently not used in this repo, but feel free to use it.
         post_gen_hook: Called after generation ends, this was added for internal use, it is currently not used in this repo, but feel free to use it.
     """
@@ -239,6 +242,13 @@ def create_model_interface(
                     value=1,
                 )
 
+                prompt_enhancer_checkbox = None
+                if prompt_enhancing_supported:
+                    prompt_enhancer_checkbox = gr.Checkbox(
+                        label="Enable Prompt Enhancer",
+                        value=True,
+                    )
+
                 postprocess_checkbox = None
                 if postprocessing_supported:
                     postprocess_checkbox = gr.Checkbox(
@@ -332,6 +342,7 @@ def create_model_interface(
             negative_prompt_value,
             seed_value,
             postprocess_value,
+            prompt_enhancer_value,
             num_outputs_value,
             request,
             model,
@@ -416,6 +427,9 @@ def create_model_interface(
                 "seed": int(seed_value),
                 "num_outputs": int(num_outputs_value),
                 "postprocess": postprocess_value if postprocessing_supported else False,
+                "enhance_prompt": prompt_enhancer_value
+                if prompt_enhancing_supported
+                else False,
             }
 
             if pre_gen_hook:
@@ -442,6 +456,7 @@ def create_model_interface(
             seed_value,
             num_outputs_value,
             postprocess_value=False,
+            prompt_enhancer_value=False,
             input_mode_value=None,
             input_image_upload_value=None,
             input_image_url_value=None,
@@ -460,6 +475,7 @@ def create_model_interface(
                     negative_prompt_value,
                     seed_value,
                     postprocess_value,
+                    prompt_enhancer_value,
                     num_outputs_value,
                     request,
                     model,
@@ -473,7 +489,7 @@ def create_model_interface(
                 request_dir = prepared_inputs["request_dir"]
 
                 all_outputs = []
-                for output in generate_on_gpu(prepared_inputs):
+                for output in generate_on_gpu(prepared_inputs, progress):
                     all_outputs.append(output)
 
                     if isinstance(output, ProcessedOutput):
@@ -514,6 +530,9 @@ def create_model_interface(
             seed,
             num_outputs,
         ]
+
+        if prompt_enhancing_supported:
+            inputs_list.append(prompt_enhancer_checkbox)
 
         if postprocessing_supported:
             inputs_list.append(postprocess_checkbox)
@@ -556,6 +575,7 @@ def create_model_interface(
         "seed": seed,
         "num_outputs": num_outputs,
         "postprocess_checkbox": postprocess_checkbox,
+        "prompt_enhancer_checkbox": prompt_enhancer_checkbox,
         "input_mode": input_mode,
         "input_image_upload": input_image_upload,
         "input_image_url": input_image_url,
@@ -567,6 +587,7 @@ def create_gradio_app(
     pipeline: GenerationPipeline,
     title: str,
     postprocessing_supported: bool = False,
+    prompt_enhancing_supported: bool = False,
     pre_gen_hook: Callable[[dict], dict | None] | None = None,
     post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None]
     | None = None,
@@ -600,6 +621,7 @@ def create_gradio_app(
                         max_input_images=max_input_images,
                         default_negative_prompt=model.default_negative_prompt,
                         postprocessing_supported=postprocessing_supported,
+                        prompt_enhancing_supported=prompt_enhancing_supported,
                         model=model,
                         pre_gen_hook=pre_gen_hook,
                         post_gen_hook=post_gen_hook,

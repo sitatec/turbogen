@@ -56,7 +56,7 @@ def create_exif_data(metadata: dict) -> bytes:
         ifd_data[piexif.ImageIFD.ImageDescription] = metadata["description"].encode(
             "utf-8"
         )
-        del metadata["prompt"]
+        del metadata["description"]
 
     if "artist" in metadata:
         ifd_data[piexif.ImageIFD.ImageDescription] = metadata["artist"].encode("utf-8")

@@ -43,6 +43,7 @@ pipeline = GenerationPipeline(
 app = create_gradio_app(
     pipeline,
     postprocessing_supported=True,
+    prompt_enhancing_supported=True,
     title="""
         # 🎨 Wan 2.2 A14B Image-To-Video & Text-To-Video
         Create stunning videos in a flash

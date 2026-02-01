@@ -40,6 +40,7 @@ pipeline = GenerationPipeline(
 app = create_gradio_app(
     pipeline,
     postprocessing_supported=True,
+    prompt_enhancing_supported=True,
     title="""
         # 🎨 Qwen Image Generation
         Lightning fast image generation with the latest Qwen Image model (2512)
