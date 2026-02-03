@@ -35,12 +35,6 @@ def download_qwen_models() -> tuple[Path, Path]:
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
-        ignore_patterns=["text_encoder/**"],
-    )
-    # FP8 text encoder
-    hf_hub.snapshot_download(
-        repo_id="sitatech/QwenImage-TextEncoder-FP8",
-        local_dir=qwen_image_edit_2511_path / "text_encoder",
     )
     # Qwen-Image-2512-Lightning
     hf_hub.hf_hub_download(
@@ -68,12 +62,6 @@ def download_qwen_image() -> Path:
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-2512",
         local_dir=qwen_image_2512_path,
-        ignore_patterns=["text_encoder/**"],
-    )
-    # FP8 text encoder
-    hf_hub.snapshot_download(
-        repo_id="sitatech/QwenImage-TextEncoder-FP8",
-        local_dir=qwen_image_2512_path / "text_encoder",
     )
     # Qwen-Image-2512-Lightning
     hf_hub.hf_hub_download(
@@ -91,12 +79,6 @@ def download_qwen_image_edit() -> Path:
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
-        ignore_patterns=["text_encoder/**"],
-    )
-    # FP8 text encoder
-    hf_hub.snapshot_download(
-        repo_id="sitatech/QwenImage-TextEncoder-FP8",
-        local_dir=qwen_image_edit_2511_path / "text_encoder",
     )
     # Qwen-Image-Edit-2511-Lightning
     hf_hub.hf_hub_download(
@@ -196,7 +178,7 @@ def download_image_scorer() -> Path:
     image_scorer_path = _SCORING_MODELS_DIR / "image_scorer"
 
     hf_hub.snapshot_download(
-        repo_id="sitatech/VisualQuality-R1-7B-FP8",
+        repo_id="TianheWu/VisualQuality-R1-7B",
         local_dir=image_scorer_path / "visual_quality_r1",
     )
 
@@ -214,9 +196,9 @@ def download_image_scorer() -> Path:
     return image_scorer_path.resolve()
 
 
-def download_prompt_enhancer(variant: Literal["8b", "4b"] = "4b") -> Path:
+def download_prompt_enhancer(variant: Literal["8b", "4b"] = "8b") -> Path:
     """
-    Download the Qwen3-VL-[8B/4B]-Instruct-FP8 model.
+    Download the Qwen3-VL-[8B/4B]-Instruct model.
     """
     assert variant.lower() in ["8b", "4b"], (
         f"Expect one of {['8b', '4b']}, but got {variant}"
@@ -225,7 +207,7 @@ def download_prompt_enhancer(variant: Literal["8b", "4b"] = "4b") -> Path:
     model_path = _ROOT_DIR / "prompt_enhancer"
 
     hf_hub.snapshot_download(
-        repo_id=f"Qwen/Qwen3-VL-{variant.upper()}-Instruct-FP8",
+        repo_id=f"Qwen/Qwen3-VL-{variant.upper()}-Instruct",
         local_dir=model_path,
     )
 
