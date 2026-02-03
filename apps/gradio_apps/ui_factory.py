@@ -550,7 +550,7 @@ def create_model_interface(
             seed,
             num_outputs,
             gr.State(
-                {
+                lambda: {  # Using a callback instead of direct value to prevent deepcopy since the model can't be deep copied
                     "inference_dir": inference_dir,
                     "max_input_images": max_input_images,
                     "is_video": is_video,
