@@ -158,7 +158,7 @@ class _BaseLightx2vModel(BaseModel):
         if lora_configs:
             self.pipe.enable_lora(lora_configs)
 
-        if model_cls == "qwen_image":
+        if self.pipe.model_cls == "qwen_image":
             self.pipe.text_encoder_type = "lightllm_kernel"  # pyrefly: ignore
             self.pipe.lightllm_config = {  # pyrefly: ignore
                 "use_flash_attention_kernel": False,
