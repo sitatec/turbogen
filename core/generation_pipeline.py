@@ -1,14 +1,15 @@
+from __future__ import annotations
+
 import gc
+from typing import TYPE_CHECKING
 from tempfile import mkdtemp
 from dataclasses import dataclass
 
 import cv2
 import numpy as np
 import torch
-from core.models.base_model import BaseModel, GenerationType
-from core.services.nsfw_detector import NsfwDetector, NsfwLevel
-from core.services.media_scoring import ImageScorer, VideoScorer
-from core.services.prompt_enhancer import PromptEnhancer
+from core.models.base_model import GenerationType
+from core.services.nsfw_detector import NsfwLevel
 from core.utils.video_utils import save_video_tensor
 from core.utils.image_utils import (
     create_exif_data,
@@ -17,6 +18,12 @@ from core.utils.image_utils import (
     convert_to_webp_with_metadata,
     generate_thumbhash,
 )
+
+if TYPE_CHECKING:
+    from core.models.base_model import BaseModel
+    from core.services.nsfw_detector import NsfwDetector
+    from core.services.media_scoring import ImageScorer, VideoScorer
+    from core.services.prompt_enhancer import PromptEnhancer
 
 
 @dataclass

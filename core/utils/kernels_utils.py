@@ -23,9 +23,9 @@ def load_flash_attention_3(fallback_to_sage_if_not_hopper=True):
     global flash_attn_3_loaded
 
     if not flash_attn_3_loaded:
-        sys.modules["flash_attn_interface"] = get_kernel(
-            "kernels-community/vllm-flash-attn3"
-        )
+        fa3_module = get_kernel("kernels-community/flash-attn3")
+        sys.modules["flash_attn_interface"] = fa3_module
+        sys.modules["flash_attn3"] = fa3_module
         flash_attn_3_loaded = True
     else:
         print("Flash Attention already loaded, skipping.")
