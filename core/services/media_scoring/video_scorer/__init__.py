@@ -11,7 +11,6 @@ from core.services.media_scoring.video_scorer.utils import (
     ModelConfig,
     DataConfig,
 )
-from core.utils import attention_backend
 from core.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
 
 
@@ -30,7 +29,6 @@ class VideoScorer:
         processor = AutoProcessor.from_pretrained(model_path, padding_side="right")
         model = Qwen2VLRewardModelBT.from_pretrained(
             model_path,
-            attn_implementation=attention_backend,
             output_dim=model_config.output_dim,
             reward_token=model_config.reward_token,
             special_token_ids=processor.tokenizer.additional_special_tokens_ids,
