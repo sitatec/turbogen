@@ -21,6 +21,211 @@ if TYPE_CHECKING:
 pipe: GenerationPipeline | None = None
 
 
+async def generate(
+    prompt_value,
+    aspect_ratio_value,
+    resolution_value,
+    negative_prompt_value,
+    seed_value,
+    num_outputs_value,
+    additional_args: dict,
+    prompt_enhancer_value=False,
+    postprocess_value=False,
+    input_mode_value=None,
+    input_image_upload_value=None,
+    input_image_url_value=None,
+    last_frame_upload_value=None,
+    last_frame_url_value=None,
+    request: gr.Request = gr.Request(),
+    progress=gr.Progress(track_tqdm=True),
+):
+    """Main generation function that coordinates preprocessing and GPU execution."""
+    post_gen_hook, model = additional_args["post_gen_hook"], additional_args["model"]
+    request_dir = None
+    try:
+        prepared_inputs = await prepare_inputs(
+            prompt_value,
+            aspect_ratio_value,
+            resolution_value,
+            negative_prompt_value,
+            seed_value,
+            postprocess_value,
+            prompt_enhancer_value,
+            num_outputs_value,
+            request,
+            model,
+            input_mode_value,
+            input_image_upload_value,
+            input_image_url_value,
+            last_frame_upload_value,
+            last_frame_url_value,
+            additional_args,
+        )
+
+        request_dir = prepared_inputs["request_dir"]
+
+        all_outputs = []
+        for output in generate_on_gpu(prepared_inputs):
+            all_outputs.append(output)
+
+            if isinstance(output, str):
+                yield (
+                    all_outputs,
+                    gr.update(visible=False),
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+            else:
+                yield (
+                    [out.generated_media_path for out in all_outputs],
+                    gr.update(visible=True),
+                    output.thumbnail_path,
+                    output.nsfwLevel.value,
+                    output.quality_score,
+                    output.thumbhash,
+                )
+
+        if post_gen_hook:
+            await call_callback(post_gen_hook, all_outputs, request, None)
+    except Exception as e:
+        raise gr.Error(f"Generation failed: {str(e)}")
+    finally:
+        if request_dir and Path(request_dir).exists():
+            try:
+                shutil.rmtree(request_dir)
+            except Exception:
+                pass
+
+
+async def prepare_inputs(
+    prompt_value,
+    aspect_ratio_value,
+    resolution_value,
+    negative_prompt_value,
+    seed_value,
+    postprocess_value,
+    prompt_enhancer_value,
+    num_outputs_value,
+    request,
+    model,
+    input_mode_value=None,
+    input_image_upload_value=None,
+    input_image_url_value=None,
+    last_frame_upload_value=None,
+    last_frame_url_value=None,
+    additional_args: dict = {},
+):
+    """Validate inputs and download media if needed."""
+    if not prompt_value:
+        raise gr.Error("Please provide a prompt!")
+
+    (
+        inference_dir,
+        max_input_images,
+        is_video,
+        prompt_enhancing_supported,
+        postprocessing_supported,
+        pre_gen_hook,
+    ) = (
+        additional_args["inference_dir"],
+        additional_args["max_input_images"],
+        additional_args["is_video"],
+        additional_args["prompt_enhancing_supported"],
+        additional_args["postprocessing_supported"],
+        additional_args["pre_gen_hook"],
+    )
+
+    request_dir = Path(f"{inference_dir}/{uuid.uuid4()}")
+    request_dir.mkdir(parents=True, exist_ok=True)
+    image_paths = []
+    last_frame_path = None
+
+    # We preserve the original urls for metadata.
+    image_urls = None
+    last_frame_url = None
+
+    if max_input_images > 0:
+        if input_mode_value == "Image URL":
+            if not input_image_url_value:
+                raise gr.Error("Please provide media URLs!")
+
+            urls = [
+                url.strip() for url in input_image_url_value.split(",") if url.strip()
+            ]
+            if not urls:
+                raise gr.Error("Please provide valid media URLs!")
+            image_urls = urls
+            if is_video:
+                if last_frame_url_value:
+                    last_frame_url = last_frame_url_value
+                    urls.append(last_frame_url_value)
+                try:
+                    downloaded_paths = await download_files(urls, request_dir)
+                    image_paths = [downloaded_paths[0]]
+                    if len(downloaded_paths) > 1:
+                        last_frame_path = downloaded_paths[1]
+                except Exception as e:
+                    if Path(request_dir).exists():
+                        shutil.rmtree(request_dir)
+                    raise gr.Error(f"Failed to download media: {str(e)}")
+            else:
+                # For image, all URLs are input images
+                urls = urls[:max_input_images]
+                try:
+                    image_paths = await download_files(urls, request_dir)
+                except Exception as e:
+                    if request_dir.exists():
+                        shutil.rmtree(request_dir)
+                    raise gr.Error(f"Failed to download images: {str(e)}")
+        else:  # File Upload mode
+            if not input_image_upload_value:
+                raise gr.Error("Please upload at least one image!")
+
+            if is_video:
+                image_paths = [input_image_upload_value]
+                last_frame_path = last_frame_upload_value
+            else:
+                if isinstance(input_image_upload_value, list):
+                    image_paths = input_image_upload_value[:max_input_images]
+                else:
+                    image_paths = [input_image_upload_value]
+
+    prepared_inputs = {
+        "model_id": model.model_id,
+        "request_dir": request_dir,
+        "image_paths": image_paths,
+        "last_frame_path": last_frame_path,
+        "prompt": prompt_value,
+        "aspect_ratio": aspect_ratio_value,
+        "resolution": resolution_value,
+        "negative_prompt": negative_prompt_value if negative_prompt_value else None,
+        "seed": int(seed_value),
+        "num_outputs": int(num_outputs_value),
+        "postprocess": postprocess_value if postprocessing_supported else False,
+        "enhance_prompt": prompt_enhancer_value
+        if prompt_enhancing_supported
+        else False,
+    }
+
+    if pre_gen_hook:
+        metadata = await call_callback(
+            pre_gen_hook,
+            {
+                "model": model,
+                "request": request,
+                "image_urls": image_urls,
+                "last_frame_url": last_frame_url,
+                **prepared_inputs,
+            },
+        )
+        if metadata:
+            prepared_inputs["metadata"] = metadata
+
+    return prepared_inputs
+
+
 def get_gen_duration(inputs: dict):
     return 60  # temporary during dev
 
@@ -115,8 +320,6 @@ async def call_callback(callback, *args, **kwargs):
 
 
 def create_model_interface(
-    pipeline: GenerationPipeline,
-    model_id: str,
     model: BaseModel,
     default_negative_prompt: str | None,
     aspect_ratios: dict[str, dict[str, tuple[int, int]]],
@@ -151,7 +354,7 @@ def create_model_interface(
     default_resolution = list(aspect_ratios[default_aspect_ratio].keys())[0]
 
     with gr.Row():
-        with gr.Column():
+        with gr.Column(scale=2):
             input_mode = None
             input_image_upload = None
             input_image_url = None
@@ -257,7 +460,7 @@ def create_model_interface(
                 postprocess_checkbox = None
                 if postprocessing_supported:
                     postprocess_checkbox = gr.Checkbox(
-                        label="Enable Postprocessing (NSFW Detection & Quality Scoring)",
+                        label="Enable Postprocessing (NSFW & Quality Scoring)",
                         value=False,
                     )
 
@@ -267,7 +470,7 @@ def create_model_interface(
                 size="lg",
             )
 
-        with gr.Column():
+        with gr.Column(scale=3):
             output_media = gr.Gallery(
                 label=f"Generated {media_type_label}s",
                 columns=2,
@@ -339,193 +542,6 @@ def create_model_interface(
             outputs=[resolution],
         )
 
-        async def prepare_inputs(
-            prompt_value,
-            aspect_ratio_value,
-            resolution_value,
-            negative_prompt_value,
-            seed_value,
-            postprocess_value,
-            prompt_enhancer_value,
-            num_outputs_value,
-            request,
-            model,
-            input_mode_value=None,
-            input_image_upload_value=None,
-            input_image_url_value=None,
-            last_frame_upload_value=None,
-            last_frame_url_value=None,
-        ):
-            """Validate inputs and download media if needed."""
-            if not prompt_value:
-                raise gr.Error("Please provide a prompt!")
-
-            request_dir = Path(f"{inference_dir}/{uuid.uuid4()}")
-            request_dir.mkdir(parents=True, exist_ok=True)
-            image_paths = []
-            last_frame_path = None
-
-            # We preserve the original urls for metadata.
-            image_urls = None
-            last_frame_url = None
-
-            if max_input_images > 0:
-                if input_mode_value == "Image URL":
-                    if not input_image_url_value:
-                        raise gr.Error("Please provide media URLs!")
-
-                    urls = [
-                        url.strip()
-                        for url in input_image_url_value.split(",")
-                        if url.strip()
-                    ]
-                    if not urls:
-                        raise gr.Error("Please provide valid media URLs!")
-                    image_urls = urls
-                    if is_video:
-                        if last_frame_url_value:
-                            last_frame_url = last_frame_url_value
-                            urls.append(last_frame_url_value)
-                        try:
-                            downloaded_paths = await download_files(urls, request_dir)
-                            image_paths = [downloaded_paths[0]]
-                            if len(downloaded_paths) > 1:
-                                last_frame_path = downloaded_paths[1]
-                        except Exception as e:
-                            if Path(request_dir).exists():
-                                shutil.rmtree(request_dir)
-                            raise gr.Error(f"Failed to download media: {str(e)}")
-                    else:
-                        # For image, all URLs are input images
-                        urls = urls[:max_input_images]
-                        try:
-                            image_paths = await download_files(urls, request_dir)
-                        except Exception as e:
-                            if request_dir.exists():
-                                shutil.rmtree(request_dir)
-                            raise gr.Error(f"Failed to download images: {str(e)}")
-                else:  # File Upload mode
-                    if not input_image_upload_value:
-                        raise gr.Error("Please upload at least one image!")
-
-                    if is_video:
-                        image_paths = [input_image_upload_value]
-                        last_frame_path = last_frame_upload_value
-                    else:
-                        if isinstance(input_image_upload_value, list):
-                            image_paths = input_image_upload_value[:max_input_images]
-                        else:
-                            image_paths = [input_image_upload_value]
-
-            prepared_inputs = {
-                "model_id": model_id,
-                "request_dir": request_dir,
-                "image_paths": image_paths,
-                "last_frame_path": last_frame_path,
-                "prompt": prompt_value,
-                "aspect_ratio": aspect_ratio_value,
-                "resolution": resolution_value,
-                "negative_prompt": negative_prompt_value
-                if negative_prompt_value
-                else None,
-                "seed": int(seed_value),
-                "num_outputs": int(num_outputs_value),
-                "postprocess": postprocess_value if postprocessing_supported else False,
-                "enhance_prompt": prompt_enhancer_value
-                if prompt_enhancing_supported
-                else False,
-            }
-
-            if pre_gen_hook:
-                metadata = await call_callback(
-                    pre_gen_hook,
-                    {
-                        "model": model,
-                        "request": request,
-                        "image_urls": image_urls,
-                        "last_frame_url": last_frame_url,
-                        **prepared_inputs,
-                    },
-                )
-                if metadata:
-                    prepared_inputs["metadata"] = metadata
-
-            return prepared_inputs
-
-        async def generate(
-            prompt_value,
-            aspect_ratio_value,
-            resolution_value,
-            negative_prompt_value,
-            seed_value,
-            num_outputs_value,
-            prompt_enhancer_value=False,
-            postprocess_value=False,
-            input_mode_value=None,
-            input_image_upload_value=None,
-            input_image_url_value=None,
-            last_frame_upload_value=None,
-            last_frame_url_value=None,
-            request: gr.Request = gr.Request(),
-            progress=gr.Progress(track_tqdm=True),
-        ):
-            """Main generation function that coordinates preprocessing and GPU execution."""
-            request_dir = None
-            try:
-                prepared_inputs = await prepare_inputs(
-                    prompt_value,
-                    aspect_ratio_value,
-                    resolution_value,
-                    negative_prompt_value,
-                    seed_value,
-                    postprocess_value,
-                    prompt_enhancer_value,
-                    num_outputs_value,
-                    request,
-                    model,
-                    input_mode_value,
-                    input_image_upload_value,
-                    input_image_url_value,
-                    last_frame_upload_value,
-                    last_frame_url_value,
-                )
-
-                request_dir = prepared_inputs["request_dir"]
-
-                all_outputs = []
-                for output in generate_on_gpu(prepared_inputs):
-                    all_outputs.append(output)
-
-                    if isinstance(output, str):
-                        yield (
-                            all_outputs,
-                            gr.update(visible=False),
-                            None,
-                            None,
-                            None,
-                            None,
-                        )
-                    else:
-                        yield (
-                            [out.generated_media_path for out in all_outputs],
-                            gr.update(visible=True),
-                            output.thumbnail_path,
-                            output.nsfwLevel.value,
-                            output.quality_score,
-                            output.thumbhash,
-                        )
-
-                if post_gen_hook:
-                    await call_callback(post_gen_hook, all_outputs, request, None)
-            except Exception as e:
-                raise gr.Error(f"Generation failed: {str(e)}")
-            finally:
-                if request_dir and Path(request_dir).exists():
-                    try:
-                        shutil.rmtree(request_dir)
-                    except Exception:
-                        pass
-
         inputs_list: list = [
             prompt,
             aspect_ratio,
@@ -533,6 +549,18 @@ def create_model_interface(
             negative_prompt,
             seed,
             num_outputs,
+            gr.State(
+                {
+                    "inference_dir": inference_dir,
+                    "max_input_images": max_input_images,
+                    "is_video": is_video,
+                    "prompt_enhancing_supported": prompt_enhancing_supported,
+                    "postprocessing_supported": postprocessing_supported,
+                    "pre_gen_hook": pre_gen_hook,
+                    "post_gen_hook": post_gen_hook,
+                    "model": model,
+                }
+            ),
         ]
 
         if prompt_enhancing_supported:
@@ -619,8 +647,6 @@ def create_gradio_app(
 
                 with gr.Tab(model.model_name):
                     create_model_interface(
-                        pipeline=pipeline,
-                        model_id=model.model_id,
                         aspect_ratios=model.supported_aspect_ratios,
                         max_input_images=max_input_images,
                         default_negative_prompt=model.default_negative_prompt,
@@ -637,4 +663,4 @@ def create_gradio_app(
     return app
 
 
-__all__ = [create_gradio_app]
+__all__ = ["create_gradio_app", "create_model_interface"]
