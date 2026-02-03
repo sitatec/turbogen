@@ -22,6 +22,8 @@ pipe: GenerationPipeline | None = None
 
 
 def get_gen_duration(inputs: dict):
+    return 60  # temporary during dev
+
     assert pipe is not None
     num_outputs = inputs.get("num_outputs", 1)
     duration = 50
