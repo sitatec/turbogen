@@ -52,6 +52,7 @@ class GenerationPipeline:
         self.video_scorer = video_scorer
         self.prompt_enhancer = prompt_enhancer
 
+    @torch.inference_mode()
     def generate(
         self,
         model_id: str,

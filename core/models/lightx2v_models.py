@@ -91,7 +91,7 @@ class _LightX2VPipeline(LightX2VPipelineBase):
         is_video = self.task.endswith("2v") or self.task.endswith("2av")
         if is_video:
             return result["video"]
-        return result[0].permute(0, 2, 3, 1).squeeze()
+        return result["images"].permute(0, 2, 3, 1).squeeze()
 
 
 class _BaseLightx2vModel(BaseModel):
