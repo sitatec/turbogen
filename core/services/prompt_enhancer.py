@@ -2,9 +2,9 @@ import re
 import json
 from pathlib import Path
 
+import torch
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 from core.models.base_model import GenerationType
-from core.utils import attention_backend
 
 
 IMAGE_GENERATION_SYS_PROMPT = """
@@ -40,7 +40,7 @@ Always preserve the original intent of the user's input. If instructions conflic
 
 7. **Clearly specify the overall artistic style**, such as realistic photography, anime illustration, movie poster, cyberpunk concept art, watercolor painting, 3D rendering, game CG, etc.
 
-8. **Maintain conciseness**: Aim for a succinct description, ideally around 150 words, ensuring all critical details are included without excessive verbosity.
+8. **Maintain conciseness**: Aim for a succinct description, ideally around 200 words, ensuring all critical details are included without excessive verbosity.
 
 You don't have to strictly specify all these characteristics, be flexible and prioritize coherence and meaningfulness depending on the context.
 
@@ -150,11 +150,11 @@ This section defines how the scene evolves over time.
      - Describe the *speed* and *quality* of movement (e.g., frantic, sluggish, smooth, jerky).
    - **Camera Movement**: Use precise cinematic terminology.
      - **Types**: Pan (left/right), Tilt (up/down), Zoom (in/out), Dolly (forward/backward), Truck (left/right), Pedestal (up/down), Roll, or Handheld/Shaky cam.
-     - **Attributes**: Specify speed (slow-motion, timelapse, real-time) and focus changes (rack focus, depth of field shifts).
-   - **Temporal Consistency**: Ensure the action described is physically possible within a standard short video generation timeframe, avoid complex multi-stage narratives unless already present in the user input.
+     - **Attributes**: Specify speed if applicable (slow-motion, timelapse, etc.) and focus changes (rack focus, depth of field shifts).
+   - **Temporal Consistency**: Ensure the action described is physically possible within a standard short video generation timeframe, avoid complex multi-stage narratives unless requested by the user input.
 
 ### 3. General Guidelines
-   - **Maintain conciseness**: Aim for a combined description of around 150 words, ensuring all critical details are included without excessive verbosity.
+   - **Maintain conciseness**: Aim for a combined description of around 200 words, ensuring all critical details are included without excessive verbosity.
    - You don't have to strictly specify all these characteristics, be flexible and prioritize coherence and meaningfulness depending on the context.
 
 ## Safety & Content Restrictions
@@ -176,6 +176,7 @@ Always preserve the original intent of the user's input. If instructions conflic
    - **Do not describe the static scene**: The input image already provides the visual base (characters, setting, colors, lighting). Do not describe what is already there unless it is changing (e.g., "the blue shirt turns red" or "the lights flicker").
    - **Prioritize dynamics**: Focus on how the subject moves, how the environment reacts, how the camera behaves, and the passage of time.
    - **Use fluent, natural descriptive language** within a single continuous text block. Avoid Markdown.
+   - **Temporal Consistency**: Ensure the action described is physically possible within a standard short video generation timeframe, avoid complex multi-stage narratives unless requested by the user input.
 
 2. **Enrich motion details appropriately**:
    - **Subject Motion**: Describe specific, anatomical, and physics-based movements. Avoid vague terms like "moving." Instead, use "striding purposefully," "trembling with fear," "hair swaying in the wind," or "chest rising and falling with breath."
@@ -194,7 +195,7 @@ Always preserve the original intent of the user's input. If instructions conflic
 
 5. **Clearly specify the video style and atmosphere**: Define the mood of the motion: "Frantic and chaotic," "Serene and slow," "Dreamlike and floating," or "Hyper-realistic and grounded."
 
-6. **Maintain conciseness**: Aim for a succinct description, ideally around 120 words, ensuring all critical details are included without excessive verbosity.
+6. **Maintain conciseness**: Aim for a succinct description, ideally around 150 words, ensuring all critical details are included without excessive verbosity.
 
 You don't have to strictly specify all these characteristics, be flexible and prioritize coherence and meaningfulness depending on the context.
 
@@ -240,7 +241,7 @@ You must focus on the **transition, trajectory, and evolution** required to get 
    - If the lighting changes between frames (e.g., Day to Night), describe the environmental shift: "Shadows lengthen and rotate as the sunlight fades into the cool blue tones of moonlight."
    - Maintain the identity of the subject throughout the motion; avoid implying new objects appearing unless they logically enter the frame.
 
-6. **Maintain conciseness**: Aim for a succinct description, ideally around 120 words, ensuring all critical details are included without excessive verbosity.
+6. **Maintain conciseness**: Aim for a succinct description, ideally around 150 words, ensuring all critical details are included without excessive verbosity.
 
 You don't have to strictly specify all these characteristics, be flexible and prioritize coherence and meaningfulness depending on the context.
 
@@ -299,12 +300,11 @@ class SafetyViolationError(Exception):
 class PromptEnhancer:
     """Serves as a Prompt Enhancer and Safety Guard"""
 
-    def __init__(self, model_path: Path):
+    def __init__(self, model_path: Path, device: str = "cuda"):
         self.model = Qwen3VLForConditionalGeneration.from_pretrained(
             model_path,
-            device_map="cuda",
-            dtype="auto",
-            attn_implementation=attention_backend,
+            device_map=device,
+            dtype=torch.bfloat16,
         )
         self.processor = AutoProcessor.from_pretrained(model_path)
 
@@ -314,7 +314,12 @@ class PromptEnhancer:
         messages = [
             {
                 "role": "system",
-                "content": self._get_system_prompt(generation_type, len(images)),
+                "content": [
+                    {
+                        "type": "text",
+                        "text": self._get_system_prompt(generation_type, len(images)),
+                    }
+                ],
             }
         ]
         messages.append(self._get_user_message(prompt, images))

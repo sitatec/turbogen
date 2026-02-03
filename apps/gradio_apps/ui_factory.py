@@ -28,6 +28,7 @@ def get_gen_duration(inputs: dict):
     initialization_time = 15  # Estimated Zero GPU initialization time
     if inputs.get("enhance_prompt"):
         initialization_time += 15
+
     model = next(
         (model for model in pipe.models if model.model_id == inputs["model_id"]),
     )
@@ -268,7 +269,6 @@ def create_model_interface(
             output_media = gr.Gallery(
                 label=f"Generated {media_type_label}s",
                 columns=2,
-                rows=2,
                 height="auto",
                 object_fit="contain",
             )
@@ -302,7 +302,7 @@ def create_model_interface(
                     gr.update(visible=(mode == "File Upload")),
                     gr.update(visible=(mode == "Image URL")),
                 ]
-                if is_video:
+                if is_video:  # Last frame
                     updates.extend(
                         [
                             gr.update(visible=(mode == "File Upload")),

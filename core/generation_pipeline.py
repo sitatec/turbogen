@@ -1,3 +1,4 @@
+import gc
 from tempfile import mkdtemp
 from dataclasses import dataclass
 
@@ -97,15 +98,21 @@ class GenerationPipeline:
             duration_seconds=duration_seconds,
         )
 
+        self._free_memory()
+
         output_dir_path = output_dir_path or mkdtemp()
         if postprocess:
-            return self._process_and_save_output(
+            result = self._process_and_save_output(
                 output, model.generation_type, output_dir_path, metadata
             )
 
-        return self._save_output(
+        result = self._save_output(
             output, model.generation_type, output_dir_path, metadata
         )
+
+        self._free_memory()
+
+        return result
 
     def _enhance_prompt(
         self,
@@ -272,6 +279,11 @@ class GenerationPipeline:
         interval = int(duration_interval * fps)
         indices = slice(0, num_frames, interval)
         return output[indices]
+
+    def _free_memory(self):
+        gc.collect()
+        torch.cuda.empty_cache()
+        gc.collect()
 
 
 __all__ = [ProcessedOutput, GenerationPipeline]
