@@ -12,6 +12,10 @@ sys.path.insert(
     ),
 )
 
+from core.utils import load_sage_attention
+
+load_sage_attention()
+
 from cog import BasePredictor, Input, Path as CogPath
 from core.generation_pipeline import GenerationPipeline
 from core.models.base_model import GenerationType

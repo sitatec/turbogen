@@ -13,7 +13,6 @@ from transformers import (
 )
 
 from core.services.media_scoring.qwen2_vision_processing import process_vision_info
-from core.utils import attention_backend
 
 
 class ImageScorer:
@@ -25,8 +24,8 @@ class ImageScorer:
 
     QUESTION_TEMPLATE = "{Question} Please only output the final answer with only one score in <answer> </answer> tags."
 
-    def __init__(self, models_dir: Path):
-        self.device = torch.device("cuda")
+    def __init__(self, models_dir: Path, device: str = "cuda"):
+        self.device = device
 
         self.vq_model, self.vq_processor = self._create_vq_model(models_dir)
 
@@ -39,8 +38,7 @@ class ImageScorer:
 
         model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             vq_model_path,
-            dtype="auto",
-            attn_implementation=attention_backend,
+            dtype=torch.bfloat16,
             device_map=self.device,
         )
         processor = AutoProcessor.from_pretrained(vq_model_path)

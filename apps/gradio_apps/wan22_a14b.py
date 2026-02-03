@@ -13,6 +13,10 @@ sys.path.insert(
 from apps.gradio_apps.ui_factory import (
     create_gradio_app,  # must be imported first to init ZeroGPU when importing `spaces`
 )
+from core.utils import load_sage_attention
+
+load_sage_attention()
+
 from model_downloads import (
     download_wan22_models,
     download_video_scorer,

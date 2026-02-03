@@ -3,7 +3,7 @@ from typing import Literal
 
 import torch
 from diffusers import DiffusionPipeline, PipelineQuantizationConfig, TorchAoConfig
-from core.utils import attention_backend as available_attn_backend
+from core.utils import is_hopper_gpu
 from core.models.base_model import BaseModel, GenerationType
 
 
@@ -45,12 +45,9 @@ class _BaseDiffusersModel(BaseModel):
             quantization_config=quantization_config,
         )
 
-        self.pipe.text_encoder.set_attn_implementation(available_attn_backend)
-
-        if available_attn_backend == "flash_attention_3":
-            self.pipe.transformer.set_attention_backend("_flash_3")
-        elif available_attn_backend == "sage_attention":
-            self.pipe.transformer.set_attention_backend("sage")
+        self.pipe.transformer.set_attention_backend(
+            "_flash_3_hub" if is_hopper_gpu() else "sage_hub"
+        )
 
         if enable_cpu_offload:
             self.pipe.enable_model_cpu_offload()

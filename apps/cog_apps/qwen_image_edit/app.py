@@ -12,6 +12,10 @@ sys.path.insert(
     ),
 )
 
+from core.utils import load_flash_attention_3
+
+load_flash_attention_3()
+
 from cog import BasePredictor, Input, Path as CogPath
 from core.generation_pipeline import GenerationPipeline
 from core.models.lightx2v_models import QwenImageEditLite

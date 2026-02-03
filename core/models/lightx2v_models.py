@@ -7,7 +7,7 @@ from typing import Literal, override
 import torch
 import numpy as np
 
-from core.utils import attention_backend as available_attn_backend
+from core.utils import is_hopper_gpu
 from core.models.base_model import BaseModel, GenerationType
 from lightx2v.models.runners.default_runner import DefaultRunner
 from lightx2v.utils.input_info import init_empty_input_info, update_input_info_from_dict
@@ -105,11 +105,7 @@ class _BaseLightx2vModel(BaseModel):
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
         attention_backend: Literal[
             "flash_attn3", "sage_attn2", "torch_sdpa"
-        ] = "flash_attn3"
-        if available_attn_backend == "flash_attention_3"
-        else "sage_attn2"
-        if available_attn_backend == "sage_attention"
-        else "torch_sdpa",
+        ] = "flash_attn3" if is_hopper_gpu() else "sage_attn2",
         infer_steps: int = 4,
         guidance_scale: float = 1,
         compile: bool = False,
@@ -165,7 +161,7 @@ class _BaseLightx2vModel(BaseModel):
         if model_cls == "qwen_image":
             self.pipe.text_encoder_type = "lightllm_kernel"  # pyrefly: ignore
             self.pipe.lightllm_config = {  # pyrefly: ignore
-                "use_flash_attention_kernel": "flash_attention_3",
+                "use_flash_attention_kernel": False,
                 "use_rmsnorm_kernel": True,
             }
 
