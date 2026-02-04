@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import os
+import gc
 import uuid
 import shutil
 import asyncio
 import random
 from pathlib import Path
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Callable, Any
 
 
+import torch
 import spaces
 import aiohttp
 import gradio as gr
@@ -65,27 +68,31 @@ async def generate(
         request_dir = prepared_inputs["request_dir"]
 
         all_outputs = []
-        for output in generate_on_gpu(prepared_inputs):
-            all_outputs.append(output)
 
-            if isinstance(output, str):
-                yield (
-                    all_outputs,
-                    gr.update(visible=False),
-                    None,
-                    None,
-                    None,
-                    None,
-                )
-            else:
-                yield (
-                    [out.generated_media_path for out in all_outputs],
-                    gr.update(visible=True),
-                    output.thumbnail_path,
-                    output.nsfwLevel.value,
-                    output.quality_score,
-                    output.thumbhash,
-                )
+        # On GPU slices like huggingface ZeroGPU spaces, torch.cuda.empty_cache() which sync gpu,
+        # introduces latency sometimes higher than the generation time. So we disable it.
+        with _disable_manual_mem_gc():
+            for output in generate_on_gpu(prepared_inputs):
+                all_outputs.append(output)
+
+                if isinstance(output, str):
+                    yield (
+                        all_outputs,
+                        gr.update(visible=False),
+                        None,
+                        None,
+                        None,
+                        None,
+                    )
+                else:
+                    yield (
+                        [out.generated_media_path for out in all_outputs],
+                        gr.update(visible=True),
+                        output.thumbnail_path,
+                        output.nsfwLevel.value,
+                        output.quality_score,
+                        output.thumbhash,
+                    )
 
         if post_gen_hook:
             await call_callback(post_gen_hook, all_outputs, request, None)
@@ -224,6 +231,22 @@ async def prepare_inputs(
             prepared_inputs["metadata"] = metadata
 
     return prepared_inputs
+
+
+@contextmanager
+def _disable_manual_mem_gc():
+    """
+    Disable torch.cuda.empty_cache and gc.collect for this context
+    """
+    orig_gc = gc.collect
+    orig_sync = torch.cuda.empty_cache
+    gc.collect = lambda *a, **k: 0
+    torch.cuda.empty_cache = lambda *a, **k: None
+    try:
+        yield
+    finally:
+        gc.collect = orig_gc
+        torch.cuda.empty_cache = orig_sync
 
 
 def get_gen_duration(inputs: dict):
@@ -411,8 +434,8 @@ def create_model_interface(
                 prompt = gr.Textbox(
                     label="Prompt",
                     placeholder=f"Describe the {media_type_label.lower()} you want to generate...",
-                    lines=3,
-                    max_lines=5,
+                    lines=5,
+                    max_lines=15,
                 )
 
                 with gr.Row():
@@ -585,9 +608,9 @@ def create_model_interface(
                     ]
                 )
 
-        generate_btn.click(
+        gr.on(
+            triggers=[generate_btn.click, prompt.submit],
             fn=generate,
-            show_progress_on=output_media,
             inputs=inputs_list,
             outputs=[
                 output_media,

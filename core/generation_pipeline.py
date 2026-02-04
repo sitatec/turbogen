@@ -105,7 +105,6 @@ class GenerationPipeline:
             guidance_scale=guidance_scale,
             duration_seconds=duration_seconds,
         )
-
         self._free_memory()
 
         output_dir_path = output_dir_path or mkdtemp()
@@ -113,13 +112,12 @@ class GenerationPipeline:
             result = self._process_and_save_output(
                 output, model.generation_type, output_dir_path, metadata
             )
-
-        result = self._save_output(
-            output, model.generation_type, output_dir_path, metadata
-        )
+        else:
+            result = self._save_output(
+                output, model.generation_type, output_dir_path, metadata
+            )
 
         self._free_memory()
-
         return result
 
     def _enhance_prompt(
@@ -289,7 +287,6 @@ class GenerationPipeline:
         return output[indices]
 
     def _free_memory(self):
-        gc.collect()
         torch.cuda.empty_cache()
         gc.collect()
 
