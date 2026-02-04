@@ -14,6 +14,7 @@ sys.path.insert(
 
 from core.utils import load_flash_attention_3
 
+# ruff: noqa:E402
 load_flash_attention_3()
 
 from cog import BasePredictor, Input, Path as CogPath

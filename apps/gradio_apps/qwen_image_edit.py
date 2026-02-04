@@ -17,6 +17,7 @@ from core.utils import load_flash_attention_3
 
 load_flash_attention_3()
 
+# ruff: noqa:E402
 from model_downloads import (
     download_qwen_image_edit,
     download_image_scorer,

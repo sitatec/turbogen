@@ -14,6 +14,7 @@ sys.path.insert(
 
 from core.utils import load_sage_attention
 
+# ruff: noqa:E402
 load_sage_attention()
 
 from cog import BasePredictor, Input, Path as CogPath

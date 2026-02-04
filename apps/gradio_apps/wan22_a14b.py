@@ -17,6 +17,7 @@ from core.utils import load_sage_attention
 
 load_sage_attention()
 
+# ruff: noqa:E402
 from model_downloads import (
     download_wan22_models,
     download_video_scorer,
