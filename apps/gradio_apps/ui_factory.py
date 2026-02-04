@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import gc
 import uuid
+import time
 import shutil
 import asyncio
 import random
@@ -250,11 +251,9 @@ def _disable_manual_mem_gc():
 
 
 def get_gen_duration(inputs: dict):
-    return 60  # temporary during dev
-
     assert pipe is not None
     num_outputs = inputs.get("num_outputs", 1)
-    duration = 50
+    duration = 60
     initialization_time = 15  # Estimated Zero GPU initialization time
     if inputs.get("enhance_prompt"):
         initialization_time += 15
@@ -266,25 +265,26 @@ def get_gen_duration(inputs: dict):
     model_name = model.model_name.lower()
     if model_name.startswith("qwen"):
         if model.generation_type.value.lower() == "t2i":
-            duration = 4
+            duration = 10
         else:
-            duration = 6
+            duration = 15
     elif model_name.startswith("wan"):
         if inputs["resolution"] == "480p":
-            duration = 20
+            duration = 30
         else:
-            duration = 50
+            duration = 60
     elif model_name.startswith("z-image-turbo"):
-        if inputs["resolution"] == "1k":
-            duration = 5
+        if inputs["resolution"] == "1K":
+            duration = 10
         else:
-            duration = 7
+            duration = 15
 
     return duration * num_outputs + initialization_time
 
 
 @spaces.GPU(duration=get_gen_duration)
 def generate_on_gpu(prepared_inputs: dict):
+    start_time = time.perf_counter()
     assert pipe is not None
 
     num_outputs = prepared_inputs.get("num_outputs", 1)
@@ -313,6 +313,8 @@ def generate_on_gpu(prepared_inputs: dict):
         )
 
         seed += 1
+
+    print(f"Generated {num_outputs} media in {time.perf_counter() - start_time:.4f}s")
 
 
 async def download_file(session: aiohttp.ClientSession, url: str, output_path: str):
