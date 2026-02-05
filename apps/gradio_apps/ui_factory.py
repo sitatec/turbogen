@@ -32,7 +32,7 @@ async def generate(
     negative_prompt_value,
     seed_value,
     num_outputs_value,
-    additional_args: dict,
+    additional_args: dict | Callable[[], dict],
     prompt_enhancer_value=False,
     postprocess_value=False,
     input_mode_value=None,
@@ -44,6 +44,8 @@ async def generate(
     progress=gr.Progress(track_tqdm=True),
 ):
     """Main generation function that coordinates preprocessing and GPU execution."""
+    if callable(additional_args):
+        additional_args = additional_args()
     post_gen_hook, model = additional_args["post_gen_hook"], additional_args["model"]
     request_dir = None
     try:
@@ -123,11 +125,14 @@ async def prepare_inputs(
     input_image_url_value=None,
     last_frame_upload_value=None,
     last_frame_url_value=None,
-    additional_args: dict = {},
+    additional_args: dict | Callable[[], dict] = {},
 ):
     """Validate inputs and download media if needed."""
     if not prompt_value:
         raise gr.Error("Please provide a prompt!")
+
+    if callable(additional_args):
+        additional_args = additional_args()
 
     (
         inference_dir,
@@ -499,8 +504,10 @@ def create_model_interface(
             output_media = gr.Gallery(
                 label=f"Generated {media_type_label}s",
                 columns=2,
-                height="auto",
+                height=700,
                 object_fit="contain",
+                preview=False,
+                format="webp",
             )
 
             # Postprocessing outputs (only visible when postprocessing is enabled)
