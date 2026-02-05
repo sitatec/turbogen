@@ -6,6 +6,8 @@ build:
   cuda: "13.0"
 
   python_version: "3.12"
+  system_packages:
+    - "git"
 
   python_requirements: requirements.txt
 
