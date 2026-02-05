@@ -1,6 +1,7 @@
 import sys
 
 import torch
+import torch.nn as nn
 from kernels import get_kernel
 
 flash_attn_3_loaded = False
@@ -41,3 +42,45 @@ def load_sage_attention():
         sage_attn_loaded = True
     else:
         print("Sage Attention already loaded, skipping.")
+
+
+def apply_sgl_kernel_rmsnorm(model: nn.Module, rmsnorm_class: type[nn.Module]):
+    # Adapted from https://github.com/ModelTC/LightX2V/blob/f76e82c/lightx2v/models/input_encoders/lightllm/qwen25_text_encoder_kernel.py
+    print("⚡️ Applying fused RMSNorm kernels from sgl_kernel")
+    try:
+        from sgl_kernel.elementwise import rmsnorm as optimized_rmsnorm
+    except ImportError as e:
+        print(f"✗ Failed to import sgl_kernel: {e}. RMSNorm optimization not applied.")
+        return
+
+    class OptimizedRMSNormWrapper(nn.Module):
+        def __init__(self, original_norm, kernel_fn):
+            super().__init__()
+            self.weight = original_norm.weight
+            self.variance_epsilon = original_norm.variance_epsilon
+            self.kernel_fn = kernel_fn
+
+        def forward(self, hidden_states):
+            orig_shape = hidden_states.shape
+            # Reshape to (-1, hidden_dim) as sgl_kernel expects 2D
+            x_2d = hidden_states.view(-1, orig_shape[-1])
+            out_2d = self.kernel_fn(x_2d, self.weight, self.variance_epsilon)
+            return out_2d.view(orig_shape)
+
+    replaced_count = 0
+
+    def replace_rmsnorm_recursive(module: nn.Module, parent_name=""):
+        nonlocal replaced_count
+        for name, child in module.named_children():
+            full_name = f"{parent_name}.{name}" if parent_name else name
+
+            if isinstance(child, rmsnorm_class):
+                optimized = OptimizedRMSNormWrapper(child, optimized_rmsnorm)
+                setattr(module, name, optimized)
+                replaced_count += 1
+            else:
+                replace_rmsnorm_recursive(child, full_name)
+
+    replace_rmsnorm_recursive(model)
+
+    print(f"✓ Replaced {replaced_count} RMSNorm layers with sgl_kernel version")

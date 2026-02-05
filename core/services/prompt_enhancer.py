@@ -4,6 +4,8 @@ from pathlib import Path
 
 import torch
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
+from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLTextRMSNorm
+from core.utils.kernels_utils import apply_sgl_kernel_rmsnorm
 from core.models.base_model import GenerationType
 
 
@@ -307,6 +309,7 @@ class PromptEnhancer:
             dtype=torch.bfloat16,
         )
         self.processor = AutoProcessor.from_pretrained(model_path)
+        apply_sgl_kernel_rmsnorm(self.model, Qwen3VLTextRMSNorm)
 
     def enhance_prompt(
         self, prompt: str, generation_type: GenerationType, images: list[str] = []

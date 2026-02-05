@@ -11,7 +11,8 @@ from transformers import (
     CLIPProcessor,
     CLIPModel,
 )
-
+from transformers.models.qwen2.modeling_qwen2 import Qwen2RMSNorm
+from core.utils.kernels_utils import apply_sgl_kernel_rmsnorm
 from core.services.media_scoring.qwen2_vision_processing import process_vision_info
 
 
@@ -28,6 +29,7 @@ class ImageScorer:
         self.device = device
 
         self.vq_model, self.vq_processor = self._create_vq_model(models_dir)
+        apply_sgl_kernel_rmsnorm(self.vq_model, Qwen2RMSNorm)
 
         self.clip_model, self.clip_processor = self._create_clip_model(models_dir)
 

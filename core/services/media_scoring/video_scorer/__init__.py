@@ -4,6 +4,7 @@ from collections.abc import Mapping
 
 import torch
 from transformers import AutoProcessor
+from transformers.models.qwen2.modeling_qwen2 import Qwen2RMSNorm
 from core.utils.kernels_utils import is_hopper_gpu
 from core.services.media_scoring.qwen2_vision_processing import process_vision_info
 from core.services.media_scoring.video_scorer.utils import build_prompt
@@ -13,6 +14,7 @@ from core.services.media_scoring.video_scorer.utils import (
     DataConfig,
 )
 from core.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
+from core.utils.kernels_utils import apply_sgl_kernel_rmsnorm
 
 
 class VideoScorer:
@@ -37,6 +39,7 @@ class VideoScorer:
             dtype=torch.bfloat16,
             device_map=device,
         )
+        apply_sgl_kernel_rmsnorm(model, Qwen2RMSNorm)
         model.config.tokenizer_padding_side = processor.tokenizer.padding_side
         model.config.pad_token_id = processor.tokenizer.pad_token_id
 
