@@ -27,25 +27,19 @@ def download_qwen_models() -> tuple[Path, Path]:
     qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
 
     # Qwen-Image-Edit-2511-Lightning
-    hf_hub.hf_hub_download(
-        repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
-        filename="Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
-        local_dir=qwen_image_edit_2511_path / "lora",
-    )
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
-    )
-    # Qwen-Image-2512-Lightning
-    hf_hub.hf_hub_download(
-        repo_id="lightx2v/Qwen-Image-2512-Lightning",
-        filename="Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors",
-        local_dir=qwen_image_2512_path / "lora",
+        ignore_patterns=["transformer/**"],
     )
     hf_hub.snapshot_download(
-        repo_id="Qwen/Qwen-Image-2512",
-        local_dir=qwen_image_2512_path,
-        allow_patterns=["transformer/**"],
+        repo_id="sitatech/Qwen-Image-Edit-2511-Lightning-INT8",
+        local_dir=qwen_image_edit_2511_path / "transformer",
+    )
+    # Qwen-Image-2512-Lightning
+    hf_hub.snapshot_download(
+        repo_id="sitatech/Qwen-Image-2512-Lightning-INT8",
+        local_dir=qwen_image_2512_path / "transformer",
     )
     _symlink_common_components(
         qwen_image_edit_2511_path,
@@ -62,12 +56,11 @@ def download_qwen_image() -> Path:
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-2512",
         local_dir=qwen_image_2512_path,
+        ignore_patterns=["transformer/**"],
     )
-    # Qwen-Image-2512-Lightning
-    hf_hub.hf_hub_download(
-        repo_id="lightx2v/Qwen-Image-2512-Lightning",
-        filename="Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors",
-        local_dir=qwen_image_2512_path / "lora",
+    hf_hub.snapshot_download(
+        repo_id="sitatech/Qwen-Image-2512-Lightning-INT8",
+        local_dir=qwen_image_2512_path / "transformer",
     )
 
     return qwen_image_2512_path.resolve()
@@ -79,12 +72,11 @@ def download_qwen_image_edit() -> Path:
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
+        ignore_patterns=["transformer/**"],
     )
-    # Qwen-Image-Edit-2511-Lightning
-    hf_hub.hf_hub_download(
-        repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
-        filename="Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
-        local_dir=qwen_image_edit_2511_path / "lora",
+    hf_hub.snapshot_download(
+        repo_id="sitatech/Qwen-Image-Edit-2511-Lightning-INT8",
+        local_dir=qwen_image_edit_2511_path / "transformer",
     )
 
     return qwen_image_edit_2511_path.resolve()

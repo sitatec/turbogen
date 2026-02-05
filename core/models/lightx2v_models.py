@@ -249,14 +249,9 @@ class QwenImageEditLite(_BaseLightx2vModel):
             generation_type=GenerationType.I2I,
             model_path=str(model_path),
             compile=compile,
+            quant_scheme=kwargs.pop("quant_scheme", "int8-torchao"),
             quantized_model_path=quantized_model_path,
-            lora_configs=[
-                {
-                    "path": f"{model_path}/lora/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
-                    "strength": 1,
-                },
-                *lora_configs,
-            ],
+            lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
             infer_steps=kwargs.pop("infer_steps", 4),
             aspect_ratios={
@@ -301,14 +296,9 @@ class QwenImageLite(_BaseLightx2vModel):
             generation_type=GenerationType.T2I,
             model_path=str(model_path),
             compile=compile,
+            quant_scheme=kwargs.pop("quant_scheme", "int8-torchao"),
             quantized_model_path=quantized_model_path,
-            lora_configs=[
-                {
-                    "path": f"{model_path}/lora/Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors",
-                    "strength": 1,
-                },
-                *lora_configs,
-            ],
+            lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
             infer_steps=kwargs.pop("infer_steps", 4),
             aspect_ratios={
