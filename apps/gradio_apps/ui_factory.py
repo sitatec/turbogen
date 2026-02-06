@@ -484,7 +484,7 @@ def create_model_interface(
                 if prompt_enhancing_supported:
                     prompt_enhancer_checkbox = gr.Checkbox(
                         label="Enhance Prompt",
-                        value=True,
+                        value=False,
                     )
 
                 postprocess_checkbox = None
@@ -505,9 +505,10 @@ def create_model_interface(
                 label=f"Generated {media_type_label}s",
                 columns=2,
                 height=700,
-                object_fit="contain",
-                preview=False,
                 format="webp",
+                allow_preview=True,
+                preview=True,
+                selected_index=0,
             )
 
             # Postprocessing outputs (only visible when postprocessing is enabled)
