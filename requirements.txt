@@ -1,3 +1,5 @@
+#gptqmodel/bitsandbytes/auto-roung  # depending on env (e.g. auto-round/bitsandbytes on zero-gpu spaces, gptqmodel preferred where compatible)
+#optimum  # you also need optimum if you are using auto-round or gptqmodel
 torch==2.9.1
 opencv-python-headless
 Pillow
@@ -8,8 +10,6 @@ diffusers
 torchao
 transformers<5.0.0 # The latest version of gptqmodel(5.6.12) isn't compatible with transformers 5.0.0 
 accelerate
-optimum
-gptqmodel
 hf-transfer
 huggingface-hub
 timm

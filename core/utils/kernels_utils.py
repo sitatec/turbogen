@@ -21,6 +21,7 @@ def load_flash_attention_3(fallback_to_sage_if_not_hopper=True):
     if fallback_to_sage_if_not_hopper and not is_hopper_gpu():
         return load_sage_attention()
 
+    # TODO: check if already installed and skip
     global flash_attn_3_loaded
 
     if not flash_attn_3_loaded:
@@ -33,6 +34,7 @@ def load_flash_attention_3(fallback_to_sage_if_not_hopper=True):
 
 
 def load_sage_attention():
+    # TODO: check if already installed and skip
     global sage_attn_loaded
 
     if not sage_attn_loaded:

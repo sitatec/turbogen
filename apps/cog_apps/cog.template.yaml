@@ -13,6 +13,7 @@ build:
 
   # commands run after the environment is setup
   run:
+    - pip install https://github.com/ModelCloud/GPTQModel/releases/download/v5.6.12/gptqmodel-5.6.12+cu130torch2.9-cp312-cp312-linux_x86_64.whl
     - curl -o /usr/local/bin/pget -L "https://github.com/replicate/pget/releases/download/v0.11.0/pget_linux_x86_64" && chmod +x /usr/local/bin/pget
 
 predict: "app.py:Model"

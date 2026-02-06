@@ -5,6 +5,7 @@ from .kernels_utils import (
     load_flash_attention_3,
     get_gpu_major,
     is_hopper_gpu,
+    apply_sgl_kernel_rmsnorm,
 )
 
 __all__ = [
@@ -15,4 +16,5 @@ __all__ = [
     "get_gpu_major",
     "load_flash_attention_3",
     "load_sage_attention",
+    "apply_sgl_kernel_rmsnorm",
 ]

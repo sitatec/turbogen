@@ -30,9 +30,9 @@ from core.services.prompt_enhancer import PromptEnhancer
 from core.services.nsfw_detector import NsfwDetector
 
 
-qwen_image_edit_path, qwen_image_path = download_qwen_models()
-image_scorer_path = download_image_scorer()
-prompt_enhancer_path = download_prompt_enhancer()
+qwen_image_edit_path, qwen_image_path = download_qwen_models(te_quant_method="bnb")
+image_scorer_path = download_image_scorer(quant_method="bnb")
+prompt_enhancer_path = download_prompt_enhancer(quant_method="bnb")
 
 qwen_image_edit = QwenImageEditLite(qwen_image_edit_path)
 qwen_image = QwenImageLite(

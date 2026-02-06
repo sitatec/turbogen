@@ -1,3 +1,4 @@
+from typing import Literal
 import os
 from pathlib import Path
 
@@ -10,7 +11,9 @@ _ROOT_DIR = Path(__file__).parent / "_model_weights"
 _SCORING_MODELS_DIR = (_ROOT_DIR / "scoring_models").resolve()
 
 
-def download_qwen_models() -> tuple[Path, Path]:
+def download_qwen_models(
+    te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
+) -> tuple[Path, Path]:
     """
     Download Qwen-Image-Edit-2511 and Qwen-Image-2512 models.
 
@@ -22,23 +25,10 @@ def download_qwen_models() -> tuple[Path, Path]:
     Returns:
         tuple[Path, Path]: [image edit path, image path].
     """
-    qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
     qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
 
     # Qwen-Image-Edit-2511-Lightning
-    hf_hub.snapshot_download(
-        repo_id="Qwen/Qwen-Image-Edit-2511",
-        local_dir=qwen_image_edit_2511_path,
-        ignore_patterns=["transformer/**", "text_encoder/**"],
-    )
-    hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen-Image-Edit-2511-Lightning-INT8",
-        local_dir=qwen_image_edit_2511_path / "transformer",
-    )
-    hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen2.5-VL-7B-Instruct-GPTQ-Int4",
-        local_dir=qwen_image_edit_2511_path / "text_encoder",
-    )
+    qwen_image_edit_2511_path = download_qwen_image_edit(te_quant_method)
 
     # Qwen-Image-2512-Lightning
     hf_hub.snapshot_download(
@@ -54,42 +44,58 @@ def download_qwen_models() -> tuple[Path, Path]:
     return qwen_image_edit_2511_path.resolve(), qwen_image_2512_path.resolve()
 
 
-def download_qwen_image() -> Path:
+def download_qwen_image(
+    te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
+) -> Path:
     qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
+
+    ignore_patterns = ["transformer/**"]
+    if te_quant_method:
+        # We don't download the original text encoder when a quantized version is requested
+        ignore_patterns.append("text_encoder/**")
 
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-2512",
         local_dir=qwen_image_2512_path,
-        ignore_patterns=["transformer/**", "text_encoder/**"],
+        ignore_patterns=ignore_patterns,
     )
     hf_hub.snapshot_download(
         repo_id="sitatech/Qwen-Image-2512-Lightning-INT8",
         local_dir=qwen_image_2512_path / "transformer",
     )
-    hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen2.5-VL-7B-Instruct-GPTQ-Int4",
-        local_dir=qwen_image_2512_path / "text_encoder",
-    )
+    if te_quant_method:
+        hf_hub.snapshot_download(
+            repo_id=f"sitatech/Qwen2.5-VL-7B-Instruct-{te_quant_method.upper()}-Int4",
+            local_dir=qwen_image_2512_path / "text_encoder",
+        )
 
     return qwen_image_2512_path.resolve()
 
 
-def download_qwen_image_edit() -> Path:
+def download_qwen_image_edit(
+    te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
+) -> Path:
     qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
+
+    ignore_patterns = ["transformer/**"]
+    if te_quant_method:
+        # We don't download the original text encoder when a quantized version is requested
+        ignore_patterns.append("text_encoder/**")
 
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
-        ignore_patterns=["transformer/**", "text_encoder/**"],
+        ignore_patterns=ignore_patterns,
     )
     hf_hub.snapshot_download(
         repo_id="sitatech/Qwen-Image-Edit-2511-Lightning-INT8",
         local_dir=qwen_image_edit_2511_path / "transformer",
     )
-    hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen2.5-VL-7B-Instruct-GPTQ-Int4",
-        local_dir=qwen_image_edit_2511_path / "text_encoder",
-    )
+    if te_quant_method:
+        hf_hub.snapshot_download(
+            repo_id=f"sitatech/Qwen2.5-VL-7B-Instruct-{te_quant_method.upper()}-Int4",
+            local_dir=qwen_image_edit_2511_path / "text_encoder",
+        )
 
     return qwen_image_edit_2511_path.resolve()
 
@@ -175,16 +181,20 @@ def download_video_scorer() -> Path:
     return video_reward_path.resolve()
 
 
-def download_image_scorer(vq_quantized=True) -> Path:
+def download_image_scorer(
+    quant_method: Literal["gptq", "bnb"] | None = "gptq",
+) -> Path:
     """
     Download the TianheWu/VisualQuality-R1-7B, aesthetic-predictor-v2 and clip-vit-large-patch14 models.
     """
     image_scorer_path = _SCORING_MODELS_DIR / "image_scorer"
 
     hf_hub.snapshot_download(
-        repo_id="sitatech/VisualQuality-R1-7B-GPTQ-Int4"
-        if vq_quantized
-        else "TianheWu/VisualQuality-R1-7B",
+        repo_id=(
+            f"sitatech/VisualQuality-R1-7B-{quant_method.upper()}-Int4"
+            if quant_method
+            else "TianheWu/VisualQuality-R1-7B"
+        ),
         local_dir=image_scorer_path / "visual_quality_r1",
     )
 
@@ -202,17 +212,21 @@ def download_image_scorer(vq_quantized=True) -> Path:
     return image_scorer_path.resolve()
 
 
-def download_prompt_enhancer(quantized=True) -> Path:
+def download_prompt_enhancer(
+    quant_method: Literal["gptq", "bnb"] | None = "gptq",
+) -> Path:
     """
-    Download the Qwen3-VL-8B-Instruct model sitatech/Qwen3-VL-8B-Instruct-GPTQ-Int4 if quantized=True (default).
+    Download the Qwen3-VL-8B-Instruct model or sitatech/Qwen3-VL-8B-Instruct-{quant_method}-Int4.
     """
 
     model_path = _ROOT_DIR / "prompt_enhancer"
 
     hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen3-VL-8B-Instruct-GPTQ-Int4"
-        if quantized
-        else "Qwen/Qwen3-VL-8B-Instruct",
+        repo_id=(
+            f"sitatech/Qwen3-VL-8B-Instruct-{quant_method.upper()}-Int4"
+            if quant_method
+            else "Qwen/Qwen3-VL-8B-Instruct"
+        ),
         local_dir=model_path,
     )
 
