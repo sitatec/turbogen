@@ -258,18 +258,25 @@ def _disable_manual_mem_gc():
 def get_gen_duration(inputs: dict):
     assert pipe is not None
     num_outputs = inputs.get("num_outputs", 1)
+    num_input_images = len(inputs.get("image_paths", [])) + (
+        1 if inputs.get("last_frame_path", None) else 0
+    )
     duration = 60
-    initialization_time = 15  # Estimated Zero GPU initialization time
-    if inputs.get("enhance_prompt"):
-        initialization_time += 15
-
     model = next(
         (model for model in pipe.models if model.model_id == inputs["model_id"]),
     )
+    gen_type = model.generation_type.value.lower()
+    initialization_time = 10  # Estimated Zero GPU initialization time
+    if inputs.get("enhance_prompt"):
+        initialization_time += 6 + (2.5 * num_input_images)
+
+    postprocessing_time = 0
+    if inputs.get("postprocess", False):
+        postprocessing_time = 5 if model.generation_type.is_video else 2
 
     model_name = model.model_name.lower()
     if model_name.startswith("qwen"):
-        if model.generation_type.value.lower() == "t2i":
+        if gen_type == "t2i":
             duration = 10
         else:
             duration = 15
@@ -284,7 +291,7 @@ def get_gen_duration(inputs: dict):
         else:
             duration = 15
 
-    return duration * num_outputs + initialization_time
+    return duration * num_outputs + initialization_time + postprocessing_time
 
 
 @spaces.GPU(duration=get_gen_duration)
