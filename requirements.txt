@@ -18,4 +18,4 @@ sgl-kernel
 triton
 kernels
 decord
-git+https://github.com/sitatec/LightX2V.git@torch2.9.1
+git+https://github.com/sitatec/LightX2V.git@torch2.9.1-int8-sgl-fixed 
