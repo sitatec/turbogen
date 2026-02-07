@@ -45,13 +45,12 @@ def convert_to_webp_with_metadata(
         return output_buffer.getvalue()
 
 
-def create_exif_data(metadata: dict) -> bytes:
+def create_exif_data(metadata: dict[str, str]) -> bytes:
     metadata = metadata.copy()
     # Create separate dictionaries for ImageIFD (0th) and ExifIFD
     ifd_data = {}
     exif_data = {}
 
-    # ImageIFD tags (basic image info)
     if "description" in metadata:
         ifd_data[piexif.ImageIFD.ImageDescription] = metadata["description"].encode(
             "utf-8"
@@ -59,19 +58,16 @@ def create_exif_data(metadata: dict) -> bytes:
         del metadata["description"]
 
     if "artist" in metadata:
-        ifd_data[piexif.ImageIFD.ImageDescription] = metadata["artist"].encode("utf-8")
+        ifd_data[piexif.ImageIFD.Artist] = metadata["artist"].encode("utf-8")
         del metadata["artist"]
 
     if "software" in metadata:
-        ifd_data[piexif.ImageIFD.ImageDescription] = metadata["software"].encode(
-            "utf-8"
-        )
+        ifd_data[piexif.ImageIFD.Software] = metadata["software"].encode("utf-8")
         del metadata["software"]
 
     metadata_str = json.dumps(metadata)
     exif_data[piexif.ExifIFD.UserComment] = metadata_str.encode("utf-8")
 
-    # Assemble the EXIF data dictionary with the correct structure
     return piexif.dump(
         {
             "0th": ifd_data,
