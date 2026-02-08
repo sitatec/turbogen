@@ -34,7 +34,7 @@ zimage_turbo_path = download_zimage_models()
 image_scorer_path = download_image_scorer()
 prompt_enhancer_path = download_prompt_enhancer()
 
-zimage_turbo = ZImageTurbo(zimage_turbo_path)
+zimage_turbo = ZImageTurbo(zimage_turbo_path, rope_type="torch")
 
 pipeline = GenerationPipeline(
     models=[zimage_turbo],

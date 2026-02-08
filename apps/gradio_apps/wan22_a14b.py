@@ -35,8 +35,16 @@ wan22_i2v_path, wan22_t2v_path = download_wan22_models()
 video_scorer_path = download_video_scorer()
 prompt_enhancer_path = download_prompt_enhancer(quant_method="bnb")
 
-wan22_i2v = Wan22Lite(wan22_i2v_path, generation_type=GenerationType.I2V)
-wan22_t2v = Wan22Lite(wan22_t2v_path, generation_type=GenerationType.T2V)
+wan22_i2v = Wan22Lite(
+    wan22_i2v_path,
+    generation_type=GenerationType.I2V,
+    rope_type="torch",
+)
+wan22_t2v = Wan22Lite(
+    wan22_t2v_path,
+    generation_type=GenerationType.T2V,
+    rope_type="torch",
+)
 
 pipeline = GenerationPipeline(
     models=[wan22_i2v, wan22_t2v],

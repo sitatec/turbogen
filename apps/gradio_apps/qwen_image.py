@@ -33,7 +33,11 @@ qwen_image_path = download_qwen_image(te_quant_method="bnb")
 image_scorer_path = download_image_scorer(quant_method="bnb")
 prompt_enhancer_path = download_prompt_enhancer(quant_method="bnb")
 
-qwen_image = QwenImageLite(qwen_image_path, quant_scheme="int8-sgl")
+qwen_image = QwenImageLite(
+    qwen_image_path,
+    quant_scheme="int8-sgl",
+    rope_type="torch",
+)
 
 pipeline = GenerationPipeline(
     models=[qwen_image],
