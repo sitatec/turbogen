@@ -77,19 +77,15 @@ def download_qwen_image_edit(
 ) -> Path:
     qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
 
-    ignore_patterns = ["transformer/**"]
+    ignore_patterns = None
     if te_quant_method:
         # We don't download the original text encoder when a quantized version is requested
-        ignore_patterns.append("text_encoder/**")
+        ignore_patterns = ["text_encoder/**"]
 
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
         ignore_patterns=ignore_patterns,
-    )
-    hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen-Image-Edit-2511-Lightning-INT8",
-        local_dir=qwen_image_edit_2511_path / "transformer",
     )
     if te_quant_method:
         hf_hub.snapshot_download(

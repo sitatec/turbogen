@@ -251,7 +251,6 @@ class QwenImageEditLite(_BaseLightx2vModel):
             generation_type=GenerationType.I2I,
             model_path=str(model_path),
             compile=compile,
-            quant_scheme=kwargs.pop("quant_scheme", "int8-vllm"),
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
