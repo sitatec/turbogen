@@ -700,7 +700,7 @@ def create_gradio_app(
 
     os.environ["GRADIO_ALLOWED_PATHS"] = inference_dir
 
-    return app
+    return app.queue()
 
 
 __all__ = ["create_gradio_app", "create_model_interface"]
