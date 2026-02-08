@@ -17,6 +17,7 @@ piexif
 sgl-kernel
 triton
 kernels
-flashinfer
+flashinfer-python
+flashinfer-cubin 
 decord
 git+https://github.com/sitatec/LightX2V.git@torch2.9.1-int8-sgl-fixed 
