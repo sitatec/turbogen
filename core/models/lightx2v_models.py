@@ -114,6 +114,7 @@ class _BaseLightx2vModel(BaseModel):
         supports_last_frame: bool = False,  # Only relevant for I2V gen type
         enable_cpu_offload: bool = False,
         quant_scheme: str | None = None,
+        rope_type: Literal["torch", "flashinfer"] = "flashinfer",
         text_encoder_quantized: bool = False,
         quantized_model_path: str | None = None,
         quantized_text_encoder_path: str | None = None,
@@ -170,6 +171,7 @@ class _BaseLightx2vModel(BaseModel):
             resize_mode="adaptive" if generation_type == "i2i" else None,
             infer_steps=infer_steps,
             guidance_scale=guidance_scale,
+            rope_type=rope_type,
         )
 
         if compile:
