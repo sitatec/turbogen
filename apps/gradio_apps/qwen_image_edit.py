@@ -36,6 +36,7 @@ prompt_enhancer_path = download_prompt_enhancer(quant_method="bnb")
 
 qwen_image_edit = QwenImageEditLite(
     qwen_image_edit_path,
+    quant_scheme="fp8-sgl",
     rope_type="torch",
 )
 

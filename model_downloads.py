@@ -77,7 +77,7 @@ def download_qwen_image_edit(
 ) -> Path:
     qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
 
-    ignore_patterns = None
+    ignore_patterns = ["transformer/**"]
     if te_quant_method:
         # We don't download the original text encoder when a quantized version is requested
         ignore_patterns = ["text_encoder/**"]
@@ -86,6 +86,11 @@ def download_qwen_image_edit(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
         ignore_patterns=ignore_patterns,
+    )
+    hf_hub.hf_hub_download(
+        repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
+        filename="qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_4steps_v1.0.safetensors",
+        local_dir=qwen_image_edit_2511_path / "transformer",
     )
     if te_quant_method:
         hf_hub.snapshot_download(
