@@ -46,12 +46,13 @@ def download_qwen_models(
 
 def download_qwen_image(
     te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
+    dit_quant_type: Literal["int8", "fp8"] | None = None,
 ) -> Path:
     qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
 
-    ignore_patterns = ["transformer/**"]
+    # We don't download the original model when a quantized version is requested
+    ignore_patterns = ["transformer/**"] if dit_quant_type else []
     if te_quant_method:
-        # We don't download the original text encoder when a quantized version is requested
         ignore_patterns.append("text_encoder/**")
 
     hf_hub.snapshot_download(
@@ -59,10 +60,11 @@ def download_qwen_image(
         local_dir=qwen_image_2512_path,
         ignore_patterns=ignore_patterns,
     )
-    hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen-Image-2512-Lightning-INT8",
-        local_dir=qwen_image_2512_path / "transformer",
-    )
+    if dit_quant_type:
+        hf_hub.snapshot_download(
+            repo_id=f"sitatech/Qwen-Image-2512-Lightning-{dit_quant_type}",
+            local_dir=qwen_image_2512_path / "transformer",
+        )
     if te_quant_method:
         hf_hub.snapshot_download(
             repo_id=f"sitatech/Qwen2.5-VL-7B-Instruct-{te_quant_method.upper()}-Int4",
@@ -77,7 +79,7 @@ def download_qwen_image_edit(
 ) -> Path:
     qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
 
-    ignore_patterns = ["transformer/**"]
+    ignore_patterns = None
     if te_quant_method:
         # We don't download the original text encoder when a quantized version is requested
         ignore_patterns = ["text_encoder/**"]
@@ -89,8 +91,8 @@ def download_qwen_image_edit(
     )
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
-        filename="qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_4steps_v1.0.safetensors",
-        local_dir=qwen_image_edit_2511_path / "transformer",
+        filename="Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+        local_dir=qwen_image_edit_2511_path / "lora",
     )
     if te_quant_method:
         hf_hub.snapshot_download(
