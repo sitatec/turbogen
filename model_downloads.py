@@ -11,60 +11,22 @@ _ROOT_DIR = Path(__file__).parent / "_model_weights"
 _SCORING_MODELS_DIR = (_ROOT_DIR / "scoring_models").resolve()
 
 
-def download_qwen_models(
-    te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
-) -> tuple[Path, Path]:
-    """
-    Download Qwen-Image-Edit-2511 and Qwen-Image-2512 models.
-
-    Qwen-Image-Edit-2511 has the same text encoder and vae as Qwen-Image-2512.
-    So we are not downloading them for Qwen-Image-2512, meaning that you will
-    need to get them from the image edit model folder if you need them. But you
-    could just let the image edit load them then share the same instances to save memory.
-
-    Returns:
-        tuple[Path, Path]: [image edit path, image path].
-    """
-    qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
-
-    # Qwen-Image-Edit-2511-Lightning
-    qwen_image_edit_2511_path = download_qwen_image_edit(te_quant_method)
-
-    # Qwen-Image-2512-Lightning
-    hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen-Image-2512-Lightning-INT8",
-        local_dir=qwen_image_2512_path / "transformer",
-    )
-    _symlink_common_components(
-        qwen_image_edit_2511_path,
-        qwen_image_2512_path,
-        ["tokenizer", "scheduler", "vae", "text_encoder"],
-    )
-
-    return qwen_image_edit_2511_path.resolve(), qwen_image_2512_path.resolve()
-
-
 def download_qwen_image(
     te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
-    dit_quant_type: Literal["int8", "fp8"] | None = None,
 ) -> Path:
     qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
-
-    # We don't download the original model when a quantized version is requested
-    ignore_patterns = ["transformer/**"] if dit_quant_type else []
-    if te_quant_method:
-        ignore_patterns.append("text_encoder/**")
 
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-2512",
         local_dir=qwen_image_2512_path,
-        ignore_patterns=ignore_patterns,
+        # We don't download the original text_encoder when a quantized version is requested
+        ignore_patterns=["text_encoder/**"] if te_quant_method else None,
     )
-    if dit_quant_type:
-        hf_hub.snapshot_download(
-            repo_id=f"sitatech/Qwen-Image-2512-Lightning-{dit_quant_type}",
-            local_dir=qwen_image_2512_path / "transformer",
-        )
+    hf_hub.hf_hub_download(
+        repo_id="lightx2v/Qwen-Image-2512-Lightning",
+        filename="Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors",
+        local_dir=qwen_image_2512_path / "lora",
+    )
     if te_quant_method:
         hf_hub.snapshot_download(
             repo_id=f"sitatech/Qwen2.5-VL-7B-Instruct-{te_quant_method.upper()}-Int4",
@@ -79,15 +41,11 @@ def download_qwen_image_edit(
 ) -> Path:
     qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
 
-    ignore_patterns = None
-    if te_quant_method:
-        # We don't download the original text encoder when a quantized version is requested
-        ignore_patterns = ["text_encoder/**"]
-
     hf_hub.snapshot_download(
         repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
-        ignore_patterns=ignore_patterns,
+        # We don't download the original text encoder when a quantized version is requested
+        ignore_patterns=["text_encoder/**"] if te_quant_method else None,
     )
     hf_hub.hf_hub_download(
         repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",

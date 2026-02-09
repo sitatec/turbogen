@@ -13,7 +13,7 @@ build:
 
   # commands run after the environment is setup
   run:
-    - pip install flashinfer-python flashinfer-cubin vllm
+    - pip install flashinfer-python flashinfer-cubin
     - pip install gptqmodel --no-build-isolation
     - curl -o /usr/local/bin/pget -L "https://github.com/replicate/pget/releases/download/v0.11.0/pget_linux_x86_64" && chmod +x /usr/local/bin/pget
 

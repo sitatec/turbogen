@@ -1,3 +1,0 @@
-# Merge with ../cog.template.yaml before deployment
-
-image: "r8.im/sitatec/qwen-image-and-edit-fast"

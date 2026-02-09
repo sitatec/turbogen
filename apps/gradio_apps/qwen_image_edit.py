@@ -34,11 +34,7 @@ qwen_image_edit_path = download_qwen_image_edit(te_quant_method="bnb")
 image_scorer_path = download_image_scorer(quant_method="bnb")
 prompt_enhancer_path = download_prompt_enhancer(quant_method="bnb")
 
-qwen_image_edit = QwenImageEditLite(
-    qwen_image_edit_path,
-    quant_scheme="fp8-sgl",
-    rope_type="torch",
-)
+qwen_image_edit = QwenImageEditLite(qwen_image_edit_path, rope_type="torch")
 
 pipeline = GenerationPipeline(
     models=[qwen_image_edit],
