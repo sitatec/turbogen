@@ -18,21 +18,14 @@ from core.utils import load_sage_attention
 load_sage_attention()
 
 # ruff: noqa:E402
-from model_downloads import (
-    download_wan22_models,
-    download_video_scorer,
-    download_prompt_enhancer,
-)
+from model_downloads import download_wan22_models, download_prompt_enhancer
 from core.models.lightx2v_models import Wan22Lite
 from core.models.base_model import GenerationType
 from core.generation_pipeline import GenerationPipeline
-from core.services.media_scoring.video_scorer import VideoScorer
 from core.services.prompt_enhancer import PromptEnhancer
-from core.services.nsfw_detector import NsfwDetector
 
 
 wan22_i2v_path, wan22_t2v_path = download_wan22_models()
-video_scorer_path = download_video_scorer()
 prompt_enhancer_path = download_prompt_enhancer(quant_method="bnb")
 
 wan22_i2v = Wan22Lite(
@@ -48,14 +41,12 @@ wan22_t2v = Wan22Lite(
 
 pipeline = GenerationPipeline(
     models=[wan22_i2v, wan22_t2v],
-    nsfw_detector=NsfwDetector(),
-    video_scorer=VideoScorer(video_scorer_path),
     prompt_enhancer=PromptEnhancer(prompt_enhancer_path),
 )
 
 app = create_gradio_app(
     pipeline,
-    postprocessing_supported=True,
+    postprocessing_supported=False,
     prompt_enhancing_supported=True,
     title="""
         # 🎨 Wan 2.2 A14B Image-To-Video & Text-To-Video
