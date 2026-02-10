@@ -48,7 +48,7 @@ def download_qwen_image_edit(
         ignore_patterns.append("text_encoder/**")
 
     hf_hub.snapshot_download(
-        repo_id="Qwen/Qwen-Image-2512",
+        repo_id="Qwen/Qwen-Image-Edit-2511",
         local_dir=qwen_image_edit_2511_path,
         ignore_patterns=ignore_patterns,
     )
