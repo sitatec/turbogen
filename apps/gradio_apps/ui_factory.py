@@ -72,28 +72,28 @@ async def generate(
 
         # On GPU slices like huggingface ZeroGPU spaces, torch.cuda.empty_cache() which sync gpu,
         # introduces latency sometimes higher than the generation time. So we disable it.
-        # with disable_manual_memory_gc():
-        for output in generate_on_gpu(prepared_inputs):
-            all_outputs.append(output)
+        with disable_manual_memory_gc():
+            for output in generate_on_gpu(prepared_inputs):
+                all_outputs.append(output)
 
-            if isinstance(output, str):
-                yield (
-                    all_outputs,
-                    gr.update(visible=False),
-                    None,
-                    None,
-                    None,
-                    None,
-                )
-            else:
-                yield (
-                    [out.generated_media_path for out in all_outputs],
-                    gr.update(visible=True),
-                    output.thumbnail_path,
-                    output.nsfwLevel.value,
-                    output.quality_score,
-                    output.thumbhash,
-                )
+                if isinstance(output, str):
+                    yield (
+                        all_outputs,
+                        gr.update(visible=False),
+                        None,
+                        None,
+                        None,
+                        None,
+                    )
+                else:
+                    yield (
+                        [out.generated_media_path for out in all_outputs],
+                        gr.update(visible=True),
+                        output.thumbnail_path,
+                        output.nsfwLevel.value,
+                        output.quality_score,
+                        output.thumbhash,
+                    )
 
         if post_gen_hook:
             await call_callback(post_gen_hook, all_outputs, request, None)
@@ -248,13 +248,13 @@ def get_gen_duration(inputs: dict):
         (model for model in pipe.models if model.model_id == inputs["model_id"]),
     )
     gen_type = model.generation_type.value.lower()
-    initialization_time = 10  # Estimated Zero GPU initialization time
-    if inputs.get("enhance_prompt"):
-        initialization_time += 6 + (2.5 * num_input_images)
+    initialization_time = 12  # Estimated Zero GPU initialization time
+    if inputs.get("enhance_prompt", False):
+        initialization_time += 7 + (3 * num_input_images)
 
     postprocessing_time = 0
     if inputs.get("postprocess", False):
-        postprocessing_time = 5 if model.generation_type.is_video else 2
+        postprocessing_time = 10 if model.generation_type.is_video else 5
 
     model_name = model.model_name.lower()
     if model_name.startswith("qwen"):
