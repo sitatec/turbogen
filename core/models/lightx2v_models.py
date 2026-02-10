@@ -304,15 +304,9 @@ class QwenImageLite(_BaseLightx2vModel):
             model_path=str(model_path),
             compile=compile,
             quantized_model_path=quantized_model_path,
-            lora_configs=[
-                {
-                    "path": f"{model_path}/lora/Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors",
-                    "strength": 1,
-                },
-                *lora_configs,
-            ],
+            lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
-            infer_steps=kwargs.pop("infer_steps", 4),
+            infer_steps=kwargs.pop("infer_steps", 2),
             aspect_ratios={
                 "1:1": {"1.3K": (1328, 1328)},
                 "16:9": {"1.3K": (1664, 928)},

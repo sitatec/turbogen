@@ -2,7 +2,12 @@ from pathlib import Path
 from typing import Literal
 
 import torch
-from diffusers import DiffusionPipeline, PipelineQuantizationConfig, TorchAoConfig
+from diffusers import (
+    DiffusionPipeline,
+    PipelineQuantizationConfig,
+    TorchAoConfig,
+    QwenImageEditPipeline,
+)
 from core.utils import is_hopper_gpu
 from core.models.base_model import BaseModel, GenerationType
 

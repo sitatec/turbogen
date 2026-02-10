@@ -20,12 +20,13 @@ def download_qwen_image(
         repo_id="Qwen/Qwen-Image-2512",
         local_dir=qwen_image_2512_path,
         # We don't download the original text_encoder when a quantized version is requested
-        ignore_patterns=["text_encoder/**"] if te_quant_method else None,
+        ignore_patterns=["text_encoder/**", "transformer/**", "scheduler/**"]
+        if te_quant_method
+        else None,
     )
-    hf_hub.hf_hub_download(
-        repo_id="lightx2v/Qwen-Image-2512-Lightning",
-        filename="Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors",
-        local_dir=qwen_image_2512_path / "lora",
+    hf_hub.snapshot_download(
+        repo_id="sitatech/Qwen-Image-2512-Turbo-2-Steps",
+        local_dir=qwen_image_2512_path,  # download transformer and scheduler sub-folders
     )
     if te_quant_method:
         hf_hub.snapshot_download(
