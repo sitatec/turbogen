@@ -8,7 +8,7 @@ fast-thumbhash
 aiohttp
 diffusers
 torchao
-transformers<5.0.0 # The latest version of gptqmodel(5.6.12) isn't compatible with transformers 5.0.0 
+transformers>=5.0.0
 accelerate
 hf-transfer
 huggingface-hub

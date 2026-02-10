@@ -72,7 +72,7 @@ class ImageScorer:
     def score_aesthetic(self, image: Image.Image | torch.Tensor) -> float:
         """Output the aesthetic sore of the image ranging from 0 to 0.1"""
         inputs = self.clip_processor(images=image, return_tensors="pt").to(self.device)
-        image_features = self.clip_model.get_image_features(**inputs)
+        image_features = self.clip_model.get_image_features(**inputs).pooler_output
         normalized_features = F.normalize(image_features, p=2, dim=-1)
         score = self.aesthetic_model(normalized_features).clamp(4, 8).item()
         # Rescale aesthetic_score from [4, 8] -> [0, 0.1]
