@@ -1,4 +1,5 @@
 from enum import Enum
+from pathlib import Path
 from typing import List, Dict, Union
 
 import cv2
@@ -6,6 +7,7 @@ import torch
 import numpy as np
 from PIL import Image
 from transformers import AutoModelForImageClassification
+from core.utils import free_memory
 
 
 class NsfwLevel(Enum):
@@ -45,11 +47,9 @@ class NsfwDetector:
     - List of any of the above (can combine the 3 types in the list: [pil, numpy, torch,...])
     """
 
-    REPO_ID = "Freepik/nsfw_image_detector"
-
-    def __init__(self, device="cuda", torch_dtype=torch.bfloat16):
+    def __init__(self, model_path: Path, device="cuda", torch_dtype=torch.bfloat16):
         self.model = AutoModelForImageClassification.from_pretrained(
-            self.REPO_ID,
+            model_path,
             torch_dtype=torch_dtype,
         ).to(device)
 
@@ -63,6 +63,8 @@ class NsfwDetector:
             2: NsfwLevel.MEDIUM,
             3: NsfwLevel.HIGH,
         }
+
+        free_memory()
 
     def _preprocess_one(
         self, img: Image.Image | torch.Tensor | np.ndarray

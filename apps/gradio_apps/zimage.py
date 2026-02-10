@@ -22,6 +22,7 @@ from model_downloads import (
     download_zimage_models,
     download_image_scorer,
     download_prompt_enhancer,
+    download_nsfw_model,
 )
 from core.models.lightx2v_models import ZImageTurbo
 from core.generation_pipeline import GenerationPipeline
@@ -33,12 +34,13 @@ from core.services.nsfw_detector import NsfwDetector
 zimage_turbo_path = download_zimage_models()
 image_scorer_path = download_image_scorer()
 prompt_enhancer_path = download_prompt_enhancer()
+nsfw_model_path = download_nsfw_model()
 
 zimage_turbo = ZImageTurbo(zimage_turbo_path, rope_type="torch")
 
 pipeline = GenerationPipeline(
     models=[zimage_turbo],
-    nsfw_detector=NsfwDetector(),
+    nsfw_detector=NsfwDetector(nsfw_model_path),
     image_scorer=ImageScorer(image_scorer_path),
     prompt_enhancer=PromptEnhancer(prompt_enhancer_path),
 )

@@ -6,7 +6,6 @@ from diffusers import (
     DiffusionPipeline,
     PipelineQuantizationConfig,
     TorchAoConfig,
-    QwenImageEditPipeline,
 )
 from core.utils import is_hopper_gpu
 from core.models.base_model import BaseModel, GenerationType

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gc
 from typing import TYPE_CHECKING
 from tempfile import mkdtemp
 from dataclasses import dataclass
@@ -10,7 +9,7 @@ import numpy as np
 import torch
 from core.models.base_model import GenerationType
 from core.services.nsfw_detector import NsfwLevel
-from core.utils.video_utils import save_video_tensor
+from core.utils import save_video_tensor, free_memory
 from core.utils.image_utils import (
     create_exif_data,
     image_tensor_to_pil,
@@ -83,15 +82,18 @@ class GenerationPipeline:
         if model is None:
             raise ValueError(f"Model {model_id} not found")
 
+        generation_type = model.generation_type
+
         if enhance_prompt:
             prompt = self._enhance_prompt(
                 prompt,
-                model.generation_type,
+                generation_type,
                 image_paths,
                 last_frame_path,
             )
             if metadata:
                 metadata["enhanced_prompt"] = prompt
+            free_memory()
 
         output = model.generate(
             prompt=prompt,
@@ -105,19 +107,18 @@ class GenerationPipeline:
             guidance_scale=guidance_scale,
             duration_seconds=duration_seconds,
         )
-        self._free_memory()
 
         output_dir_path = output_dir_path or mkdtemp()
         if postprocess:
+            free_memory()
             result = self._process_and_save_output(
-                output, model.generation_type, output_dir_path, metadata
+                output, generation_type, output_dir_path, metadata
             )
         else:
             result = self._save_output(
-                output, model.generation_type, output_dir_path, metadata
+                output, generation_type, output_dir_path, metadata
             )
 
-        self._free_memory()
         return result
 
     def _enhance_prompt(
@@ -285,10 +286,6 @@ class GenerationPipeline:
         interval = int(duration_interval * fps)
         indices = slice(0, num_frames, interval)
         return output[indices]
-
-    def _free_memory(self):
-        torch.cuda.empty_cache()
-        gc.collect()
 
 
 __all__ = [ProcessedOutput, GenerationPipeline]

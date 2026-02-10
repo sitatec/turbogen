@@ -1,5 +1,6 @@
 from .image_utils import image_tensor_to_numpy, image_tensor_to_pil
 from .video_utils import save_video_tensor
+from .memory_utils import disable_manual_memory_gc, free_memory
 from .kernels_utils import (
     load_sage_attention,
     load_flash_attention_3,
@@ -7,6 +8,7 @@ from .kernels_utils import (
     is_hopper_gpu,
     apply_sgl_kernel_rmsnorm,
 )
+
 
 __all__ = [
     "image_tensor_to_numpy",
@@ -17,4 +19,6 @@ __all__ = [
     "load_flash_attention_3",
     "load_sage_attention",
     "apply_sgl_kernel_rmsnorm",
+    "disable_manual_memory_gc",
+    "free_memory",
 ]

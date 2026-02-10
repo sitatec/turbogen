@@ -12,6 +12,7 @@ sys.path.insert(
     ),
 )
 
+from core.utils.memory_utils import disable_manual_memory_gc
 from core.utils import load_flash_attention_3
 
 # ruff: noqa:E402
@@ -63,15 +64,18 @@ class Model(BasePredictor):
     ) -> CogPath:
         t = time.perf_counter()
 
-        output_path = self.pipeline.generate(
-            model_id=self.zimage.model_id,
-            prompt=prompt,
-            aspect_ratio=aspect_ratio,
-            seed=seed,
-            resolution=resolution,
-            postprocess=False,
-            output_dir_path="./output",
-        )
+        # The lightx2v lib do a lot of torch.cuda.empty_cache() which sync gpu,
+        # introducing some latency. So we disable it. TODO: make it configurable
+        with disable_manual_memory_gc():
+            output_path = self.pipeline.generate(
+                model_id=self.zimage.model_id,
+                prompt=prompt,
+                aspect_ratio=aspect_ratio,
+                seed=seed,
+                resolution=resolution,
+                postprocess=False,
+                output_dir_path="./output",
+            )
 
         print(f"Generated in {time.perf_counter() - t} seconds")
         return CogPath(cast(str, output_path))

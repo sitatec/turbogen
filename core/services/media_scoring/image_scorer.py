@@ -12,7 +12,7 @@ from transformers import (
     CLIPModel,
 )
 from transformers.models.qwen2.modeling_qwen2 import Qwen2RMSNorm
-from core.utils.kernels_utils import apply_sgl_kernel_rmsnorm
+from core.utils import apply_sgl_kernel_rmsnorm, free_memory
 from core.services.media_scoring.qwen2_vision_processing import process_vision_info
 
 
@@ -34,6 +34,8 @@ class ImageScorer:
         self.clip_model, self.clip_processor = self._create_clip_model(models_dir)
 
         self.aesthetic_model = self._create_aesthetic_model(models_dir)
+
+        free_memory()
 
     def _create_vq_model(self, models_dir: Path):
         vq_model_path = models_dir / "visual_quality_r1"

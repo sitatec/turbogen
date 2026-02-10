@@ -7,7 +7,7 @@ from typing import Literal, override
 import torch
 import numpy as np
 
-from core.utils import is_hopper_gpu
+from core.utils import is_hopper_gpu, free_memory
 from core.models.base_model import BaseModel, GenerationType
 from lightx2v.models.runners.default_runner import DefaultRunner
 from lightx2v.utils.input_info import init_empty_input_info, update_input_info_from_dict
@@ -194,6 +194,8 @@ class _BaseLightx2vModel(BaseModel):
             self.pipe.runner.run_input_encoder = types.MethodType(
                 encode_input, self.pipe.runner
             )
+
+        free_memory()
 
     @override
     def generate(

@@ -200,6 +200,16 @@ def download_prompt_enhancer(
     return model_path.resolve()
 
 
+def download_nsfw_model():
+    model_path = _ROOT_DIR / "nsfw_model"
+
+    hf_hub.snapshot_download(
+        repo_id="Freepik/nsfw_image_detector", local_dir=model_path
+    )
+
+    return model_path.resolve()
+
+
 def _symlink_common_components(
     source_dir: Path,
     destination_dir: Path,
