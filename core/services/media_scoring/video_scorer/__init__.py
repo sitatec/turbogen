@@ -31,7 +31,9 @@ class VideoScorer:
         processor = AutoProcessor.from_pretrained(model_path, padding_side="right")
         model = Qwen2VLRewardModelBT.from_pretrained(
             model_path,
-            attn_implementation=f"flash_attention_{'3' if is_hopper_gpu() else '2'}",
+            attn_implementation="flash_attention_3"
+            if is_hopper_gpu()
+            else "sage_attention",
             output_dim=model_config.output_dim,
             reward_token=model_config.reward_token,
             special_token_ids=processor.tokenizer.additional_special_tokens_ids,

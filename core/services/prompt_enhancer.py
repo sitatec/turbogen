@@ -1,3 +1,4 @@
+from core.utils.kernels_utils import is_hopper_gpu
 import re
 import json
 from pathlib import Path
@@ -313,6 +314,15 @@ class PromptEnhancer:
 
         free_memory()
 
+    def _optimize_for_token_count(self, token_count: int):
+        if token_count < 2048:
+            print(f"Receive {token_count}, using SDPA")
+            self.model.set_attn_implementation("sdpa")
+        else:
+            selected_attn = "flash_attention_3" if is_hopper_gpu() else "sage_attention"
+            print(f"Receive {token_count}, using {selected_attn}")
+            self.model.set_attn_implementation(selected_attn)
+
     def enhance_prompt(
         self, prompt: str, generation_type: GenerationType, images: list[str] = []
     ) -> str:
@@ -337,7 +347,9 @@ class PromptEnhancer:
             return_tensors="pt",
         ).to(self.model.device)
 
-        generated_ids = self.model.generate(**inputs, max_new_tokens=2048)
+        self._optimize_for_token_count(inputs.input_ids.shape[-1])
+
+        generated_ids = self.model.generate(**inputs, max_new_tokens=512)
         generated_ids_trimmed = [
             out_ids[len(in_ids) :]
             for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
