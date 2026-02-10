@@ -414,7 +414,7 @@ class PromptEnhancer:
             or is_prompt_safe
             and not json_data.get("enhanced_prompt", "").strip()
         ):
-            raise Exception("Failed to enhance prompt")
+            raise Exception(f"Failed to enhance prompt, got: {text}")
 
         return json_data
 
