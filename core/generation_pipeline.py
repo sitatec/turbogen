@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING
 from tempfile import mkdtemp
 from dataclasses import dataclass
 
 import cv2
-import numpy as np
 import torch
+import numpy as np
 from core.models.base_model import GenerationType
 from core.services.nsfw_detector import NsfwLevel
 from core.utils import save_video_tensor, free_memory
@@ -138,9 +139,13 @@ class GenerationPipeline:
             if last_frame_path:
                 input_images.append(last_frame_path)
 
-        return self.prompt_enhancer.enhance_prompt(
+        t = time.perf_counter()
+        enhanced_pormpt = self.prompt_enhancer.enhance_prompt(
             prompt, generation_type, input_images
         )
+        print(f"Prompt Enhanced in {time.perf_counter() - t:.4f}s")
+
+        return enhanced_pormpt
 
     def _process_and_save_output(
         self,
@@ -151,6 +156,7 @@ class GenerationPipeline:
         fps: int = 16,
         thumbnail_quality: int = 90,
     ) -> ProcessedOutput:
+        start_t = time.perf_counter()
         if generation_type.is_video:
             assert self.video_scorer is not None
             output_path = f"{output_dir_path}/output.mp4"
@@ -159,7 +165,10 @@ class GenerationPipeline:
             first_frame = image_tensor_to_numpy(output[0])
             thumbnail = self._create_thumbnail(first_frame)
             thumbhash = generate_thumbhash(thumbnail)
+
+            vid_t = time.perf_counter()
             quality_score = self.video_scorer.score(output)[0]
+            print(f"Video scored in {time.perf_counter() - vid_t:.4f}s")
 
             save_video_tensor(output, output_path, fps)
             convert_to_webp_with_metadata(
@@ -176,7 +185,10 @@ class GenerationPipeline:
             image = image_tensor_to_numpy(output)
             thumbnail = self._create_thumbnail(image)
             thumbhash = generate_thumbhash(thumbnail)
+
+            img_t = time.perf_counter()
             quality_score = self.image_scorer.score(output)
+            print(f"Image scored in {time.perf_counter() - img_t:.4f}s")
 
             convert_to_webp_with_metadata(image, metadata, output_path=output_path)
             convert_to_webp_with_metadata(
@@ -186,13 +198,16 @@ class GenerationPipeline:
                 quality=thumbnail_quality,
             )
 
-        return ProcessedOutput(
+        processed_output = ProcessedOutput(
             generated_media_path=output_path,
             thumbnail_path=thumbnail_path,
             thumbhash=thumbhash,
             nsfwLevel=self._get_nsfw_level(output, generation_type),
             quality_score=quality_score,
         )
+        print(f"Output processed and saved in {time.perf_counter() - start_t:.4f}s")
+
+        return processed_output
 
     def _save_output(
         self,
@@ -202,6 +217,8 @@ class GenerationPipeline:
         metadata: dict | None = None,
         fps: int = 16,
     ) -> str:
+        start_t = time.perf_counter()
+
         output_path = f"{output_dir_path}/output.webp"
         if generation_type.is_image:
             image_tensor_to_pil(output).save(
@@ -213,6 +230,8 @@ class GenerationPipeline:
         else:
             output_path = f"{output_dir_path}/output.mp4"
             save_video_tensor(output, output_path, fps)
+
+        print(f"Output saved in {time.perf_counter() - start_t:.4f}s")
 
         return output_path
 
@@ -252,10 +271,12 @@ class GenerationPipeline:
     ) -> NsfwLevel:
         assert self.nsfw_detector, "NSFW detector is not initialized"
 
-        if generation_type in [GenerationType.T2V, GenerationType.I2V]:
+        if generation_type.is_video:
             frames = self._selected_video_frames(output, fps)
             if not frames:
-                return NsfwLevel.SAFE
+                raise RuntimeError(
+                    "Failed to run nsfw checker on videos, got empty selected frames"
+                )
 
             levels = self.nsfw_detector.get_nsfw_level(frames)
             if not isinstance(levels, list):
