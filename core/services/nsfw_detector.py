@@ -38,7 +38,7 @@ InputType = Union[
 
 class NsfwDetector:
     """
-    NSFW image detector using an INT8 ONNX model on CPU.
+    NSFW image detector.
 
     Supported input types:
     - PIL.Image
@@ -75,7 +75,7 @@ class NsfwDetector:
         if isinstance(img, Image.Image):
             img = np.array(img.convert("RGB"))
         elif isinstance(img, torch.Tensor):
-            img = img.detach().cpu().numpy()
+            img = img.float().detach().cpu().numpy()
             if img.shape[0] == 3:
                 img = np.transpose(img, (1, 2, 0))  # to HWC RGB
 
@@ -124,16 +124,16 @@ class NsfwDetector:
 
     def _preprocess(self, images: InputType) -> np.ndarray:
         """
-        Prepare inputs for the ONNX model.
+        Prepare inputs.
 
-        Returns:
-            Dict[str, np.ndarray] compatible with ORTModel
+        Returns: np.ndarray
         """
         if not isinstance(images, list):
             images = [images]
 
         return np.stack([self._preprocess_one(img) for img in images], axis=0)
 
+    @torch.inference_mode()
     def predict_probabilities(self, images: InputType) -> List[Dict[NsfwLevel, float]]:
         """
         Predict probability scores for each NSFW level.
@@ -148,7 +148,8 @@ class NsfwDetector:
         Returns:
             A list of dictionaries with probability scores for each level.
         """
-        inputs = self._preprocess(images)
+        inputs = torch.from_numpy(self._preprocess(images))
+        inputs = inputs.to(dtype=self.model.dtype, device=self.model.device)
 
         logits = self.model(inputs).logits
         batch_probs = torch.softmax(logits, dim=-1)
@@ -156,7 +157,11 @@ class NsfwDetector:
         output = []
         for element_probs in batch_probs:
             output_img = {}
-            danger_accumulation = torch.scalar_tensor(0.0)
+            danger_accumulation = torch.scalar_tensor(
+                0.0,
+                device=element_probs.device,
+                dtype=element_probs.dtype,
+            )
 
             # We iterate in reverse order to accumulate danger levels from high to low level.
             # This way, even if the model predict for example a probability of 0.8 for HIGH,

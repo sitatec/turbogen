@@ -278,7 +278,7 @@ class GenerationPipeline:
                     "Failed to run nsfw checker on videos, got empty selected frames"
                 )
 
-            levels = self.nsfw_detector.get_nsfw_level(frames)
+            levels = self.nsfw_detector.get_nsfw_level(frames)  # type: ignore
             if not isinstance(levels, list):
                 levels = [levels]
 
@@ -291,7 +291,7 @@ class GenerationPipeline:
         self,
         output: torch.Tensor,
         fps: int,
-    ) -> torch.Tensor:
+    ) -> list[torch.Tensor]:
         assert output.dim() == 4
 
         num_frames = output.shape[0]
@@ -306,7 +306,9 @@ class GenerationPipeline:
 
         interval = int(duration_interval * fps)
         indices = slice(0, num_frames, interval)
-        return output[indices]
+        selected_frames = output[indices]
+
+        return list(selected_frames.unbind(dim=0))
 
 
 __all__ = [ProcessedOutput, GenerationPipeline]
