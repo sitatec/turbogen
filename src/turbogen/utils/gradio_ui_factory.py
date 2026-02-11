@@ -340,7 +340,7 @@ def create_model_interface(
     postprocessing_supported: bool = False,
     prompt_enhancing_supported: bool = False,
     pre_gen_hook: Callable[[dict], dict | None] | None = None,
-    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None] | None = None,
+    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any | None], None] | None = None,
     inference_dir: str = "/tmp/inference_requests",
 ):
     """
@@ -632,7 +632,7 @@ def create_gradio_app(
     postprocessing_supported: bool = False,
     prompt_enhancing_supported: bool = False,
     pre_gen_hook: Callable[[dict], dict | None] | None = None,
-    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None] | None = None,
+    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any | None], None] | None = None,
     inference_dir: str = "/tmp/inference_requests",
 ):
     """Create the main Gradio application with tabs for different models."""
