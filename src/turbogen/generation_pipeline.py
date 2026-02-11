@@ -71,15 +71,11 @@ class GenerationPipeline:
         output_dir_path: str | None = None,
         metadata: dict | None = None,
     ) -> ProcessedOutput | str:
-        assert (
-            not postprocess
-            or self.nsfw_detector
-            and (self.video_scorer or self.image_scorer)
-        ), "NSFW detector and at least one media scorer are required for postprocessing"
-
-        model = next(
-            (model for model in self.models if model.model_id == model_id), None
+        assert not postprocess or self.nsfw_detector and (self.video_scorer or self.image_scorer), (
+            "NSFW detector and at least one media scorer are required for postprocessing"
         )
+
+        model = next((model for model in self.models if model.model_id == model_id), None)
         if model is None:
             raise ValueError(f"Model {model_id} not found")
 
@@ -112,13 +108,9 @@ class GenerationPipeline:
         output_dir_path = output_dir_path or mkdtemp()
         if postprocess:
             free_memory()
-            result = self._process_and_save_output(
-                output, generation_type, output_dir_path, metadata
-            )
+            result = self._process_and_save_output(output, generation_type, output_dir_path, metadata)
         else:
-            result = self._save_output(
-                output, generation_type, output_dir_path, metadata
-            )
+            result = self._save_output(output, generation_type, output_dir_path, metadata)
 
         return result
 
@@ -140,9 +132,7 @@ class GenerationPipeline:
                 input_images.append(last_frame_path)
 
         t = time.perf_counter()
-        enhanced_pormpt = self.prompt_enhancer.enhance_prompt(
-            prompt, generation_type, input_images
-        )
+        enhanced_pormpt = self.prompt_enhancer.enhance_prompt(prompt, generation_type, input_images)
         print(f"Prompt Enhanced in {time.perf_counter() - t:.4f}s")
 
         return enhanced_pormpt
@@ -225,7 +215,7 @@ class GenerationPipeline:
                 output_path,
                 format="WEBP",
                 quality=100,
-                exif=create_exif_data(metadata) if metadata else None,
+                exif=create_exif_data(metadata) if metadata else b"",
             )
         else:
             output_path = f"{output_dir_path}/output.mp4"
@@ -274,9 +264,7 @@ class GenerationPipeline:
         if generation_type.is_video:
             frames = self._selected_video_frames(output, fps)
             if not frames:
-                raise RuntimeError(
-                    "Failed to run nsfw checker on videos, got empty selected frames"
-                )
+                raise RuntimeError("Failed to run nsfw checker on videos, got empty selected frames")
 
             levels = self.nsfw_detector.get_nsfw_level(frames)  # type: ignore
             if not isinstance(levels, list):
