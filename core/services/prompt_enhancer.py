@@ -1,4 +1,3 @@
-from core.utils.kernels_utils import is_hopper_gpu
 import re
 import json
 from pathlib import Path
@@ -6,7 +5,7 @@ from pathlib import Path
 import torch
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLTextRMSNorm
-from core.utils import apply_sgl_kernel_rmsnorm, free_memory
+from core.utils import apply_sgl_kernel_rmsnorm, free_memory, is_hopper_gpu
 from core.models.base_model import GenerationType
 
 
@@ -421,6 +420,14 @@ class PromptEnhancer:
                     pass
 
         is_prompt_safe = json_data.get("is_safe")
+
+        if isinstance(is_prompt_safe, str):
+            cleaned = is_prompt_safe.lower().strip()
+            if cleaned == "true":
+                is_prompt_safe = True
+            elif cleaned == "false":
+                is_prompt_safe = False
+
         if (
             not isinstance(is_prompt_safe, bool)
             or is_prompt_safe

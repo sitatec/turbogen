@@ -239,7 +239,7 @@ class GenerationPipeline:
         self,
         img: np.ndarray,
         target_width: int = 480,
-        min_height: int = 360,
+        min_height: int = 400,
     ):
         """Resize to [target_width] while preventing the new height from being smaller than [min_height]"""
         height, width = img.shape[:2]
@@ -251,12 +251,12 @@ class GenerationPipeline:
         new_w = int(round(width * scale))
         new_h = int(round(height * scale))
 
-        # If source is much larger, downscale to 1.5x target using INTER_AREA as a first pass.
+        # If source is much larger, downscale to 1.8x target using INTER_AREA as a first pass.
         # This removes high-frequency noise and prevents Lanczos "ringing" (halos).
-        if scale < 0.6:
+        if scale < 0.5:
             img = cv2.resize(
                 img,
-                (int(new_w * 1.5), int(new_h * 1.5)),
+                (int(new_w * 1.8), int(new_h * 1.8)),
                 interpolation=cv2.INTER_AREA,
             )
 
