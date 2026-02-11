@@ -45,7 +45,10 @@ async def generate(
     if callable(additional_args):
         additional_args = additional_args()
     post_gen_hook, model = additional_args["post_gen_hook"], additional_args["model"]
+
     request_dir = None
+    error = None
+    all_outputs = []
     try:
         prepared_inputs = await prepare_inputs(
             prompt_value,
@@ -67,8 +70,6 @@ async def generate(
         )
 
         request_dir = prepared_inputs["request_dir"]
-
-        all_outputs = []
 
         # On GPU slices like huggingface ZeroGPU spaces, torch.cuda.empty_cache() which sync gpu,
         # introduces latency sometimes higher than the generation time. So we disable it.
@@ -95,11 +96,12 @@ async def generate(
                         output.thumbhash,
                     )
 
-        if post_gen_hook:
-            await call_callback(post_gen_hook, all_outputs, request, None)
     except Exception as e:
+        error = e
         raise gr.Error(f"Generation failed: {str(e)}")
     finally:
+        if post_gen_hook:
+            await call_callback(post_gen_hook, all_outputs, request, error)
         if request_dir and Path(request_dir).exists():
             try:
                 shutil.rmtree(request_dir)
