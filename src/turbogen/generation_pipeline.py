@@ -8,10 +8,10 @@ from dataclasses import dataclass
 import cv2
 import torch
 import numpy as np
-from core.models.base_model import GenerationType
-from core.services.nsfw_detector import NsfwLevel
-from core.utils import save_video_tensor, free_memory
-from core.utils.image_utils import (
+from turbogen.models.base_model import GenerationType
+from turbogen.services.nsfw_detector import NsfwLevel
+from turbogen.utils import save_video_tensor, free_memory
+from turbogen.utils.image_utils import (
     create_exif_data,
     image_tensor_to_pil,
     image_tensor_to_numpy,
@@ -20,10 +20,10 @@ from core.utils.image_utils import (
 )
 
 if TYPE_CHECKING:
-    from core.models.base_model import BaseModel
-    from core.services.nsfw_detector import NsfwDetector
-    from core.services.media_scoring import ImageScorer, VideoScorer
-    from core.services.prompt_enhancer import PromptEnhancer
+    from turbogen.models.base_model import BaseModel
+    from turbogen.services.nsfw_detector import NsfwDetector
+    from turbogen.services.media_scoring import ImageScorer, VideoScorer
+    from turbogen.services.prompt_enhancer import PromptEnhancer
 
 
 @dataclass

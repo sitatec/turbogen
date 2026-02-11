@@ -12,8 +12,8 @@ from transformers import (
     CLIPModel,
 )
 from transformers.models.qwen2.modeling_qwen2 import Qwen2RMSNorm
-from core.utils import apply_sgl_kernel_rmsnorm, free_memory
-from core.services.media_scoring.qwen2_vision_processing import process_vision_info
+from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory
+from turbogen.services.media_scoring.qwen2_vision_processing import process_vision_info
 
 
 class ImageScorer:

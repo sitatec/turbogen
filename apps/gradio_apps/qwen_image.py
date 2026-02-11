@@ -1,33 +1,21 @@
-import sys
-from pathlib import Path
-
-sys.path.insert(
-    0,
-    str(
-        next(
-            parent for parent in Path(__file__).parents if parent.name == "turbogen"
-        ).resolve()
-    ),
-)
-from apps.gradio_apps.ui_factory import (
-    create_gradio_app,  # must be imported first to init ZeroGPU when importing `spaces`
-)
-from core.utils import load_flash_attention_3
+# gradio_ui_factory must be imported first to init ZeroGPU when importing `spaces`
+from turbogen.utils.gradio_ui_factory import create_gradio_app
+from turbogen.utils import load_flash_attention_3
 
 load_flash_attention_3()
 
 # ruff: noqa:E402
-from model_downloads import (
+from turbogen.model_downloads import (
     download_qwen_image,
     download_image_scorer,
     download_prompt_enhancer,
     download_nsfw_model,
 )
-from core.models.lightx2v_models import QwenImageLite
-from core.generation_pipeline import GenerationPipeline
-from core.services.media_scoring.image_scorer import ImageScorer
-from core.services.prompt_enhancer import PromptEnhancer
-from core.services.nsfw_detector import NsfwDetector
+from turbogen.models.lightx2v_models import QwenImageLite
+from turbogen.generation_pipeline import GenerationPipeline
+from turbogen.services.media_scoring.image_scorer import ImageScorer
+from turbogen.services.prompt_enhancer import PromptEnhancer
+from turbogen.services.nsfw_detector import NsfwDetector
 
 
 qwen_image_path = download_qwen_image(te_quant_method="bnb")

@@ -5,8 +5,8 @@ from pathlib import Path
 import torch
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLTextRMSNorm
-from core.utils import apply_sgl_kernel_rmsnorm, free_memory, is_hopper_gpu
-from core.models.base_model import GenerationType
+from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory, is_hopper_gpu
+from turbogen.models.base_model import GenerationType
 
 
 IMAGE_GENERATION_SYS_PROMPT = """

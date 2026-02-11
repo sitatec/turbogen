@@ -38,10 +38,10 @@ def convert_to_webp_with_metadata(
         metadata = create_exif_data(metadata)
 
     if output_path:
-        image.save(output_path, format="WEBP", quality=quality, exif=metadata)
+        image.save(output_path, format="WEBP", quality=quality, exif=metadata or b"")
     else:
         output_buffer = io.BytesIO()
-        image.save(output_buffer, format="WEBP", quality=quality, exif=metadata)
+        image.save(output_buffer, format="WEBP", quality=quality, exif=metadata or b"")
         return output_buffer.getvalue()
 
 

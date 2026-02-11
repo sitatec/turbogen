@@ -42,4 +42,6 @@ ensure_command "yq" "sudo curl -L https://github.com/mikefarah/yq/releases/lates
 yq eval-all 'select(fileIndex == 0) *+ select(fileIndex == 1)' ./apps/cog_apps/cog.template.yaml "./apps/cog_apps/$1/cog.yaml" > ./cog.yaml
 mv ./apps/cog_apps/$1/app.py app.py
 
+rm -rf src # We remove the local turbogen code, the pip installed version should be used
+
 cog push

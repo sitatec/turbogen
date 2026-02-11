@@ -14,11 +14,11 @@ import spaces
 import aiohttp
 import gradio as gr
 import numpy as np
-from core.utils.memory_utils import disable_manual_memory_gc
+from turbogen.utils.memory_utils import disable_manual_memory_gc
 
 if TYPE_CHECKING:
-    from core.models.base_model import BaseModel
-    from core.generation_pipeline import GenerationPipeline, ProcessedOutput
+    from turbogen.models.base_model import BaseModel
+    from turbogen.generation_pipeline import GenerationPipeline, ProcessedOutput
 
 pipe: GenerationPipeline | None = None
 
@@ -162,9 +162,7 @@ async def prepare_inputs(
             if not input_image_url_value:
                 raise gr.Error("Please provide media URLs!")
 
-            urls = [
-                url.strip() for url in input_image_url_value.split(",") if url.strip()
-            ]
+            urls = [url.strip() for url in input_image_url_value.split(",") if url.strip()]
             if not urls:
                 raise gr.Error("Please provide valid media URLs!")
             image_urls = urls
@@ -215,9 +213,7 @@ async def prepare_inputs(
         "seed": int(seed_value),
         "num_outputs": int(num_outputs_value),
         "postprocess": postprocess_value if postprocessing_supported else False,
-        "enhance_prompt": prompt_enhancer_value
-        if prompt_enhancing_supported
-        else False,
+        "enhance_prompt": prompt_enhancer_value if prompt_enhancing_supported else False,
     }
 
     if pre_gen_hook:
@@ -240,9 +236,7 @@ async def prepare_inputs(
 def get_gen_duration(inputs: dict):
     assert pipe is not None
     num_outputs = inputs.get("num_outputs", 1)
-    num_input_images = len(inputs.get("image_paths", [])) + (
-        1 if inputs.get("last_frame_path", None) else 0
-    )
+    num_input_images = len(inputs.get("image_paths", [])) + (1 if inputs.get("last_frame_path", None) else 0)
     duration = 60
     model = next(
         (model for model in pipe.models if model.model_id == inputs["model_id"]),
@@ -346,8 +340,7 @@ def create_model_interface(
     postprocessing_supported: bool = False,
     prompt_enhancing_supported: bool = False,
     pre_gen_hook: Callable[[dict], dict | None] | None = None,
-    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None]
-    | None = None,
+    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None] | None = None,
     inference_dir: str = "/tmp/inference_requests",
 ):
     """
@@ -551,11 +544,7 @@ def create_model_interface(
         # Update resolution choices when aspect ratio changes
         def update_resolution_choices(aspect_ratio_value, current_resolution):
             new_resolutions = list(aspect_ratios[aspect_ratio_value].keys())
-            resolution = (
-                current_resolution
-                if current_resolution in new_resolutions
-                else new_resolutions[0]
-            )
+            resolution = current_resolution if current_resolution in new_resolutions else new_resolutions[0]
             return gr.Dropdown(choices=new_resolutions, value=resolution)
 
         aspect_ratio.change(
@@ -643,8 +632,7 @@ def create_gradio_app(
     postprocessing_supported: bool = False,
     prompt_enhancing_supported: bool = False,
     pre_gen_hook: Callable[[dict], dict | None] | None = None,
-    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None]
-    | None = None,
+    post_gen_hook: Callable[[list[ProcessedOutput | str], gr.Request, Any], None] | None = None,
     inference_dir: str = "/tmp/inference_requests",
 ):
     """Create the main Gradio application with tabs for different models."""

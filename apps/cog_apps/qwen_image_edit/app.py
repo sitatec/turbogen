@@ -1,27 +1,15 @@
-import sys
 import time
 from typing import cast
-from pathlib import Path
 
-sys.path.insert(
-    0,
-    str(
-        next(
-            parent for parent in Path(__file__).parents if parent.name == "turbogen"
-        ).resolve()
-    ),
-)
-
-from core.utils import load_flash_attention_3
-from core.utils.memory_utils import disable_manual_memory_gc
+from turbogen.utils import load_flash_attention_3, disable_manual_memory_gc
 
 # ruff: noqa:E402
 load_flash_attention_3()
 
 from cog import BasePredictor, Input, Path as CogPath
-from core.generation_pipeline import GenerationPipeline
-from core.models.lightx2v_models import QwenImageEditLite
-from model_downloads import download_qwen_image_edit
+from turbogen.generation_pipeline import GenerationPipeline
+from turbogen.models.lightx2v_models import QwenImageEditLite
+from turbogen.model_downloads import download_qwen_image_edit
 
 
 class Model(BasePredictor):

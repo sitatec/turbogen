@@ -7,8 +7,8 @@ from diffusers import (
     PipelineQuantizationConfig,
     TorchAoConfig,
 )
-from core.utils import is_hopper_gpu
-from core.models.base_model import BaseModel, GenerationType
+from turbogen.utils import is_hopper_gpu
+from turbogen.models.base_model import BaseModel, GenerationType
 
 
 class _BaseDiffusersModel(BaseModel):

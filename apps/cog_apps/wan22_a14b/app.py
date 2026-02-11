@@ -1,28 +1,16 @@
-import sys
 import time
 from typing import cast
-from pathlib import Path
 
-sys.path.insert(
-    0,
-    str(
-        next(
-            parent for parent in Path(__file__).parents if parent.name == "turbogen"
-        ).resolve()
-    ),
-)
-
-from core.utils.memory_utils import disable_manual_memory_gc
-from core.utils import load_sage_attention
+from turbogen.utils import load_sage_attention, disable_manual_memory_gc
 
 # ruff: noqa:E402
 load_sage_attention()
 
 from cog import BasePredictor, Input, Path as CogPath
-from core.generation_pipeline import GenerationPipeline
-from core.models.base_model import GenerationType
-from core.models.lightx2v_models import Wan22Lite
-from model_downloads import download_wan22_models
+from turbogen.generation_pipeline import GenerationPipeline
+from turbogen.models.base_model import GenerationType
+from turbogen.models.lightx2v_models import Wan22Lite
+from turbogen.model_downloads import download_wan22_models
 
 
 class Model(BasePredictor):
@@ -30,12 +18,8 @@ class Model(BasePredictor):
     def setup(self) -> None:
         wan22_i2v_path, wan22_t2v_path = download_wan22_models()
 
-        self.wan22_t2v = Wan22Lite(
-            model_path=wan22_t2v_path, generation_type=GenerationType.T2V
-        )
-        self.wan22_i2v = Wan22Lite(
-            model_path=wan22_i2v_path, generation_type=GenerationType.I2V
-        )
+        self.wan22_t2v = Wan22Lite(model_path=wan22_t2v_path, generation_type=GenerationType.T2V)
+        self.wan22_i2v = Wan22Lite(model_path=wan22_i2v_path, generation_type=GenerationType.I2V)
 
         self.pipeline = GenerationPipeline(models=[self.wan22_t2v, self.wan22_i2v])
 

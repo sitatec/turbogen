@@ -5,15 +5,15 @@ from collections.abc import Mapping
 import torch
 from transformers import AutoProcessor
 from transformers.models.qwen2.modeling_qwen2 import Qwen2RMSNorm
-from core.services.media_scoring.qwen2_vision_processing import process_vision_info
-from core.services.media_scoring.video_scorer.utils import build_prompt
-from core.services.media_scoring.video_scorer.utils import (
+from turbogen.services.media_scoring.qwen2_vision_processing import process_vision_info
+from turbogen.services.media_scoring.video_scorer.utils import build_prompt
+from turbogen.services.media_scoring.video_scorer.utils import (
     load_configs_from_json,
     ModelConfig,
     DataConfig,
 )
-from core.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
-from core.utils import free_memory, apply_sgl_kernel_rmsnorm, is_hopper_gpu
+from turbogen.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
+from turbogen.utils import free_memory, apply_sgl_kernel_rmsnorm, is_hopper_gpu
 
 
 class VideoScorer:

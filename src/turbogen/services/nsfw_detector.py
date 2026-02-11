@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from PIL import Image
 from transformers import AutoModelForImageClassification
-from core.utils import free_memory
+from turbogen.utils import free_memory
 
 
 class NsfwLevel(Enum):

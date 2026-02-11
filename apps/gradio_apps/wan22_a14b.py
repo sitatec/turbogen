@@ -1,28 +1,15 @@
-import sys
-from pathlib import Path
-
-sys.path.insert(
-    0,
-    str(
-        next(
-            parent for parent in Path(__file__).parents if parent.name == "turbogen"
-        ).resolve()
-    ),
-)
-
-from apps.gradio_apps.ui_factory import (
-    create_gradio_app,  # must be imported first to init ZeroGPU when importing `spaces`
-)
-from core.utils import load_sage_attention
+# gradio_ui_factory must be imported first to init ZeroGPU when importing `spaces`
+from turbogen.utils.gradio_ui_factory import create_gradio_app
+from turbogen.utils import load_sage_attention
 
 load_sage_attention()
 
 # ruff: noqa:E402
-from model_downloads import download_wan22_models, download_prompt_enhancer
-from core.models.lightx2v_models import Wan22Lite
-from core.models.base_model import GenerationType
-from core.generation_pipeline import GenerationPipeline
-from core.services.prompt_enhancer import PromptEnhancer
+from turbogen.model_downloads import download_wan22_models, download_prompt_enhancer
+from turbogen.models.lightx2v_models import Wan22Lite
+from turbogen.models.base_model import GenerationType
+from turbogen.generation_pipeline import GenerationPipeline
+from turbogen.services.prompt_enhancer import PromptEnhancer
 
 
 wan22_i2v_path, wan22_t2v_path = download_wan22_models()

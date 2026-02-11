@@ -7,8 +7,8 @@ from typing import Literal, override
 import torch
 import numpy as np
 
-from core.utils import is_hopper_gpu, free_memory
-from core.models.base_model import BaseModel, GenerationType
+from turbogen.utils import is_hopper_gpu, free_memory
+from turbogen.models.base_model import BaseModel, GenerationType
 from lightx2v.models.runners.default_runner import DefaultRunner
 from lightx2v.utils.input_info import init_empty_input_info, update_input_info_from_dict
 from lightx2v import LightX2VPipeline as LightX2VPipelineBase
