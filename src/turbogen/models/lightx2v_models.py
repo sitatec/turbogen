@@ -81,9 +81,7 @@ class _LightX2VPipeline(LightX2VPipelineBase):
                     ),
                     "infer_steps": steps or self.infer_steps,
                     "sample_guide_scale": guidance_scale or self.sample_guide_scale,
-                    "enable_cfg": guidance_scale > 1
-                    if guidance_scale
-                    else self.enable_cfg,
+                    "enable_cfg": guidance_scale > 1 if guidance_scale else self.enable_cfg,
                 }
             )
 
@@ -103,9 +101,9 @@ class _BaseLightx2vModel(BaseModel):
         model_path: str,
         generation_type: GenerationType,
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
-        attention_backend: Literal[
-            "flash_attn3", "sage_attn2", "torch_sdpa"
-        ] = "flash_attn3" if is_hopper_gpu() else "sage_attn2",
+        attention_backend: Literal["flash_attn3", "sage_attn2", "torch_sdpa"] = "flash_attn3"
+        if is_hopper_gpu()
+        else "sage_attn2",
         infer_steps: int = 4,
         guidance_scale: float = 1,
         compile: bool = False,
@@ -140,17 +138,10 @@ class _BaseLightx2vModel(BaseModel):
                 vae_offload=True,
             )
 
-        if (
-            quant_scheme
-            or quantized_model_path
-            or quantized_text_encoder_path
-            or text_encoder_quantized
-        ):
+        if quant_scheme or quantized_model_path or quantized_text_encoder_path or text_encoder_quantized:
             self.pipe.enable_quantize(
                 quant_scheme=quant_scheme or "fp8-sgl",
-                dit_quantized=(
-                    quant_scheme is not None or quantized_model_path is not None
-                ),
+                dit_quantized=(quant_scheme is not None or quantized_model_path is not None),
                 dit_quantized_ckpt=quantized_model_path,
                 text_encoder_quantized=text_encoder_quantized,
                 text_encoder_quantized_ckpt=quantized_text_encoder_path,
@@ -176,11 +167,7 @@ class _BaseLightx2vModel(BaseModel):
 
         if compile:
             self.pipe.enable_compilation(
-                [
-                    list(shape)
-                    for resolutions in aspect_ratios.values()
-                    for shape in resolutions.values()
-                ]
+                [list(shape) for resolutions in aspect_ratios.values() for shape in resolutions.values()]
             )
 
         if generation_type == GenerationType.I2V and supports_last_frame:
@@ -191,9 +178,7 @@ class _BaseLightx2vModel(BaseModel):
 
                 return self._run_input_encoder_local_i2v()
 
-            self.pipe.runner.run_input_encoder = types.MethodType(
-                encode_input, self.pipe.runner
-            )
+            self.pipe.runner.run_input_encoder = types.MethodType(encode_input, self.pipe.runner)
 
         free_memory()
 
@@ -289,9 +274,7 @@ class QwenImageLite(_BaseLightx2vModel):
         **kwargs,
     ):
         if text_encoder and vae:
-            QwenImageRunner.load_model = self._create_patched_load_model(
-                text_encoder, vae
-            )
+            QwenImageRunner.load_model = self._create_patched_load_model(text_encoder, vae)
         super().__init__(
             model_id="l",
             model_name="Qwen Image 2512",
@@ -302,7 +285,7 @@ class QwenImageLite(_BaseLightx2vModel):
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
-            infer_steps=kwargs.pop("infer_steps", 2),
+            infer_steps=kwargs.pop("infer_steps", 3),
             aspect_ratios={
                 "1:1": {"1.3K": (1328, 1328)},
                 "16:9": {"1.3K": (1664, 928)},
@@ -393,9 +376,7 @@ class Wan22Lite(_BaseLightx2vModel):
         enable_cpu_offload: bool = False,
         quant_scheme: str | None = "fp8-sgl",
         text_encoder_quantized: bool = True,
-        generation_type: Literal[
-            GenerationType.I2V, GenerationType.T2V
-        ] = GenerationType.I2V,
+        generation_type: Literal[GenerationType.I2V, GenerationType.T2V] = GenerationType.I2V,
         **kwargs,
     ):
         super().__init__(
