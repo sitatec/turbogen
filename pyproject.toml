@@ -34,7 +34,7 @@ dependencies = [
   "fast-thumbhash",
   "aiohttp",
   "diffusers",
-  "torchao==0.15.0",                                        # The 0.16.0 version isn't compatible with the current diffusers latest version
+  "torchao==0.15.0",                                                   # The 0.16.0 version isn't compatible with the current diffusers latest version
   "transformers>=5.0.0",
   "accelerate",
   "hf-transfer",
@@ -45,7 +45,7 @@ dependencies = [
   "triton",
   "kernels",
   "decord",
-  "git+https://github.com/sitatec/LightX2V.git@torch2.9.1",
+  "lightx2v @ git+https://github.com/sitatec/LightX2V.git@torch2.9.1",
 ]
 
 [project.urls]
