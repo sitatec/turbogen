@@ -70,7 +70,7 @@ class _LightX2VPipeline(LightX2VPipelineBase):
 
         if guidance_scale or steps or duration_seconds:
             print(
-                "⚠️WARNING⚠️: guidance_scale, duration and steps params should only be provided during testing or local runs. It will break think in concurrent envs like production inference."
+                "⚠️WARNING⚠️: guidance_scale, duration and steps params should only be provided during testing or local runs. It may break think in concurrent envs like production inference."
             )
             self.runner.set_config(
                 {
