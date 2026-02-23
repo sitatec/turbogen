@@ -1,3 +1,4 @@
+from typing import Literal
 import re
 import json
 from pathlib import Path
@@ -18,6 +19,7 @@ Always preserve the original intent of the user's input. If instructions conflic
 
 1. **Use fluent, natural descriptive language** within a single continuous text block.
    - Avoid formal Markdown elements (e.g., using • or *), numbered items, or headings. However, displaying such characters as plain text in the image is allowed (e.g., rendering a text listing items as bullet-points).
+   - Aim for beautiful, highly aesthetic outputs unless conflict with user intent
 
 2. **Enrich visual details appropriately**:
    - Determine whether the image contains text. If not, do not add any extraneous textual elements.  
@@ -26,10 +28,10 @@ Always preserve the original intent of the user's input. If instructions conflic
    - **Never modify proper nouns**: Names of people, brands, locations, IPs, movie/game titles, slogans in their original wording, etc., must be preserved exactly as given.
 
 4. **Textual content**:  
-   - If the image contains visible text, **enclose every piece of displayed text in English double quotes (" ")** to distinguish it from other content.
+   - If the image contains visible text, **enclose every piece of displayed text in double quotes** to distinguish it from other content.
    - Accurately describe the text’s content, position, layout direction (horizontal/vertical/wrapped), font style, color, size, and presentation method (e.g., printed, embroidered, neon, LED, graffiti). Transcribe punctuation and capitalization accurately.
    - If the prompt implies (but doesn't specifically state) the presence of specific text or numbers, explicitly state the **exact textual/numeric content**, enclosed in double quotation marks. Avoid vague references like (a list of names), (a chart); instead, provide concrete text without excessive length.
-   - For non-English texts, retain the original text and put it withing double quotes (" ") without translation.
+   - For non-English texts, retain the original language and put it withing English double quotes (" ") without translation.
 
 5. **Human Subjects**:
    - **Identity & Appearance**: Explicitly state ethnicity, gender, and a specific age or narrow range. Describe skin tone and texture; detail face shape, structural features, specific eye/nose/mouth traits, and a precise expression.
@@ -49,9 +51,9 @@ You don't have to strictly specify all these characteristics, be flexible and pr
 
 ## Safety & Content Restrictions
 
-  - NSFW/Sexually explicit content are **strictly forbidden*
+  - NSFW/Sexually explicit content is **strictly forbidden*
   - Public figures in real-life (celebrities, politicians) are forbidden. 
-  - Anonymous, fictional and historical figures are allowed.
+  - Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
 IMAGE_EDITING_SYS_PROMPT = """
@@ -85,7 +87,7 @@ Please follow the enhancing rules below:
 - Specify text position, color, and layout only if user has required.
 - If font is specified, keep the original language of the font.
 - Example:  
-    > Original: Ajouter le text Bonjour au t-shirt
+    > Original: Ajoute le text Bonjour au t-shirt
     > Enhanced: Add the text "Bonjour" to the blue t-shirt
 
 ### 3. Human (ID) Editing Tasks
@@ -116,7 +118,7 @@ Please follow the enhancing rules below:
 
 If an input image contains forbidden content or the user request to alter the image in a way that result in forbidden content, flag it as unsafe.
 
-### 1. Sexual Content are **strictly forbidden**: 
+### 1. Sexual content is **strictly forbidden**: 
    - Removing clothing or altering outfits in a sexual way
    - Emphasizing sexual body parts
    - Changing poses, expressions, or camera angles to be sexual in nature.
@@ -124,7 +126,7 @@ If an input image contains forbidden content or the user request to alter the im
 
 ### 2. Real Public Figures & Children:  
    - Any editing involving public figures in real-life (celebrities, politicians) or children under 13 are forbidden.
-   - Anonymous, fictional and historical figures are allowed.
+   - Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
 TEXT_TO_VIDEO_SYS_PROMPT = """
@@ -137,6 +139,7 @@ Always preserve the original intent of the user's input. If instructions conflic
 ### 1. Visual Description (Static Scene)
 This section establishes the starting frame or general aesthetic.
    - **Use fluent, natural descriptive language** without Markdown bullets or headings within the text itself.
+   - Aim for beautiful, highly aesthetic outputs unless conflict with user intent
    - **Enrich visual details**: Supplement logically consistent environmental, lighting, texture, or atmospheric elements. Describe the "mise-en-scène"—the arrangement of scenery and stage properties.
    - **Never modify proper nouns**: Names, brands, locations, IPs, etc., must be preserved exactly as given.
    - **Textual Content**: If the video involves visible text, **enclose every piece of displayed text in English double quotes (" ")**. Transcribe punctuation and capitalization accurately. Describe font, material (e.g., neon, engraved), and location. For non-English texts, retain the original text without translation.
@@ -161,10 +164,10 @@ This section defines how the scene evolves over time.
 
 ## Safety & Content Restrictions
 
-The following types of content are **strictly forbidden**:
+The following types of content is **strictly forbidden**:
   1. NSFW/Sexually explicit content (All People).
   2. Public figures in real-life (celebrities, politicians) are forbidden. 
-  3. Anonymous, fictional and historical figures are allowed.
+  3. Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
 IMAGE_TO_VIDEO_SYS_PROMPT = """
@@ -205,9 +208,9 @@ You don't have to strictly specify all these characteristics, be flexible and pr
 ## Safety & Content Restrictions
 
 If an input image contains forbidden content or the user request to alter the image in a way that result in forbidden content, flag it as unsafe.
-- NSFW/Sexually explicit content are **strictly forbidden*
+- NSFW/Sexually explicit content is **strictly forbidden*
 - Public figures in real-life (celebrities, politicians) are forbidden. 
-- Anonymous, fictional and historical figures are allowed.
+- Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
 FIRST_LAST_FRAME_SYS_PROMPT = """
@@ -251,9 +254,9 @@ You don't have to strictly specify all these characteristics, be flexible and pr
 ## Safety & Content Restrictions
 
 If an input image contains forbidden content or the user request to alter the image in a way that result in forbidden content, flag it as unsafe.
-- NSFW/Sexually explicit content are **strictly forbidden*
+- NSFW/Sexually explicit content is **strictly forbidden*
 - Public figures in real-life (celebrities, politicians) are forbidden. 
-- Anonymous, fictional and historical figures are allowed.
+- Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
 
@@ -294,9 +297,26 @@ Return a single JSON object that strictly follows this JSON schema:
 
 
 class SafetyViolationError(Exception):
-    def __init__(self, reason: str):
+    def __init__(
+        self,
+        reason: Literal[
+            "SEXUALLY_EXPLICIT",
+            "REAL_PUBLIC_FIGURE",
+            "CHILDREN_UNDER_13",
+            "UNKNOWN",
+        ],
+    ):
+        supportedReasons = ["SEXUALLY_EXPLICIT", "REAL_PUBLIC_FIGURE", "CHILDREN_UNDER_13", "UNKNOWN"]
+        if reason not in supportedReasons:
+            print(
+                f'Receive unsupported reason {reason}, defaulting to "UNKNOWN". Supported reasons are {supportedReasons}'
+            )
+            reason = "UNKNOWN"
         self.reason = reason
         super().__init__(f"Safety violation: {reason}")
+
+    def __str__(self):
+        return f'SafetyViolationError(reason="{self.reason}")'
 
 
 class PromptEnhancer:
@@ -322,9 +342,12 @@ class PromptEnhancer:
             print(f"Receive {token_count}, using {selected_attn}")
             self.model.set_attn_implementation(selected_attn)
 
-    def enhance_prompt(
-        self, prompt: str, generation_type: GenerationType, images: list[str] = []
-    ) -> str:
+    def enhance_prompt(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> str:
+        """
+        Enhance the given prompt.
+        For video prompt enhancement, the first image is treated as first frame and the second (if any), is treated as last frame.
+        Throws SafetyViolationError if the prompt is unsafe
+        """
         messages = [
             {
                 "role": "system",
@@ -349,10 +372,7 @@ class PromptEnhancer:
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
         generated_ids = self.model.generate(**inputs, max_new_tokens=512)
-        generated_ids_trimmed = [
-            out_ids[len(in_ids) :]
-            for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
-        ]
+        generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
         output_text = self.processor.batch_decode(  # pyrefly: ignore
             generated_ids_trimmed,
             skip_special_tokens=True,
@@ -361,7 +381,7 @@ class PromptEnhancer:
 
         parsed = self._parse_json(output_text)
         if not parsed["is_safe"]:
-            reason = parsed.get("unsafe_reason") or "Unknown"
+            reason = parsed.get("unsafe_reason") or "UNKNOWN"
             raise SafetyViolationError(reason)
 
         return parsed["enhanced_prompt"]
@@ -374,24 +394,18 @@ class PromptEnhancer:
 
         return {"role": "user", "content": user_content}
 
-    def _get_system_prompt(
-        self, generation_type: GenerationType, num_images: int
-    ) -> str:
+    def _get_system_prompt(self, generation_type: GenerationType, num_images: int) -> str:
         output_format = get_output_format(generation_type)
         match generation_type:
             case GenerationType.T2I:
                 return IMAGE_GENERATION_SYS_PROMPT + output_format
             case GenerationType.I2I:
-                assert num_images > 0, (
-                    "At least one image is required for image editing"
-                )
+                assert num_images > 0, "At least one image is required for image editing"
                 return IMAGE_EDITING_SYS_PROMPT + output_format
             case GenerationType.T2V:
                 return TEXT_TO_VIDEO_SYS_PROMPT + output_format
             case GenerationType.I2V:
-                assert num_images > 0, (
-                    "At least one image is required for image to video"
-                )
+                assert num_images > 0, "At least one image is required for image to video"
                 if num_images == 2:
                     return FIRST_LAST_FRAME_SYS_PROMPT + output_format
                 else:
@@ -428,11 +442,9 @@ class PromptEnhancer:
             elif cleaned == "false":
                 is_prompt_safe = False
 
-        if (
-            not isinstance(is_prompt_safe, bool)
-            or is_prompt_safe
-            and not json_data.get("enhanced_prompt", "").strip()
-        ):
+            json_data["is_safe"] = is_prompt_safe
+
+        if not isinstance(is_prompt_safe, bool) or is_prompt_safe and not json_data.get("enhanced_prompt", "").strip():
             raise Exception(f"Failed to enhance prompt, got: {text}")
 
         return json_data
