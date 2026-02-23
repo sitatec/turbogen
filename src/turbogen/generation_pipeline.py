@@ -10,7 +10,7 @@ import torch
 import numpy as np
 from turbogen.models.base_model import GenerationType
 from turbogen.services.nsfw_detector import NsfwLevel
-from turbogen.utils import save_video_tensor, free_memory
+from turbogen.utils import save_video_tensor
 from turbogen.utils.image_utils import (
     create_exif_data,
     image_tensor_to_pil,
@@ -81,16 +81,17 @@ class GenerationPipeline:
 
         generation_type = model.generation_type
 
-        if enhance_prompt:
-            prompt = self._enhance_prompt(
+        if self.prompt_enhancer:
+            enhanced_prompt = self._handle_prompt(
                 prompt,
+                enhance_prompt,
                 generation_type,
                 image_paths,
                 last_frame_path,
             )
-            if metadata:
-                metadata["enhanced_prompt"] = prompt
-            free_memory()
+            prompt = enhanced_prompt or prompt
+            if enhanced_prompt and metadata:
+                metadata["enhanced_prompt"] = enhanced_prompt
 
         output = model.generate(
             prompt=prompt,
@@ -107,16 +108,16 @@ class GenerationPipeline:
 
         output_dir_path = output_dir_path or mkdtemp()
         if postprocess:
-            free_memory()
             result = self._process_and_save_output(output, generation_type, output_dir_path, metadata)
         else:
             result = self._save_output(output, generation_type, output_dir_path, metadata)
 
         return result
 
-    def _enhance_prompt(
+    def _handle_prompt(
         self,
         prompt: str,
+        enhance_prompt: bool,
         generation_type: GenerationType,
         image_paths: list[str],
         last_frame_path: str | None,
@@ -132,10 +133,12 @@ class GenerationPipeline:
                 input_images.append(last_frame_path)
 
         t = time.perf_counter()
-        enhanced_pormpt = self.prompt_enhancer.enhance_prompt(prompt, generation_type, input_images)
-        print(f"Prompt Enhanced in {time.perf_counter() - t:.4f}s")
-
-        return enhanced_pormpt
+        if enhance_prompt:
+            enhanced_prompt = self.prompt_enhancer.enhance_prompt(prompt, generation_type, input_images)
+            print(f"Prompt Enhanced in {time.perf_counter() - t:.4f}s")
+            return enhanced_prompt
+        else:
+            self.prompt_enhancer.ensure_prompt_safety(prompt, generation_type, input_images)
 
     def _process_and_save_output(
         self,

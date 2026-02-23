@@ -52,7 +52,7 @@ You don't have to strictly specify all these characteristics, be flexible and pr
 ## Safety & Content Restrictions
 
   - NSFW/Sexually explicit content is **strictly forbidden*
-  - Public figures in real-life (celebrities, politicians) are forbidden. 
+  - Public figures in real-life (e.g., celebrities, politicians) are forbidden. 
   - Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
@@ -125,7 +125,7 @@ If an input image contains forbidden content or the user request to alter the im
    - Anything that will result in a sexually explicit image.
 
 ### 2. Real Public Figures & Children:  
-   - Any editing involving public figures in real-life (celebrities, politicians) or children under 13 are forbidden.
+   - Any editing involving public figures in real-life (e.g., celebrities, politicians) or children under 13 are forbidden.
    - Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
@@ -166,7 +166,7 @@ This section defines how the scene evolves over time.
 
 The following types of content is **strictly forbidden**:
   1. NSFW/Sexually explicit content (All People).
-  2. Public figures in real-life (celebrities, politicians) are forbidden. 
+  2. Public figures in real-life (e.g., celebrities, politicians) are forbidden. 
   3. Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
@@ -209,7 +209,7 @@ You don't have to strictly specify all these characteristics, be flexible and pr
 
 If an input image contains forbidden content or the user request to alter the image in a way that result in forbidden content, flag it as unsafe.
 - NSFW/Sexually explicit content is **strictly forbidden*
-- Public figures in real-life (celebrities, politicians) are forbidden. 
+- Public figures in real-life (e.g., celebrities, politicians) are forbidden. 
 - Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
@@ -255,7 +255,7 @@ You don't have to strictly specify all these characteristics, be flexible and pr
 
 If an input image contains forbidden content or the user request to alter the image in a way that result in forbidden content, flag it as unsafe.
 - NSFW/Sexually explicit content is **strictly forbidden*
-- Public figures in real-life (celebrities, politicians) are forbidden. 
+- Public figures in real-life (e.g., celebrities, politicians) are forbidden. 
 - Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
@@ -293,6 +293,48 @@ Return a single JSON object that strictly follows this JSON schema:
   "required": ["is_safe", "enhanced_prompt"]
 }}
 ```
+"""
+
+
+SAFETY_CHECK_SYS_PROMPT = """
+You are an expert AI safety moderator. Your task is to evaluate the user's media generation prompt and any provided input images against the following strict safety guidelines:
+
+1. NSFW/Sexually explicit content is **strictly forbidden**.
+2. Real-life public figures (e.g., celebrities, politicians) are **strictly forbidden** (anonymous, fictional, and historical figures are allowed).
+3. If the request involves modifying an existing image, involving children under 13 is **strictly forbidden**.
+
+Analyze the input objectively. If it violates any rule, mark it as unsafe and provide the exact violation reason.
+"""
+
+
+def get_safety_output_format(generation_type: GenerationType) -> str:
+    unsafe_reasons = ["SEXUALLY_EXPLICIT", "REAL_PUBLIC_FIGURE"]
+    if generation_type == GenerationType.I2I:
+        unsafe_reasons.append("CHILDREN_UNDER_13")
+
+    enum_str = json.dumps(unsafe_reasons)
+
+    return f"""
+## Output Format
+
+Return a single JSON object that strictly follows this JSON schema:
+
+```json
+{{
+  "type": "object",
+  "properties": {{
+    "is_safe": {{
+      "type": "boolean",
+      "description": "Indicates whether the generation request is completely safe based on the Safety Guidelines."
+    }},
+    "unsafe_reason": {{
+      "type": "string",
+      "enum": {enum_str},
+      "description": "The reason why the generation is not safe. Should only be provided when is_safe is false."
+    }}
+  }},
+  "required": ["is_safe"]
+}}
 """
 
 
@@ -371,7 +413,7 @@ class PromptEnhancer:
 
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
-        generated_ids = self.model.generate(**inputs, max_new_tokens=512)
+        generated_ids = self.model.generate(**inputs, max_new_tokens=512, **self._get_gen_params(len(images) > 0))
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
         output_text = self.processor.batch_decode(  # pyrefly: ignore
             generated_ids_trimmed,
@@ -385,6 +427,43 @@ class PromptEnhancer:
             raise SafetyViolationError(reason)
 
         return parsed["enhanced_prompt"]
+
+    def ensure_prompt_safety(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> None:
+        """
+        Evaluates the safety of the prompt and input images without modifying the prompt.
+        Throws a SafetyViolationError if the inputs violate safety guidelines.
+        """
+        system_prompt = SAFETY_CHECK_SYS_PROMPT + get_safety_output_format(generation_type)
+        messages = [
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": system_prompt}],
+            }
+        ]
+        messages.append(self._get_user_message(prompt, images))
+
+        inputs = self.processor.apply_chat_template(  # pyrefly: ignore
+            messages,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_dict=True,
+            return_tensors="pt",
+        ).to(self.model.device)
+
+        self._optimize_for_token_count(inputs.input_ids.shape[-1])
+
+        generated_ids = self.model.generate(**inputs, max_new_tokens=128, **self._get_gen_params(len(images) > 0))
+        generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
+        output_text = self.processor.batch_decode(  # pyrefly: ignore
+            generated_ids_trimmed,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )[0]
+
+        parsed = self._parse_safety_json(output_text)
+        if not parsed["is_safe"]:
+            reason = parsed.get("unsafe_reason") or "UNKNOWN"
+            raise SafetyViolationError(reason)
 
     def _get_user_message(self, prompt: str, images: list[str]) -> dict:
         user_content = []
@@ -412,6 +491,27 @@ class PromptEnhancer:
                     return IMAGE_TO_VIDEO_SYS_PROMPT + output_format
             case _:
                 raise Exception(f"Unsupported generation type: {generation_type}")
+
+    def _get_gen_params(self, has_images: bool) -> dict:
+        """
+        Returns transformers-compatible generation parameters based on Qwen3-VL recommended settings.
+        """
+        if has_images:
+            return {
+                "do_sample": True,
+                "top_p": 0.8,
+                "top_k": 20,
+                "temperature": 0.7,
+                "repetition_penalty": 1.0,
+            }
+        else:
+            return {
+                "do_sample": True,
+                "top_p": 1.0,
+                "top_k": 40,
+                "temperature": 1.0,
+                "repetition_penalty": 1.0,
+            }
 
     def _parse_json(self, text: str) -> dict:
         json_data = {}
@@ -448,6 +548,41 @@ class PromptEnhancer:
             raise Exception(f"Failed to enhance prompt, got: {text}")
 
         return json_data
+
+    def _parse_safety_json(self, text: str) -> dict:
+        json_data = {}
+        try:
+            json_data = json.loads(text)
+        except json.JSONDecodeError:
+            # Try to find JSON block
+            match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
+            if match:
+                try:
+                    json_data = json.loads(match.group(1))
+                except json.JSONDecodeError:
+                    pass
+            # Try finding first { and last }
+            if not json_data:
+                match = re.search(r"\{.*\}", text, re.DOTALL)
+                if match:
+                    try:
+                        json_data = json.loads(match.group(0))
+                    except json.JSONDecodeError:
+                        pass
+
+        is_prompt_safe = json_data.get("is_safe")
+
+        if isinstance(is_prompt_safe, str):
+            cleaned = is_prompt_safe.lower().strip()
+            if cleaned == "true":
+                is_prompt_safe = True
+            elif cleaned == "false":
+                is_prompt_safe = False
+
+        if not isinstance(is_prompt_safe, bool):
+            raise Exception(f"Failed to parse safety check response, got: {text}")
+
+        return {"is_safe": is_prompt_safe, "unsafe_reason": json_data.get("unsafe_reason")}
 
 
 __all__ = ["PromptEnhancer"]
