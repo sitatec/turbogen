@@ -1,4 +1,4 @@
-from typing import Literal
+from enum import Enum
 import re
 import json
 from pathlib import Path
@@ -29,7 +29,7 @@ Always preserve the original intent of the user's input. If instructions conflic
 
 4. **Textual content**:  
    - If the image contains visible text, **enclose every piece of displayed text in double quotes** to distinguish it from other content.
-   - Accurately describe the text’s content, position, layout direction (horizontal/vertical/wrapped), font style, color, size, and presentation method (e.g., printed, embroidered, neon, LED, graffiti). Transcribe punctuation and capitalization accurately.
+   - Accurately describe the text's content, position, layout direction (horizontal/vertical/wrapped), font style, color, size, and presentation method (e.g., printed, embroidered, neon, LED, graffiti). Transcribe punctuation and capitalization accurately.
    - If the prompt implies (but doesn't specifically state) the presence of specific text or numbers, explicitly state the **exact textual/numeric content**, enclosed in double quotation marks. Avoid vague references like (a list of names), (a chart); instead, provide concrete text without excessive length.
    - For non-English texts, retain the original language and put it withing English double quotes (" ") without translation.
 
@@ -68,7 +68,7 @@ Please follow the enhancing rules below:
 - Keep the enhanced prompt **direct and specific**.  
 - If the instruction is contradictory, vague, or unachievable, prioritize reasonable inference and correction, and supplement details when necessary.  
 - Keep the core intention of the original instruction unchanged, only enhancing its clarity, rationality, and visual feasibility.  
-- All added objects or modifications must align with the logic and style of the edited input image’s overall scene.
+- All added objects or modifications must align with the logic and style of the edited input image's overall scene.
 - Add missing key information: e.g., if position is unspecified, choose a reasonable area based on composition (near subject, empty space, center/edge, etc.).  
 - Regardless of the user's input language, the enhanced prompt must be in English.
 
@@ -91,12 +91,12 @@ Please follow the enhancing rules below:
     > Enhanced: Add the text "Bonjour" to the blue t-shirt
 
 ### 3. Human (ID) Editing Tasks
-- Emphasize maintaining the person’s core visual consistency (ethnicity, gender, age, hairstyle, expression, outfit, etc.).  
+- Emphasize maintaining the person's core visual consistency (ethnicity, gender, age, hairstyle, expression, outfit, etc.).  
 - **For expression changes / beauty / make up changes, they must be natural and subtle, never exaggerated.**  
 - If modifying appearance (e.g., clothes, hairstyle), ensure the new element is consistent with the original style.  
 - Example:  
-    > Original: Change the person’s hat
-    > Enhanced: Replace the man’s hat with a dark brown beret; keep his smile, short hair, and gray jacket unchanged
+    > Original: Change the person's hat
+    > Enhanced: Replace the man's hat with a dark brown beret; keep his smile, short hair, and gray jacket unchanged
 
 ### 4. Style Conversion or Enhancement Tasks
 - If a style is specified, describe it concisely using key visual features. For example:  
@@ -109,10 +109,10 @@ Please follow the enhancing rules below:
 - If there are other changes, place the style description at the end.
 
 ### 5. Multi-Image Tasks
-- Enhanced prompts must clearly point out which image’s element is being modified. For example:  
+- Enhanced prompts must clearly point out which image's element is being modified. For example:  
     > Original: Replace the subject of image 1 with the subject of image 2
-    > Enhanced: Replace the girl of image 1 with the boy of image 2, keeping image 2’s background unchanged
-- For stylization tasks, describe the reference image’s style in the Enhanced prompt, while preserving the visual content of the source image.  
+    > Enhanced: Replace the girl of image 1 with the boy of image 2, keeping image 2's background unchanged
+- For stylization tasks, describe the reference image's style in the Enhanced prompt, while preserving the visual content of the source image.  
 
 ## 4. Safety & Content Restrictions
 
@@ -338,22 +338,20 @@ Return a single JSON object that strictly follows this JSON schema:
 """
 
 
+class SafetyViolationReason(str, Enum):
+    SEXUALLY_EXPLICIT = "SEXUALLY_EXPLICIT"
+    REAL_PUBLIC_FIGURE = "REAL_PUBLIC_FIGURE"
+    CHILDREN_UNDER_13 = "CHILDREN_UNDER_13"
+    UNKNOWN = "UNKNOWN"
+
+    @property
+    @staticmethod
+    def values(self):
+        return tuple(r.value for r in SafetyViolationReason)
+
+
 class SafetyViolationError(Exception):
-    def __init__(
-        self,
-        reason: Literal[
-            "SEXUALLY_EXPLICIT",
-            "REAL_PUBLIC_FIGURE",
-            "CHILDREN_UNDER_13",
-            "UNKNOWN",
-        ],
-    ):
-        supportedReasons = ["SEXUALLY_EXPLICIT", "REAL_PUBLIC_FIGURE", "CHILDREN_UNDER_13", "UNKNOWN"]
-        if reason not in supportedReasons:
-            print(
-                f'Receive unsupported reason {reason}, defaulting to "UNKNOWN". Supported reasons are {supportedReasons}'
-            )
-            reason = "UNKNOWN"
+    def __init__(self, reason: SafetyViolationReason):
         self.reason = reason
         super().__init__(f"Safety violation: {reason}")
 
@@ -421,12 +419,11 @@ class PromptEnhancer:
             clean_up_tokenization_spaces=False,
         )[0]
 
-        parsed = self._parse_json(output_text)
-        if not parsed["is_safe"]:
-            reason = parsed.get("unsafe_reason") or "UNKNOWN"
-            raise SafetyViolationError(reason)
+        output_json = self._parse_json(output_text)
 
-        return parsed["enhanced_prompt"]
+        self._ensure_safe(output_json)
+
+        return output_json["enhanced_prompt"]
 
     def ensure_prompt_safety(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> None:
         """
@@ -460,10 +457,9 @@ class PromptEnhancer:
             clean_up_tokenization_spaces=False,
         )[0]
 
-        parsed = self._parse_safety_json(output_text)
-        if not parsed["is_safe"]:
-            reason = parsed.get("unsafe_reason") or "UNKNOWN"
-            raise SafetyViolationError(reason)
+        output_json = self._parse_safety_json(output_text)
+
+        self._ensure_safe(output_json)
 
     def _get_user_message(self, prompt: str, images: list[str]) -> dict:
         user_content = []
@@ -583,6 +579,15 @@ class PromptEnhancer:
             raise Exception(f"Failed to parse safety check response, got: {text}")
 
         return {"is_safe": is_prompt_safe, "unsafe_reason": json_data.get("unsafe_reason")}
+
+    def _ensure_safe(self, output_json: dict):
+        if not output_json["is_safe"]:
+            try:
+                reason = SafetyViolationReason(output_json.get("unsafe_reason"))
+            except ValueError:
+                reason = SafetyViolationReason.UNKNOWN
+
+            raise SafetyViolationError(reason)
 
 
 __all__ = ["PromptEnhancer"]
