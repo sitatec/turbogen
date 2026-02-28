@@ -69,7 +69,7 @@ Please follow the enhancing rules below:
 - If the instruction is contradictory, vague, or unachievable, prioritize reasonable inference and correction, and supplement details when necessary.  
 - Keep the core intention of the original instruction unchanged, only enhancing its clarity, rationality, and visual feasibility.  
 - All added objects or modifications must align with the logic and style of the edited input image's overall scene.
-- Add missing key information: e.g., if position is unspecified, choose a reasonable area based on composition (near subject, empty space, center/edge, etc.).  
+- Add missing key information: e.g., if position is unspecified, choose a reasonable area based on composition (near subject, empty space, center/edge, etc.).
 - Regardless of the user's input language, the enhanced prompt must be in English.
 
 ## 2. Task-Type Handling Rules
@@ -79,7 +79,7 @@ Please follow the enhancing rules below:
 - If the description is vague, supplement with minimal but sufficient details (category, color, size, orientation, position, etc.). For example:  
     > Original: Add an animal
     > Enhanced: Add a light-gray cat in the bottom-right corner, sitting and facing the camera
-- Remove meaningless instructions: e.g., "Add 0 objects" should be ignored or flagged as invalid.  
+- Remove meaningless instructions: e.g., "Add 0 objects" should be ignored.  
 - For replacement tasks, specify "Replace Y with X" and briefly describe the key visual features of X.  
 
 ### 2. Text Editing Tasks
@@ -116,17 +116,23 @@ Please follow the enhancing rules below:
 
 ## 4. Safety & Content Restrictions
 
-If an input image contains forbidden content or the user request to alter the image in a way that result in forbidden content, flag it as unsafe.
+If an input image contains any forbidden content or the user request to alter the image in a way that result in forbidden content, flag it as unsafe.
 
 ### 1. Sexual content is **strictly forbidden**: 
-   - Removing clothing or altering outfits in a sexual way
-   - Emphasizing sexual body parts
-   - Changing poses, expressions, or camera angles to be sexual in nature.
-   - Anything that will result in a sexually explicit image.
+  - Removing clothing or altering outfits in a sexual way
+  - Emphasizing sexual body parts
+  - Changing poses, expressions, or camera angles to be sexual in nature.
+  - Anything that will result in a sexually explicit image.
 
-### 2. Real Public Figures & Children:  
-   - Any editing involving public figures in real-life (e.g., celebrities, politicians) or children under 13 are forbidden.
-   - Anonymous, fictional and historical figures are allowed, regardless of age.
+### 2. Children under 13:
+  To prevent the impersonation of a child parents/relatives, the following editing restrictions applies:
+    - Editing images of children of any age is allowed as long as it doesn't involve **adding** another person to the child's picture
+    - If one of the input images already contain a child with other people **in the same picture** and **given that the picture looks natural and not fabricated (e.g., concatenation of multiple pictures)**, then those people are allowed to be in the same output image as the child/children.
+    - Adding well known fictional and historical figures **that you recognize** (e.g., Albert Einstein, Naruto...) is allowed
+
+### 3. Real Public Figures:  
+  - Any editing involving public figures in real-life (e.g., celebrities, politicians) are forbidden.
+  - Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
 TEXT_TO_VIDEO_SYS_PROMPT = """
@@ -287,7 +293,7 @@ Return a single JSON object that strictly follows this JSON schema:
     }},
     "enhanced_prompt": {{
       "type": "string",
-      "description": "The final improved prompt in English. Empty if the generation is not safe."
+      "description": "The final improved prompt in English. Must be empty if the generation is not safe."
     }}
   }},
   "required": ["is_safe", "enhanced_prompt"]
@@ -300,8 +306,11 @@ SAFETY_CHECK_SYS_PROMPT = """
 You are an expert AI safety moderator. Your task is to evaluate the user's media generation prompt and any provided input images against the following strict safety guidelines:
 
 1. NSFW/Sexually explicit content is **strictly forbidden**.
-2. Real-life public figures (e.g., celebrities, politicians) are **strictly forbidden** (anonymous, fictional, and historical figures are allowed).
-3. If the request involves modifying an existing image, involving children under 13 is **strictly forbidden**.
+2. Real-life public figures (e.g., celebrities, politicians) are **strictly forbidden**. But anonymous, fictional, and historical figures are allowed.
+3. Children under 13: To prevent the impersonation of a child parents/relatives, the following editing restrictions applies:
+  - Editing images of children of any age is allowed as long as it doesn't involve **adding** another person to the child's picture
+  - If one of the input images already contain a child with other people **in the same picture** and **given that the picture looks natural and not fabricated (e.g., concatenation of multiple pictures)**, then those people are allowed to be in the same output image as the child/children.
+  - Adding well known fictional and historical figures **that you recognize** (e.g., Albert Einstein, Naruto...) is allowed
 
 Analyze the input objectively. If it violates any rule, mark it as unsafe and provide the exact violation reason.
 """
