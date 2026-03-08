@@ -19,8 +19,8 @@ from turbogen.services.nsfw_detector import NsfwDetector
 
 
 zimage_turbo_path = download_zimage_models()
-image_scorer_path = download_image_scorer()
-prompt_enhancer_path = download_prompt_enhancer()
+image_scorer_path = download_image_scorer(quant_method="bnb")
+prompt_enhancer_path = download_prompt_enhancer(quant_method="bnb")
 nsfw_model_path = download_nsfw_model()
 
 zimage_turbo = ZImageTurbo(zimage_turbo_path, rope_type="torch")

@@ -47,6 +47,34 @@ def convert_to_webp_with_metadata(
         return output_buffer.getvalue()
 
 
+def create_thumbnail(
+    img: np.ndarray,
+    target_width: int = 480,
+    min_height: int = 400,
+):
+    """Resize to [target_width] while preventing the new height from being smaller than [min_height]"""
+    height, width = img.shape[:2]
+    scale = max(target_width / width, min_height / height)
+
+    if scale >= 1.0:  # Avoid upscaling
+        return img
+
+    new_w = int(round(width * scale))
+    new_h = int(round(height * scale))
+
+    # If source is much larger, downscale to 1.8x target using INTER_AREA as a first pass.
+    # This removes high-frequency noise and prevents Lanczos "ringing" (halos).
+    if scale < 0.5:
+        img = cv2.resize(
+            img,
+            (int(new_w * 1.8), int(new_h * 1.8)),
+            interpolation=cv2.INTER_AREA,
+        )
+
+    # Final low scale resize to target using Lanczos for nice acuity
+    return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+
+
 def create_exif_data(metadata: dict[str, str]) -> bytes:
     metadata = metadata.copy()
     # Create separate dictionaries for ImageIFD (0th) and ExifIFD

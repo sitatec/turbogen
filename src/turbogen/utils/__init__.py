@@ -1,4 +1,4 @@
-from .image_utils import image_tensor_to_numpy, image_tensor_to_pil
+from .image_utils import image_tensor_to_numpy, image_tensor_to_pil, create_thumbnail
 from .video_utils import save_video_tensor
 from .memory_utils import disable_manual_memory_gc, free_memory
 from .kernels_utils import (
@@ -21,4 +21,5 @@ __all__ = [
     "apply_sgl_kernel_rmsnorm",
     "disable_manual_memory_gc",
     "free_memory",
+    "create_thumbnail",
 ]

@@ -98,11 +98,11 @@ async def generate(
 
     except Exception as e:
         error = e
-        raise gr.Error(f"Generation failed: {str(e)}")
+        raise gr.Error(f"Generation failed: {e}") from e
     finally:
         if post_gen_hook:
             await call_callback(post_gen_hook, all_outputs, request, error)
-        if request_dir and Path(request_dir).exists():
+        if request_dir and request_dir.exists():
             try:
                 shutil.rmtree(request_dir)
             except Exception:
@@ -178,7 +178,7 @@ async def prepare_inputs(
                     if len(downloaded_paths) > 1:
                         last_frame_path = downloaded_paths[1]
                 except Exception as e:
-                    if Path(request_dir).exists():
+                    if request_dir.exists():
                         shutil.rmtree(request_dir)
                     raise gr.Error(f"Failed to download media: {str(e)}")
             else:

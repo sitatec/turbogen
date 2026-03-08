@@ -23,17 +23,13 @@ class VideoScorer:
         device="cuda",
     ):
         config_path = model_path / "reward_model_config.json"
-        model_config, data_config, inference_config = load_configs_from_json(
-            str(config_path)
-        )
+        model_config, data_config, inference_config = load_configs_from_json(str(config_path))
         model_config = ModelConfig(**model_config)
 
         processor = AutoProcessor.from_pretrained(model_path, padding_side="right")
         model = Qwen2VLRewardModelBT.from_pretrained(
             model_path,
-            attn_implementation="flash_attention_3"
-            if is_hopper_gpu()
-            else "sage_attention",
+            attn_implementation="flash_attention_3" if is_hopper_gpu() else "sage_attention",
             output_dim=model_config.output_dim,
             reward_token=model_config.reward_token,
             special_token_ids=processor.tokenizer.additional_special_tokens_ids,
@@ -58,15 +54,9 @@ class VideoScorer:
         if self.inference_config is None:
             return reward
         else:
-            reward["VQ"] = (
-                reward["VQ"] - self.inference_config["VQ_mean"]
-            ) / self.inference_config["VQ_std"]
-            reward["MQ"] = (
-                reward["MQ"] - self.inference_config["MQ_mean"]
-            ) / self.inference_config["MQ_std"]
-            reward["TA"] = (
-                reward["TA"] - self.inference_config["TA_mean"]
-            ) / self.inference_config["TA_std"]
+            reward["VQ"] = (reward["VQ"] - self.inference_config["VQ_mean"]) / self.inference_config["VQ_std"]
+            reward["MQ"] = (reward["MQ"] - self.inference_config["MQ_mean"]) / self.inference_config["MQ_std"]
+            reward["TA"] = (reward["TA"] - self.inference_config["TA_mean"]) / self.inference_config["TA_std"]
             return reward
 
     def _pad_sequence(self, sequences, attention_mask, max_len, padding_side="right"):
@@ -83,9 +73,7 @@ class VideoScorer:
         sequences_padded = torch.nn.functional.pad(
             sequences, padding, "constant", self.processor.tokenizer.pad_token_id
         )
-        attention_mask_padded = torch.nn.functional.pad(
-            attention_mask, padding, "constant", 0
-        )
+        attention_mask_padded = torch.nn.functional.pad(attention_mask, padding, "constant", 0)
 
         return sequences_padded, attention_mask_padded
 
@@ -123,9 +111,7 @@ class VideoScorer:
     ):
         fps = self.data_config.fps if fps is None else fps
         num_frames = self.data_config.num_frames if num_frames is None else num_frames
-        max_pixels = (
-            self.data_config.max_frame_pixels if max_pixels is None else max_pixels
-        )
+        max_pixels = self.data_config.max_frame_pixels if max_pixels is None else max_pixels
 
         if num_frames is None:
             chat_data = [
@@ -182,9 +168,7 @@ class VideoScorer:
         image_inputs, video_inputs = process_vision_info(chat_data)
 
         batch = self.processor(
-            text=self.processor.apply_chat_template(
-                chat_data, tokenize=False, add_generation_prompt=True
-            ),
+            text=self.processor.apply_chat_template(chat_data, tokenize=False, add_generation_prompt=True),
             images=image_inputs,
             videos=video_inputs,
             padding=True,
@@ -214,23 +198,16 @@ class VideoScorer:
         Outputs:
             Scores: List[float]
         """
-        assert fps is None or num_frames is None, (
-            "fps and num_frames cannot be set at the same time."
+        assert fps is None or num_frames is None, "fps and num_frames cannot be set at the same time."
+        prompts = prompts or ["A video with excellent visual quality, motion quality, and aesthetic appeal."] * len(
+            videos_or_paths
         )
-        prompts = prompts or [
-            "A video with excellent visual quality, motion quality, and aesthetic appeal."
-        ] * len(videos_or_paths)
-        batch = self.prepare_batch(
-            videos_or_paths, prompts, fps, num_frames, max_pixels
-        )
+        batch = self.prepare_batch(videos_or_paths, prompts, fps, num_frames, max_pixels)
         rewards = self.model(return_dict=True, **batch)["logits"]
 
-        rewards = [
-            {"VQ": reward[0].item(), "MQ": reward[1].item(), "TA": reward[2].item()}
-            for reward in rewards
-        ]
+        rewards = [{"VQ": reward[0].item(), "MQ": reward[1].item(), "TA": reward[2].item()} for reward in rewards]
 
-        scores = []
+        scores: list[float] = []
         for reward in rewards:
             reward = self._norm(reward)
             z_overall = 0.3 * reward["VQ"] + 0.25 * reward["MQ"]

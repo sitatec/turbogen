@@ -66,9 +66,7 @@ class NsfwDetector:
 
         free_memory()
 
-    def _preprocess_one(
-        self, img: Image.Image | torch.Tensor | np.ndarray
-    ) -> np.ndarray:
+    def _preprocess_one(self, img: Image.Image | torch.Tensor | np.ndarray) -> np.ndarray:
         """
         Preprocess a single image into CHW float32 NumPy tensor.
         """
@@ -205,6 +203,40 @@ class NsfwDetector:
         if not isinstance(images, list):
             return nsfw_levels[0]
         return nsfw_levels
+
+    def get_video_nsfw_level(self, output: torch.Tensor, fps: int) -> NsfwLevel:
+        frames = self._selected_video_frames(output, fps)
+        if not frames:
+            raise RuntimeError("Failed to run nsfw checker on videos, got empty selected frames")
+
+        levels = self.get_nsfw_level(frames)  # type: ignore
+        if not isinstance(levels, list):
+            levels = [levels]
+
+        return max(levels, key=lambda level: level.rank)
+
+    def _selected_video_frames(
+        self,
+        output: torch.Tensor,
+        fps: int,
+    ) -> list[torch.Tensor]:
+        assert output.dim() == 4
+
+        num_frames = output.shape[0]
+        video_duration = num_frames / fps
+
+        if video_duration >= 60:
+            duration_interval = 4
+        elif video_duration >= 30:
+            duration_interval = 3
+        else:
+            duration_interval = 2
+
+        interval = int(duration_interval * fps)
+        indices = slice(0, num_frames, interval)
+        selected_frames = output[indices]
+
+        return list(selected_frames.unbind(dim=0))
 
     def is_nsfw(
         self,
