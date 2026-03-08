@@ -49,7 +49,7 @@ def convert_to_webp_with_metadata(
 
 def create_thumbnail(
     img: np.ndarray,
-    target_width: int = 480,
+    target_width: int = 512,
     min_height: int = 400,
 ):
     """Resize to [target_width] while preventing the new height from being smaller than [min_height]"""
@@ -62,12 +62,12 @@ def create_thumbnail(
     new_w = int(round(width * scale))
     new_h = int(round(height * scale))
 
-    # If source is much larger, downscale to 1.8x target using INTER_AREA as a first pass.
+    # If source is much larger, downscale to 1.7x target using INTER_AREA as a first pass.
     # This removes high-frequency noise and prevents Lanczos "ringing" (halos).
     if scale < 0.5:
         img = cv2.resize(
             img,
-            (int(new_w * 1.8), int(new_h * 1.8)),
+            (int(new_w * 1.7), int(new_h * 1.7)),
             interpolation=cv2.INTER_AREA,
         )
 
