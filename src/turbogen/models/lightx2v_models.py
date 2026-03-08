@@ -114,6 +114,7 @@ class _BaseLightx2vModel(BaseModel):
         quant_scheme: str | None = None,
         rope_type: Literal["torch", "flashinfer"] = "flashinfer",
         text_encoder_quantized: bool = False,
+        text_encoder_quant_scheme: str | None = None,
         quantized_model_path: str | None = None,
         quantized_text_encoder_path: str | None = None,
     ):
@@ -145,12 +146,13 @@ class _BaseLightx2vModel(BaseModel):
                 dit_quantized_ckpt=quantized_model_path,
                 text_encoder_quantized=text_encoder_quantized,
                 text_encoder_quantized_ckpt=quantized_text_encoder_path,
+                text_encoder_quant_scheme=text_encoder_quant_scheme,
             )
 
         if lora_configs:
             self.pipe.enable_lora(lora_configs)
 
-        if self.pipe.model_cls == "qwen_image":
+        if self.pipe.model_cls in ["qwen_image", "z_image"]:
             self.pipe.text_encoder_type = "lightllm_kernel"  # pyrefly: ignore
             self.pipe.lightllm_config = {  # pyrefly: ignore
                 "use_flash_attention_kernel": False,
@@ -336,6 +338,8 @@ class ZImageTurbo(_BaseLightx2vModel):
         lora_configs: list[dict] | None = None,
         compile: bool = False,
         enable_cpu_offload: bool = False,
+        quant_scheme: str | None = "fp8-sgl",
+        text_encoder_quant_scheme: str | None = "int4",
         **kwargs,
     ):
         super().__init__(
@@ -347,6 +351,8 @@ class ZImageTurbo(_BaseLightx2vModel):
             compile=compile,
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
+            quant_scheme=quant_scheme,
+            text_encoder_quant_scheme=text_encoder_quant_scheme,
             enable_cpu_offload=enable_cpu_offload,
             infer_steps=kwargs.pop("infer_steps", 9),
             guidance_scale=kwargs.pop("guidance_scale", 0),
@@ -365,6 +371,11 @@ class ZImageTurbo(_BaseLightx2vModel):
             },
             **kwargs,
         )
+
+        from transformers.models.qwen3.modeling_qwen3 import Qwen3RMSNorm
+        from turbogen.utils import apply_sgl_kernel_rmsnorm
+
+        apply_sgl_kernel_rmsnorm(self.pipe.runner.text_encoders[0].text_encoder, Qwen3RMSNorm)
 
 
 class Wan22Lite(_BaseLightx2vModel):

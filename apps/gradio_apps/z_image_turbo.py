@@ -18,7 +18,7 @@ from turbogen.services.prompt_enhancer import PromptEnhancer
 from turbogen.services.nsfw_detector import NsfwDetector
 
 
-zimage_turbo_path = download_zimage_models()
+zimage_turbo_path = download_zimage_models(te_quantized=False)
 image_scorer_path = download_image_scorer(quant_method="bnb")
 prompt_enhancer_path = download_prompt_enhancer(quant_method="bnb")
 nsfw_model_path = download_nsfw_model()

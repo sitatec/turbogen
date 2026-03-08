@@ -55,7 +55,7 @@ def download_qwen_image_edit(
 
     hf_hub.snapshot_download(
         repo_id="sitatech/Qwen-Image-Edit-2511-Lightning",
-        local_dir=qwen_image_edit_2511_path,  # download transformer subfolder
+        local_dir=qwen_image_edit_2511_path,  # sitatech/Qwen-Image-Edit-2511-Lightning has the transformer subfolder
     )
 
     if te_quant_method:
@@ -67,14 +67,28 @@ def download_qwen_image_edit(
     return qwen_image_edit_2511_path.resolve()
 
 
-def download_zimage_models():
+def download_zimage_models(te_quantized: bool = True):
     zimage_turbo_path = _ROOT_DIR / "Z-Image-Turbo"
+
+    ignore_patterns = ["transformer/**", "assets/**"]
+    if te_quantized:
+        ignore_patterns.append("text_encoder/**")
 
     hf_hub.snapshot_download(
         repo_id="Tongyi-MAI/Z-Image-Turbo",
         local_dir=zimage_turbo_path,
-        ignore_patterns=["assets"],
+        ignore_patterns=ignore_patterns,
     )
+    hf_hub.hf_hub_download(
+        repo_id="lightx2v/Z-Image-Turbo-Quantized",
+        filename="z_image_turbo_scaled_fp8_e4m3fn.safetensors",
+        local_dir=zimage_turbo_path / "transformer",
+    )
+    if te_quantized:
+        hf_hub.snapshot_download(
+            repo_id="JunHowie/Qwen3-4B-GPTQ-Int4",
+            local_dir=zimage_turbo_path / "text_encoder",
+        )
 
     return zimage_turbo_path.resolve()
 
@@ -203,9 +217,7 @@ def download_prompt_enhancer(
 def download_nsfw_model():
     model_path = _ROOT_DIR / "nsfw_model"
 
-    hf_hub.snapshot_download(
-        repo_id="Freepik/nsfw_image_detector", local_dir=model_path
-    )
+    hf_hub.snapshot_download(repo_id="Freepik/nsfw_image_detector", local_dir=model_path)
 
     return model_path.resolve()
 
