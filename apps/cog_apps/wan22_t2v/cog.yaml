@@ -1,0 +1,3 @@
+# Merge with ../cog.template.yaml before deployment
+
+image: "r8.im/sitatec/wan-2.2-t2v-fast"

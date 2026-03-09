@@ -7,6 +7,7 @@ from .kernels_utils import (
     get_gpu_major,
     is_hopper_gpu,
     apply_sgl_kernel_rmsnorm,
+    set_jit_cache_dirs,
 )
 
 
@@ -22,4 +23,5 @@ __all__ = [
     "disable_manual_memory_gc",
     "free_memory",
     "create_thumbnail",
+    "set_jit_cache_dirs",
 ]

@@ -67,3 +67,6 @@ class Model(BasePredictor):
 
         print(f"Generated in {time.perf_counter() - t} seconds")
         return CogPath(cast(str, output_path))
+
+    def warmup(self) -> None:
+        None

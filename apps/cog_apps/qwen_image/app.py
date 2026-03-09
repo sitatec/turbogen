@@ -1,11 +1,13 @@
 import time
 from typing import cast
+from pathlib import Path
 
-from turbogen.utils import load_flash_attention_3, disable_manual_memory_gc
-
-load_flash_attention_3()
+from turbogen.utils import load_flash_attention_3, disable_manual_memory_gc, set_jit_cache_dirs
 
 # ruff: noqa:E402
+set_jit_cache_dirs(Path(__file__).parent.resolve() / ".jit_cache")
+load_flash_attention_3()
+
 from cog import BasePredictor, Input, Path as CogPath
 from turbogen.generation_pipeline import GenerationPipeline
 from turbogen.models.lightx2v_models import QwenImageLite
@@ -15,11 +17,17 @@ from turbogen.model_downloads import download_qwen_image
 class Model(BasePredictor):
     # pyrefly: ignore
     def setup(self) -> None:
+        t = time.perf_counter()
         qwen_image_path = download_qwen_image()
+        print(f"Downloaded in {time.perf_counter() - t} seconds")
 
+        t2 = time.perf_counter()
         self.qwen_image = QwenImageLite(qwen_image_path)
+        print(f"Model loaded in {time.perf_counter() - t2} seconds")
 
         self.pipeline = GenerationPipeline(models=[self.qwen_image])
+
+        print(f"Completed setup in {time.perf_counter() - t} seconds")
 
     # pyrefly: ignore
     def predict(
@@ -66,3 +74,12 @@ class Model(BasePredictor):
 
         print(f"Generated in {time.perf_counter() - t} seconds")
         return CogPath(cast(str, output_path))
+
+    def warmup(self) -> None:
+        print("Running warmup...")
+        self.predict(
+            prompt="a cat sitting on a chair",
+            aspect_ratio="1:1",
+            seed=42,
+        )
+        print("Warmup complete.")

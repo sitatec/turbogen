@@ -10,22 +10,22 @@ load_flash_attention_3()
 
 from cog import BasePredictor, Input, Path as CogPath
 from turbogen.generation_pipeline import GenerationPipeline
-from turbogen.models.lightx2v_models import QwenImageEditLite
-from turbogen.model_downloads import download_qwen_image_edit
+from turbogen.models.lightx2v_models import ZImageTurbo
+from turbogen.model_downloads import download_zimage_models
 
 
 class Model(BasePredictor):
     # pyrefly: ignore
     def setup(self) -> None:
         t = time.perf_counter()
-        qwen_image_edit_path = download_qwen_image_edit()
+        zimage_path = download_zimage_models()
         print(f"Downloaded in {time.perf_counter() - t} seconds")
 
         t2 = time.perf_counter()
-        self.qwen_image_edit = QwenImageEditLite(qwen_image_edit_path)
+        self.zimage = ZImageTurbo(model_path=zimage_path)
         print(f"Model loaded in {time.perf_counter() - t2} seconds")
 
-        self.pipeline = GenerationPipeline(models=[self.qwen_image_edit])
+        self.pipeline = GenerationPipeline(models=[self.zimage])
 
         print(f"Completed setup in {time.perf_counter() - t} seconds")
 
@@ -33,7 +33,6 @@ class Model(BasePredictor):
     def predict(
         self,
         prompt: str = Input(description="Description of the image"),
-        images: list[CogPath] = Input(description="Input image for image editing"),
         aspect_ratio: str = Input(
             default="1:1",
             choices=[
@@ -46,7 +45,13 @@ class Model(BasePredictor):
                 "2:3",
                 "5:4",
                 "4:5",
+                "21:9",
+                "9:21",
             ],
+        ),
+        resolution: str = Input(
+            default="1.3K",
+            choices=["1K", "1.3K", "1.5K"],
         ),
         seed: int = Input(
             description="Random seed. Set to -1 for random.",
@@ -59,12 +64,11 @@ class Model(BasePredictor):
         # introducing some latency. So we disable it. TODO: make it configurable
         with disable_manual_memory_gc():
             output_path = self.pipeline.generate(
-                model_id=self.qwen_image_edit.model_id,
+                model_id=self.zimage.model_id,
                 prompt=prompt,
                 aspect_ratio=aspect_ratio,
-                image_paths=[str(image) for image in images],
                 seed=seed,
-                resolution="1K",
+                resolution=resolution,
                 postprocess=False,
                 output_dir_path="./output",
             )
@@ -73,17 +77,11 @@ class Model(BasePredictor):
         return CogPath(cast(str, output_path))
 
     def warmup(self) -> None:
-        import tempfile
-        from PIL import Image
-
         print("Running warmup...")
-        # Create a small solid-colour image to satisfy the required image input
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_f:
-            Image.new("RGB", (1024, 1024), color=(128, 128, 128)).save(tmp_f.name)
-            self.predict(
-                prompt="a cat sitting on a chair",
-                images=[CogPath(tmp_f.name)],
-                aspect_ratio="1:1",
-                seed=42,
-            )
+        self.predict(
+            prompt="a cat sitting on a chair",
+            aspect_ratio="1:1",
+            resolution="1K",
+            seed=42,
+        )
         print("Warmup complete.")

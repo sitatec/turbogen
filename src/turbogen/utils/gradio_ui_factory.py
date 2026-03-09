@@ -72,7 +72,7 @@ async def generate(
         request_dir = prepared_inputs["request_dir"]
 
         # On GPU slices like huggingface ZeroGPU spaces, torch.cuda.empty_cache() which sync gpu,
-        # introduces latency sometimes higher than the generation time. So we disable it.
+        # introduces latency sometimes higher than the generation time for highly optimized models. So we disable it.
         with disable_manual_memory_gc():
             for output in generate_on_gpu(prepared_inputs):
                 all_outputs.append(output)

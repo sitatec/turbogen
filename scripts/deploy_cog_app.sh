@@ -1,9 +1,9 @@
 #!/bin/bash
 
-if [ -z "$1" ] || { [ "$1" != "qwen" ] && [ "$1" != "wan" ] && [ "$1" != "zimage" ] && [ "$1" != "qwen_img" ] && [ "$1" != "qwen_img_edit" ]; }; then
+if [ -z "$1" ] || { [ "$1" != "wan22_i2v" ] && [ "$1" != "wan22_t2v" ] && [ "$1" != "z_image_turbo" ] && [ "$1" != "qwen_image" ] && [ "$1" != "qwen_image_edit" ]; }; then
     echo "Usage:"
     echo "  ./scripts/deploy_cog_inference.sh model"
-    echo " model: One of qwen (for both image and edit) or wan or zimage or qwen_img or qwen_img_edit"
+    echo " model: One of wan22_i2v, wan22_t2v, z_image_turbo, qwen_image, or qwen_image_edit"
     exit 1
 fi
 
@@ -23,18 +23,6 @@ ensure_command() {
     fi
 }
 
-if [ "$1" == "qwen" ]; then
-    cog_app_dir="./apps/qwen_image_and_edit"
-elif [ "$1" == "wan" ]; then
-    cog_app_dir="./apps/wan22_a14b"
-elif [ "$1" == "zimage" ]; then
-    cog_app_dir="./apps/zimage"
-elif [ "$1" == "qwen_img" ]; then
-    cog_app_dir="./apps/qwen_image"
-elif [ "$1" == "qwen_img_edit" ]; then
-    cog_app_dir="./apps/qwen_image_edit"
-fi
-
 # Ensure the required commands are available
 ensure_command "cog" "sudo curl -L https://github.com/replicate/cog/releases/latest/download/cog_$(uname -s)_$(uname -m) -o /usr/local/bin/cog && sudo chmod +x /usr/local/bin/cog" && \
 ensure_command "yq" "sudo curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_$(uname -s)_$(uname -m) -o /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq"
@@ -42,6 +30,10 @@ ensure_command "yq" "sudo curl -L https://github.com/mikefarah/yq/releases/lates
 yq eval-all 'select(fileIndex == 0) *+ select(fileIndex == 1)' ./apps/cog_apps/cog.template.yaml "./apps/cog_apps/$1/cog.yaml" > ./cog.yaml
 mv ./apps/cog_apps/$1/app.py app.py
 
-rm -rf src # We remove the local turbogen code, the pip installed version should be used
+rm -rf src notebooks apps # We remove the local turbogen code, the pip installed version should be used
+
+cog run script/warmup_cog_app
+
+cog login
 
 cog push

@@ -1,5 +1,7 @@
-from functools import lru_cache
+from pathlib import Path
+import os
 import sys
+from functools import lru_cache
 
 import torch
 import torch.nn as nn
@@ -49,12 +51,8 @@ def load_sage_attention(register_to_transformers: bool = True):
         if register_to_transformers:
             from transformers import AttentionInterface
 
-            def sage_attention(
-                module, query_states, key_states, value_states, _, **kwargs
-            ):
-                return sage_attn_module.sageattn(
-                    query_states, key_states, value_states, tensor_layout="HND"
-                )
+            def sage_attention(module, query_states, key_states, value_states, _, **kwargs):
+                return sage_attn_module.sageattn(query_states, key_states, value_states, tensor_layout="HND")
 
             AttentionInterface.register("sage_attention", sage_attention)
     else:
@@ -101,3 +99,9 @@ def apply_sgl_kernel_rmsnorm(model: nn.Module, rmsnorm_class: type[nn.Module]):
     replace_rmsnorm_recursive(model)
 
     print(f"✓ Replaced {replaced_count} RMSNorm layers with sgl_kernel version")
+
+
+def set_jit_cache_dirs(cache_root_dir: Path):
+    os.environ["FLASHINFER_CACHE_DIR"] = f"{cache_root_dir}/flashinfer"
+    os.environ["TRITON_CACHE_DIR"] = f"{cache_root_dir}/triton"
+    os.environ["TORCHINDUCTOR_CACHE_DIR"] = f"{cache_root_dir}/inductor"
