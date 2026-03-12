@@ -93,10 +93,13 @@ async def process_image(input_mode, file_path, url, metadata_input):
                 print(f"Failed to parse metadata: {e}")
 
         img = Image.open(image_path)
-        is_webp = img.format and img.format.upper() == "WEBP"
+        img_format = img.format.upper() if img.format else None
+        should_convert_to_webp = not img_format or (
+            img_format != "WEBP" and img_format != "JPG" and img_format != "JPEG"
+        )
         webp_path = None
 
-        if not is_webp:
+        if should_convert_to_webp:
             webp_path = str(request_dir / "converted.webp")
             convert_to_webp_with_metadata(img, metadata, quality=100, output_path=webp_path)
 
