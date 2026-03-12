@@ -85,12 +85,6 @@ async def process_image(input_mode, file_path, url, metadata_input):
             image_path = str(request_dir / Path(file_path).name)
             shutil.copy(file_path, image_path)
 
-        np_image = np.array(Image.open(image_path).convert("RGB"))
-        quality_score, nsfw_level = evaluate_image(torch.from_numpy(np_image))
-
-        thumbnail = create_thumbnail(np_image)
-        thumbhash = generate_thumbhash(thumbnail)
-
         metadata = None
         if metadata_input:
             try:
@@ -98,10 +92,24 @@ async def process_image(input_mode, file_path, url, metadata_input):
             except Exception as e:
                 print(f"Failed to parse metadata: {e}")
 
+        img = Image.open(image_path)
+        is_webp = img.format and img.format.upper() == "WEBP"
+        webp_path = None
+
+        if not is_webp:
+            webp_path = str(request_dir / "converted.webp")
+            convert_to_webp_with_metadata(img, metadata, quality=100, output_path=webp_path)
+
+        np_image = np.array(img.convert("RGB"))
+        quality_score, nsfw_level = evaluate_image(torch.from_numpy(np_image))
+
+        thumbnail = create_thumbnail(np_image)
+        thumbhash = generate_thumbhash(thumbnail)
+
         thumb_path = str(request_dir / "thumbnail.webp")
         convert_to_webp_with_metadata(thumbnail, metadata, quality=90, output_path=thumb_path)
 
-        return thumb_path, str(nsfw_level), quality_score, thumbhash
+        return thumb_path, str(nsfw_level), quality_score, thumbhash, webp_path
     except Exception as err:
         raise gr.Error(f"Generation failed: {err}") from err
     finally:
@@ -155,7 +163,7 @@ async def process_video(input_mode, file_path, url, metadata_input):
 
 
 with gr.Blocks(theme=gr.themes.Soft()) as app:
-    gr.Markdown("# Media Scorer", elem_classes=["text-center"])
+    gr.Markdown("# Media Processing")
     gr.Markdown(
         "Score the quality (based on **human preferences**) and NSFW level of images and videos. Built with [turbogen](https://github.com/sitatec/turbogen.git)",
     )
@@ -177,6 +185,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
                             img_nsfw_out = gr.Textbox(label="NSFW Level")
                             img_quality_out = gr.Number(label="Quality Score")
                             img_hash_out = gr.Textbox(label="ThumbHash")
+                        img_converted_out = gr.Image(label="Converted WebP", type="filepath")
 
             def toggle_img_input(mode):
                 return [
@@ -188,7 +197,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
             img_submit_btn.click(
                 process_image,
                 inputs=[img_input_mode, img_file_upload, img_url_input, img_metadata_input],
-                outputs=[img_thumb_out, img_nsfw_out, img_quality_out, img_hash_out],
+                outputs=[img_thumb_out, img_nsfw_out, img_quality_out, img_hash_out, img_converted_out],
             )
 
         with gr.Tab("Video Scoring"):
@@ -222,4 +231,4 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
             )
 
 if __name__ == "__main__":
-    app.launch(allowed_paths=[str(REQUESTS_DIR)])
+    app.launch()
