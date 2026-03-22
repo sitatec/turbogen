@@ -23,92 +23,6 @@ if TYPE_CHECKING:
 pipe: GenerationPipeline | None = None
 
 
-async def generate(
-    prompt_value,
-    aspect_ratio_value,
-    resolution_value,
-    negative_prompt_value,
-    seed_value,
-    num_outputs_value,
-    additional_args: dict | Callable[[], dict],
-    prompt_enhancer_value=False,
-    postprocess_value=False,
-    input_mode_value=None,
-    input_image_upload_value=None,
-    input_image_url_value=None,
-    last_frame_upload_value=None,
-    last_frame_url_value=None,
-    request: gr.Request = gr.Request(),
-    progress=gr.Progress(track_tqdm=True),
-):
-    """Main generation function that coordinates preprocessing and GPU execution."""
-    if callable(additional_args):
-        additional_args = additional_args()
-    post_gen_hook, model = additional_args["post_gen_hook"], additional_args["model"]
-
-    request_dir = None
-    error = None
-    all_outputs = []
-    try:
-        prepared_inputs = await prepare_inputs(
-            prompt_value,
-            aspect_ratio_value,
-            resolution_value,
-            negative_prompt_value,
-            seed_value,
-            postprocess_value,
-            prompt_enhancer_value,
-            num_outputs_value,
-            request,
-            model,
-            input_mode_value,
-            input_image_upload_value,
-            input_image_url_value,
-            last_frame_upload_value,
-            last_frame_url_value,
-            additional_args,
-        )
-
-        request_dir = prepared_inputs["request_dir"]
-
-        # On GPU slices like huggingface ZeroGPU spaces, torch.cuda.empty_cache() which sync gpu,
-        # introduces latency sometimes higher than the generation time for highly optimized models. So we disable it.
-        with disable_manual_memory_gc():
-            for output in generate_on_gpu(prepared_inputs):
-                all_outputs.append(output)
-
-                if isinstance(output, str):
-                    yield (
-                        all_outputs,
-                        gr.update(visible=False),
-                        None,
-                        None,
-                        None,
-                        None,
-                    )
-                else:
-                    yield (
-                        [out.generated_media_path for out in all_outputs],
-                        gr.update(visible=True),
-                        output.thumbnail_path,
-                        output.nsfwLevel.value,
-                        output.quality_score,
-                        output.thumbhash,
-                    )
-
-    except Exception as e:
-        error = e
-        raise gr.Error(f"Generation failed: {e}") from e
-    finally:
-        if post_gen_hook:
-            await call_callback(post_gen_hook, all_outputs, request, error)
-        if request_dir and request_dir.exists():
-            try:
-                shutil.rmtree(request_dir)
-            except Exception:
-                pass
-
-
 async def prepare_inputs(
     prompt_value,
     aspect_ratio_value,
@@ -562,18 +476,6 @@ def create_model_interface(
             negative_prompt,
             seed,
             num_outputs,
-            gr.State(
-                lambda: {  # Using a callback instead of direct value to prevent deepcopy since the model can't be deep copied
-                    "inference_dir": inference_dir,
-                    "max_input_images": max_input_images,
-                    "is_video": is_video,
-                    "prompt_enhancing_supported": prompt_enhancing_supported,
-                    "postprocessing_supported": postprocessing_supported,
-                    "pre_gen_hook": pre_gen_hook,
-                    "post_gen_hook": post_gen_hook,
-                    "model": model,
-                }
-            ),
         ]
 
         if prompt_enhancing_supported:
@@ -598,19 +500,108 @@ def create_model_interface(
                     ]
                 )
 
-        gr.on(
-            triggers=[generate_btn.click, prompt.submit],
-            fn=generate,
-            inputs=inputs_list,
-            outputs=[
-                output_media,
-                postprocess_row,
-                thumbnail,
-                nsfw_level,
-                quality_score,
-                thumbhash,
-            ],
-        )
+    async def generate(
+        prompt_value,
+        aspect_ratio_value,
+        resolution_value,
+        negative_prompt_value,
+        seed_value,
+        num_outputs_value,
+        prompt_enhancer_value=False,
+        postprocess_value=False,
+        input_mode_value=None,
+        input_image_upload_value=None,
+        input_image_url_value=None,
+        last_frame_upload_value=None,
+        last_frame_url_value=None,
+        request: gr.Request = gr.Request(),
+        progress=gr.Progress(track_tqdm=True),
+    ):
+        """Main generation function that coordinates preprocessing and GPU execution."""
+        request_dir = None
+        error = None
+        all_outputs = []
+        try:
+            prepared_inputs = await prepare_inputs(
+                prompt_value,
+                aspect_ratio_value,
+                resolution_value,
+                negative_prompt_value,
+                seed_value,
+                postprocess_value,
+                prompt_enhancer_value,
+                num_outputs_value,
+                request,
+                model,
+                input_mode_value,
+                input_image_upload_value,
+                input_image_url_value,
+                last_frame_upload_value,
+                last_frame_url_value,
+                {  # Using a callback instead of direct value to prevent deepcopy since the model can't be deep copied
+                    "inference_dir": inference_dir,
+                    "max_input_images": max_input_images,
+                    "is_video": is_video,
+                    "prompt_enhancing_supported": prompt_enhancing_supported,
+                    "postprocessing_supported": postprocessing_supported,
+                    "pre_gen_hook": pre_gen_hook,
+                    "post_gen_hook": post_gen_hook,
+                    "model": model,
+                },
+            )
+
+            request_dir = prepared_inputs["request_dir"]
+
+            # On GPU slices like huggingface ZeroGPU spaces, torch.cuda.empty_cache() which sync gpu,
+            # introduces latency sometimes higher than the generation time for highly optimized models. So we disable it.
+            with disable_manual_memory_gc():
+                for output in generate_on_gpu(prepared_inputs):
+                    all_outputs.append(output)
+
+                    if isinstance(output, str):
+                        yield (
+                            all_outputs,
+                            gr.update(visible=False),
+                            None,
+                            None,
+                            None,
+                            None,
+                        )
+                    else:
+                        yield (
+                            [out.generated_media_path for out in all_outputs],
+                            gr.update(visible=True),
+                            output.thumbnail_path,
+                            output.nsfwLevel.value,
+                            output.quality_score,
+                            output.thumbhash,
+                        )
+
+        except Exception as e:
+            error = e
+            raise gr.Error(f"Generation failed: {e}") from e
+        finally:
+            if post_gen_hook:
+                await call_callback(post_gen_hook, all_outputs, request, error)
+            if request_dir and request_dir.exists():
+                try:
+                    shutil.rmtree(request_dir)
+                except Exception:
+                    pass
+
+    gr.on(
+        triggers=[generate_btn.click, prompt.submit],
+        fn=generate,
+        inputs=inputs_list,
+        outputs=[
+            output_media,
+            postprocess_row,
+            thumbnail,
+            nsfw_level,
+            quality_score,
+            thumbhash,
+        ],
+    )
 
     return {
         "prompt": prompt,
