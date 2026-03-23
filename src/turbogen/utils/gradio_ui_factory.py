@@ -168,7 +168,7 @@ def get_gen_duration(inputs: dict):
 
     model_name = model.model_name.lower()
     if model_name.startswith("qwen"):
-        if gen_type == "t2i":
+        if gen_type == "t2i" and inputs["resolution"] == "1K":
             duration = 10
         else:
             duration = 15
@@ -579,7 +579,7 @@ def create_model_interface(
 
         except Exception as e:
             error = e
-            raise gr.Error(f"Generation failed: {e}") from e
+            raise Exception(f"Generation failed: {e}") from e
         finally:
             if post_gen_hook:
                 await call_callback(post_gen_hook, all_outputs, request, error)
