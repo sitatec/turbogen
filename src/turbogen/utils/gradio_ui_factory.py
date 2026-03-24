@@ -1,3 +1,4 @@
+import traceback
 from __future__ import annotations
 
 import os
@@ -579,7 +580,16 @@ def create_model_interface(
 
         except Exception as e:
             error = e
-            raise Exception(f"Generation failed: {e}") from e
+            yield (
+                None,
+                gr.update(visible=True),
+                None,
+                None,
+                None,
+                f"Generation failed: {e}",
+            )
+            traceback.print_exc()
+
         finally:
             if post_gen_hook:
                 await call_callback(post_gen_hook, all_outputs, request, error)
