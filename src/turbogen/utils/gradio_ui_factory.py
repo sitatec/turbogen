@@ -5,7 +5,6 @@ import uuid
 import time
 import shutil
 import asyncio
-import random
 import traceback
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Any
@@ -14,7 +13,6 @@ from typing import TYPE_CHECKING, Callable, Any
 import spaces
 import aiohttp
 import gradio as gr
-import numpy as np
 from turbogen.utils.memory_utils import disable_manual_memory_gc
 
 if TYPE_CHECKING:
@@ -187,6 +185,21 @@ def get_gen_duration(inputs: dict):
     return duration * num_outputs + initialization_time + postprocessing_time
 
 
+def __run_async(coro):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop is not None and loop.is_running():
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(lambda: asyncio.run(coro)).result()
+    else:
+        return asyncio.run(coro)
+
+
 @spaces.GPU(duration=get_gen_duration)
 def generate_on_gpu(prepared_inputs: dict):
     start_time = time.perf_counter()
@@ -194,30 +207,21 @@ def generate_on_gpu(prepared_inputs: dict):
 
     num_outputs = prepared_inputs.get("num_outputs", 1)
 
-    seed = prepared_inputs.get("seed", -1)
-    if seed == -1:
-        seed = random.randint(1, np.iinfo(np.int32).max)
-
-    for i in range(num_outputs):
-        output_dir = prepared_inputs["request_dir"] / f"output_{i}"
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        yield pipe.generate(
-            model_id=prepared_inputs["model_id"],
-            prompt=prepared_inputs["prompt"],
-            aspect_ratio=prepared_inputs["aspect_ratio"],
-            resolution=prepared_inputs["resolution"],
-            image_paths=prepared_inputs["image_paths"],
-            last_frame_path=prepared_inputs["last_frame_path"],
-            seed=seed,
-            negative_prompt=prepared_inputs["negative_prompt"],
-            postprocess=prepared_inputs["postprocess"],
-            enhance_prompt=prepared_inputs["enhance_prompt"],
-            output_dir_path=output_dir,
-            metadata=prepared_inputs.get("metadata"),
-        )
-
-        seed += 1
+    yield from pipe.generate_batch(
+        model_id=prepared_inputs["model_id"],
+        prompt=prepared_inputs["prompt"],
+        aspect_ratio=prepared_inputs["aspect_ratio"],
+        resolution=prepared_inputs["resolution"],
+        num_outputs=num_outputs,
+        image_paths=prepared_inputs["image_paths"],
+        last_frame_path=prepared_inputs["last_frame_path"],
+        seed=prepared_inputs.get("seed", -1),
+        negative_prompt=prepared_inputs["negative_prompt"],
+        postprocess=prepared_inputs.get("postprocess", False),
+        enhance_prompt=prepared_inputs.get("enhance_prompt", False),
+        output_dir_path=str(prepared_inputs["request_dir"]),
+        metadata=prepared_inputs.get("metadata"),
+    )
 
     print(f"Generated {num_outputs} media in {time.perf_counter() - start_time:.4f}s")
 
@@ -501,7 +505,7 @@ def create_model_interface(
                     ]
                 )
 
-    async def generate(
+    def generate(
         prompt_value,
         aspect_ratio_value,
         resolution_value,
@@ -523,32 +527,34 @@ def create_model_interface(
         error = None
         all_outputs = []
         try:
-            prepared_inputs = await prepare_inputs(
-                prompt_value,
-                aspect_ratio_value,
-                resolution_value,
-                negative_prompt_value,
-                seed_value,
-                postprocess_value,
-                prompt_enhancer_value,
-                num_outputs_value,
-                request,
-                model,
-                input_mode_value,
-                input_image_upload_value,
-                input_image_url_value,
-                last_frame_upload_value,
-                last_frame_url_value,
-                {  # Using a callback instead of direct value to prevent deepcopy since the model can't be deep copied
-                    "inference_dir": inference_dir,
-                    "max_input_images": max_input_images,
-                    "is_video": is_video,
-                    "prompt_enhancing_supported": prompt_enhancing_supported,
-                    "postprocessing_supported": postprocessing_supported,
-                    "pre_gen_hook": pre_gen_hook,
-                    "post_gen_hook": post_gen_hook,
-                    "model": model,
-                },
+            prepared_inputs = __run_async(
+                prepare_inputs(
+                    prompt_value,
+                    aspect_ratio_value,
+                    resolution_value,
+                    negative_prompt_value,
+                    seed_value,
+                    postprocess_value,
+                    prompt_enhancer_value,
+                    num_outputs_value,
+                    request,
+                    model,
+                    input_mode_value,
+                    input_image_upload_value,
+                    input_image_url_value,
+                    last_frame_upload_value,
+                    last_frame_url_value,
+                    {  # Using a callback instead of direct value to prevent deepcopy since the model can't be deep copied
+                        "inference_dir": inference_dir,
+                        "max_input_images": max_input_images,
+                        "is_video": is_video,
+                        "prompt_enhancing_supported": prompt_enhancing_supported,
+                        "postprocessing_supported": postprocessing_supported,
+                        "pre_gen_hook": pre_gen_hook,
+                        "post_gen_hook": post_gen_hook,
+                        "model": model,
+                    },
+                )
             )
 
             request_dir = prepared_inputs["request_dir"]
@@ -592,7 +598,7 @@ def create_model_interface(
 
         finally:
             if post_gen_hook:
-                await call_callback(post_gen_hook, all_outputs, request, error)
+                __run_async(call_callback(post_gen_hook, all_outputs, request, error))
             if request_dir and request_dir.exists():
                 try:
                     shutil.rmtree(request_dir)

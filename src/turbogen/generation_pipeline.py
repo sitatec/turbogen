@@ -113,6 +113,85 @@ class GenerationPipeline:
 
         return result
 
+    @torch.inference_mode()
+    def generate_batch(
+        self,
+        model_id: str,
+        prompt: str,
+        aspect_ratio: str,
+        resolution: str,
+        num_outputs: int = 1,
+        image_paths: list[str] | None = None,
+        last_frame_path: str | None = None,
+        seed: int = -1,  # -1 for random seed
+        negative_prompt: str | None = None,
+        steps: int | None = None,
+        guidance_scale: float | None = None,
+        duration_seconds: float | None = None,
+        postprocess: bool = False,
+        enhance_prompt: bool = False,
+        output_dir_path: str | None = None,
+        metadata: dict | None = None,
+    ):
+        assert not postprocess or self.nsfw_detector and (self.video_scorer or self.image_scorer), (
+            "NSFW detector and at least one media scorer are required for postprocessing"
+        )
+
+        model = next((model for model in self.models if model.model_id == model_id), None)
+        if model is None:
+            raise ValueError(f"Model {model_id} not found")
+
+        generation_type = model.generation_type
+
+        image_paths_list = image_paths if image_paths is not None else []
+
+        if self.prompt_enhancer:
+            enhanced_prompt = self._handle_prompt(
+                prompt,
+                enhance_prompt,
+                generation_type,
+                image_paths_list,
+                last_frame_path,
+            )
+            prompt = enhanced_prompt or prompt
+            if enhanced_prompt and metadata is not None:
+                metadata["enhanced_prompt"] = enhanced_prompt
+
+        if seed == -1:
+            import random
+            import numpy as np
+
+            seed = random.randint(1, np.iinfo(np.int32).max)
+
+        from pathlib import Path
+
+        base_dir = output_dir_path or mkdtemp()
+
+        for i in range(num_outputs):
+            current_seed = seed + i
+            output = model.generate(
+                prompt=prompt,
+                aspect_ratio=aspect_ratio,
+                resolution=resolution,
+                image_paths=image_paths_list,
+                last_frame_path=last_frame_path,
+                seed=current_seed,
+                negative_prompt=negative_prompt,
+                steps=steps,
+                guidance_scale=guidance_scale,
+                duration_seconds=duration_seconds,
+            )
+
+            current_output_dir = Path(base_dir) / f"output_{i}"
+            current_output_dir.mkdir(parents=True, exist_ok=True)
+
+            if postprocess:
+                result = self._process_and_save_output(output, generation_type, str(current_output_dir), metadata)
+            else:
+                result = self._save_output(output, generation_type, str(current_output_dir), metadata)
+
+            yield result
+
     def _handle_prompt(
         self,
         prompt: str,
