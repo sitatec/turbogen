@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 from tempfile import mkdtemp
 from dataclasses import dataclass
 
 import torch
+import random
+import numpy as np
+
 from turbogen.models.base_model import GenerationType
 from turbogen.services.nsfw_detector import NsfwLevel
 from turbogen.utils import save_video_tensor
@@ -157,18 +161,10 @@ class GenerationPipeline:
             if enhanced_prompt and metadata is not None:
                 metadata["enhanced_prompt"] = enhanced_prompt
 
-        if seed == -1:
-            import random
-            import numpy as np
-
-            seed = random.randint(1, np.iinfo(np.int32).max)
-
-        from pathlib import Path
-
-        base_dir = output_dir_path or mkdtemp()
+        base_dir = Path(output_dir_path or mkdtemp())
 
         for i in range(num_outputs):
-            current_seed = seed + i
+            current_seed = random.randint(1, np.iinfo(np.int32).max) if seed == -1 else seed + i
             output = model.generate(
                 prompt=prompt,
                 aspect_ratio=aspect_ratio,
@@ -182,7 +178,7 @@ class GenerationPipeline:
                 duration_seconds=duration_seconds,
             )
 
-            current_output_dir = Path(base_dir) / f"output_{i}"
+            current_output_dir = base_dir / f"output_{i}"
             current_output_dir.mkdir(parents=True, exist_ok=True)
 
             if postprocess:
