@@ -25,7 +25,8 @@ def image_tensor_to_pil(tensor: torch.Tensor) -> Image.Image:
 def convert_to_webp_with_metadata(
     image: np.ndarray | Image.Image,
     metadata: bytes | dict | None,
-    quality: int = 100,
+    quality: int = 87,
+    lossless: bool = False,
     output_path: str | None = None,
 ) -> bytes | None:
     """
@@ -40,17 +41,17 @@ def convert_to_webp_with_metadata(
         metadata = b""
 
     if output_path:
-        image.save(output_path, format="WEBP", quality=quality, exif=metadata)
+        image.save(output_path, format="WEBP", quality=quality, exif=metadata, lossless=lossless)
     else:
         output_buffer = io.BytesIO()
-        image.save(output_buffer, format="WEBP", quality=quality, exif=metadata)
+        image.save(output_buffer, format="WEBP", quality=quality, exif=metadata, lossless=lossless)
         return output_buffer.getvalue()
 
 
 def create_thumbnail(
     img: np.ndarray,
-    target_width: int = 512,
-    min_height: int = 400,
+    target_width: int = 420,
+    min_height: int = 360,
 ):
     """Resize to [target_width] while preventing the new height from being smaller than [min_height]"""
     height, width = img.shape[:2]
