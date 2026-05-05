@@ -157,9 +157,9 @@ def get_gen_duration(inputs: dict):
         (model for model in pipe.models if model.model_id == inputs["model_id"]),
     )
     gen_type = model.generation_type.value.lower()
-    initialization_time = 12  # Estimated Zero GPU initialization time
+    initialization_time = 20  # Estimated Zero GPU initialization time
     if inputs.get("enhance_prompt", False):
-        initialization_time += 7 + (3 * num_input_images)
+        initialization_time += 10 + (10 * num_input_images)
 
     postprocessing_time = 0
     if inputs.get("postprocess", False):
