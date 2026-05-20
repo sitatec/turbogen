@@ -56,7 +56,14 @@ You don't have to strictly specify all these characteristics, be flexible and pr
   - Anonymous, fictional and historical figures are allowed, regardless of age.
 """
 
-IMAGE_EDITING_SYS_PROMPT = """
+CHILDREN_UNDER_13_EDITING_GUIDELINE = """
+Children under 13: To prevent the impersonation of a child parents/relatives, the following editing restrictions applies:
+  - Editing images of children of any age is allowed as long as it doesn't involve **adding** another person to the child's picture
+  - If one of the input images already contain a child with other people **in the same picture** and **given that the picture looks natural and not fabricated (e.g., concatenation of multiple pictures)**, then those people are allowed to be in the same output image as the child/children.
+  - Adding well known fictional and historical figures **that you recognize** (e.g., Albert Einstein, Naruto...) is allowed
+"""
+
+IMAGE_EDITING_SYS_PROMPT = f"""
 # Image Editing Prompt Enhancement Expert
 
 You are a professional edit prompt enhancer, fluent in multiple languages, with exceptional visual comprehension and descriptive abilities. Your task is to generate a direct and specific edit prompt based on the user-provided instruction and the input image(s).
@@ -124,11 +131,7 @@ If an input image contains any forbidden content or the user request to alter th
   - Changing poses, expressions, or camera angles to be sexual in nature.
   - Anything that will result in a sexually explicit image.
 
-### 2. Children under 13:
-  To prevent the impersonation of a child parents/relatives, the following editing restrictions applies:
-    - Editing images of children of any age is allowed as long as it doesn't involve **adding** another person to the child's picture
-    - If one of the input images already contain a child with other people **in the same picture** and **given that the picture looks natural and not fabricated (e.g., concatenation of multiple pictures)**, then those people are allowed to be in the same output image as the child/children.
-    - Adding well known fictional and historical figures **that you recognize** (e.g., Albert Einstein, Naruto...) is allowed
+### 2. {CHILDREN_UNDER_13_EDITING_GUIDELINE}
 
 ### 3. Real Public Figures:  
   - Any editing involving public figures in real-life (e.g., celebrities, politicians) are forbidden.
@@ -308,11 +311,7 @@ You are an expert AI safety moderator. Your task is to evaluate the user's media
 
 1. NSFW/Sexually explicit content is **strictly forbidden**.
 2. Real-life public figures (e.g., celebrities, politicians) are **strictly forbidden**. But anonymous, fictional, and historical figures are allowed.
-3. Children under 13: To prevent the impersonation of a child parents/relatives, the following editing restrictions applies:
-  - Editing images of children of any age is allowed as long as it doesn't involve **adding** another person to the child's picture
-  - If one of the input images already contain a child with other people **in the same picture** and **given that the picture looks natural and not fabricated (e.g., concatenation of multiple pictures)**, then those people are allowed to be in the same output image as the child/children.
-  - Adding well known fictional and historical figures **that you recognize** (e.g., Albert Einstein, Naruto...) is allowed
-
+{}
 Analyze the input objectively. If it violates any rule, mark it as unsafe and provide the exact violation reason.
 """
 
@@ -442,7 +441,10 @@ class PromptEnhancer:
         Evaluates the safety of the prompt and input images without modifying the prompt.
         Throws a SafetyViolationError if the inputs violate safety guidelines.
         """
-        system_prompt = SAFETY_CHECK_SYS_PROMPT + get_safety_output_format(generation_type)
+        system_prompt = SAFETY_CHECK_SYS_PROMPT.format(
+            CHILDREN_UNDER_13_EDITING_GUIDELINE if generation_type == GenerationType.I2I else ""
+        )
+        system_prompt = system_prompt + get_safety_output_format(generation_type)
         messages = [
             {
                 "role": "system",
