@@ -46,6 +46,7 @@ dependencies = [
   "kernels",
   "decord",
   "apache-tvm-ffi",                                                     # Required by flash-attention 4
+  "nvidia-cutlass-dsl",                                                 # Required by flash-attention 4
   "lightx2v @ git+https://github.com/sitatec/LightX2V.git@torch2.11.0",
 ]
 
