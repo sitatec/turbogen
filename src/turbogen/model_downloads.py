@@ -70,7 +70,7 @@ def download_qwen_image_edit(
 def download_zimage_models(te_quantized: bool = True):
     zimage_turbo_path = _ROOT_DIR / "Z-Image-Turbo"
 
-    ignore_patterns = ["transformer/**", "assets/**"]
+    ignore_patterns = ["transformer/diffusion_pytorch_model*", "assets/**"]
     if te_quantized:
         ignore_patterns.append("text_encoder/**")
 
