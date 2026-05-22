@@ -27,14 +27,14 @@ classifiers = [
 #gptqmodel/bitsandbytes/auto-roung  # depending on env (e.g. auto-round/bitsandbytes on huggingface zero-gpu spaces, gptqmodel preferred where compatible)
 #optimum  # you also need optimum if you are using auto-round or gptqmodel
 dependencies = [
-  "torch==2.9.1",
+  "torch==2.11.0",
   "opencv-python-headless",
   "Pillow",
   "numpy",
   "fast-thumbhash",
   "aiohttp",
   "diffusers",
-  "torchao==0.15.0",                                                   # The 0.16.0 version isn't compatible with the current diffusers latest version
+  "torchao",                                                            # The 0.16.0 version isn't compatible with the current diffusers latest version
   "transformers>=5.0.0",
   "accelerate",
   "hf-transfer",
@@ -45,7 +45,7 @@ dependencies = [
   "triton",
   "kernels",
   "decord",
-  "lightx2v @ git+https://github.com/sitatec/LightX2V.git@torch2.9.1",
+  "lightx2v @ git+https://github.com/sitatec/LightX2V.git@torch2.11.0",
 ]
 
 [project.urls]
