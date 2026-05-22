@@ -41,7 +41,7 @@ dependencies = [
   "huggingface-hub",
   "timm",
   "piexif",
-  "sgl-kernel",
+  "sglang-kernel",
   "triton",
   "kernels",
   "decord",
