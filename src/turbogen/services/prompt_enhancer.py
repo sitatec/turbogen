@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLTextRMSNorm
-from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory, is_hopper_gpu
+from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory, is_hopper_gpu_or_higher
 from turbogen.models.base_model import GenerationType
 
 
@@ -389,7 +389,7 @@ class PromptEnhancer:
             print(f"Receive {token_count}, using SDPA")
             self.model.set_attn_implementation("sdpa")
         else:
-            selected_attn = "flash_attention_3" if is_hopper_gpu() else "sage_attention"
+            selected_attn = "flash_attention_4" if is_hopper_gpu_or_higher() else "sage_attention"
             print(f"Receive {token_count}, using {selected_attn}")
             self.model.set_attn_implementation(selected_attn)
 

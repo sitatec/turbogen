@@ -2,11 +2,11 @@ import time
 from typing import cast
 from pathlib import Path
 
-from turbogen.utils import load_flash_attention_3, disable_manual_memory_gc, set_jit_cache_dirs
+from turbogen.utils import load_flash_attention, disable_manual_memory_gc, set_jit_cache_dirs
 
 # ruff: noqa:E402
 set_jit_cache_dirs(Path(__file__).parent.resolve() / ".jit_cache")
-load_flash_attention_3()
+load_flash_attention()
 
 from cog import BasePredictor, Input, Path as CogPath
 from turbogen.generation_pipeline import GenerationPipeline

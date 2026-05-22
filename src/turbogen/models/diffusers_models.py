@@ -7,7 +7,7 @@ from diffusers import (
     PipelineQuantizationConfig,
     TorchAoConfig,
 )
-from turbogen.utils import is_hopper_gpu
+from turbogen.utils import is_hopper_gpu_or_higher
 from turbogen.models.base_model import BaseModel, GenerationType
 
 
@@ -36,9 +36,7 @@ class _BaseDiffusersModel(BaseModel):
         self.default_guidance_scale = guidance_scale
 
         quantization_config = (
-            PipelineQuantizationConfig(
-                quant_mapping={"transformer": TorchAoConfig(quant_scheme)}
-            )
+            PipelineQuantizationConfig(quant_mapping={"transformer": TorchAoConfig(quant_scheme)})
             if quant_scheme
             else None
         )
@@ -49,9 +47,7 @@ class _BaseDiffusersModel(BaseModel):
             quantization_config=quantization_config,
         )
 
-        self.pipe.transformer.set_attention_backend(
-            "_flash_3_hub" if is_hopper_gpu() else "sage_hub"
-        )
+        self.pipe.transformer.set_attention_backend("_flash_3_hub" if is_hopper_gpu_or_higher() else "sage_hub")
 
         if enable_cpu_offload:
             self.pipe.enable_model_cpu_offload()
@@ -92,9 +88,7 @@ class _BaseDiffusersModel(BaseModel):
             width=width,
             height=height,
             num_inference_steps=steps or self.default_inference_steps,
-            guidance_scale=guidance_scale
-            if guidance_scale is not None
-            else self.default_guidance_scale,
+            guidance_scale=guidance_scale if guidance_scale is not None else self.default_guidance_scale,
             generator=generator,
             output_type="pt",
         )
@@ -229,9 +223,7 @@ class Wan22Lite(_BaseDiffusersModel):
     def __init__(
         self,
         model_path: Path,
-        generation_type: Literal[
-            GenerationType.I2V, GenerationType.T2V
-        ] = GenerationType.I2V,
+        generation_type: Literal[GenerationType.I2V, GenerationType.T2V] = GenerationType.I2V,
         compile: bool = False,
         enable_cpu_offload: bool = False,
         lora_configs: list[dict] = [],

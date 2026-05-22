@@ -1,8 +1,8 @@
 # gradio_ui_factory must be imported first to init ZeroGPU when importing `spaces`
 from turbogen.utils.gradio_ui_factory import create_gradio_app
-from turbogen.utils import load_flash_attention_3
+from turbogen.utils import load_flash_attention
 
-load_flash_attention_3()
+load_flash_attention()
 
 # ruff: noqa:E402
 from turbogen.model_downloads import (

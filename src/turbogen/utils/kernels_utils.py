@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from kernels import get_kernel
 
-flash_attn_3_loaded = False
+flash_attn_loaded = False
 sage_attn_loaded = False
 
 
@@ -18,22 +18,22 @@ def get_gpu_major():
 
 
 @lru_cache()
-def is_hopper_gpu():
-    return get_gpu_major() == 9
+def is_hopper_gpu_or_higher():
+    return get_gpu_major() >= 9
 
 
-def load_flash_attention_3(fallback_to_sage_if_not_hopper=True):
-    if fallback_to_sage_if_not_hopper and not is_hopper_gpu():
+def load_flash_attention(fallback_to_sage_if_not_hopper=True):
+    if fallback_to_sage_if_not_hopper and not is_hopper_gpu_or_higher():
         return load_sage_attention()
 
     # TODO: check if already installed and skip
-    global flash_attn_3_loaded
+    global flash_attn_loaded
 
-    if not flash_attn_3_loaded:
-        fa3_module = get_kernel("kernels-community/flash-attn3")
-        sys.modules["flash_attn_interface"] = fa3_module
-        sys.modules["flash_attn3"] = fa3_module
-        flash_attn_3_loaded = True
+    if not flash_attn_loaded:
+        fa_module = get_kernel("kernels-community/flash-attn4")
+        sys.modules["flash_attn_interface"] = fa_module
+        sys.modules["flash_attn.cute"] = fa_module
+        flash_attn_loaded = True
     else:
         print("Flash Attention already loaded, skipping.")
 

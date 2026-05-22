@@ -7,7 +7,7 @@ from typing import Literal, override
 import torch
 import numpy as np
 
-from turbogen.utils import is_hopper_gpu, free_memory
+from turbogen.utils import is_hopper_gpu_or_higher, free_memory
 from turbogen.models.base_model import BaseModel, GenerationType
 from lightx2v.models.runners.default_runner import DefaultRunner
 from lightx2v.utils.input_info import init_empty_input_info, update_input_info_from_dict
@@ -102,7 +102,7 @@ class _BaseLightx2vModel(BaseModel):
         generation_type: GenerationType,
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
         attention_backend: Literal["flash_attn3", "sage_attn2", "torch_sdpa"] = "flash_attn3"
-        if is_hopper_gpu()
+        if is_hopper_gpu_or_higher()
         else "sage_attn2",
         infer_steps: int = 4,
         guidance_scale: float = 1,

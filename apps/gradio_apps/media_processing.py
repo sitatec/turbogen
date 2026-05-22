@@ -10,9 +10,9 @@ from PIL import Image
 from pathlib import Path
 import decord
 
-from turbogen.utils import load_flash_attention_3, create_thumbnail
+from turbogen.utils import load_flash_attention, create_thumbnail
 
-load_flash_attention_3()
+load_flash_attention()
 
 # ruff: noqa:E402
 from turbogen.model_downloads import (
