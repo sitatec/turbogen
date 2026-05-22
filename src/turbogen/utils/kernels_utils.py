@@ -30,14 +30,8 @@ def load_flash_attention(fallback_to_sage_if_not_hopper=True):
     global flash_attn_loaded
 
     if not flash_attn_loaded:
-        # fa_module = get_kernel("kernels-community/flash-attn4", version=0)
-        # sys.modules["flash_attn.cute"] = fa_module
-        fa_module = get_kernel("kernels-community/flash-attn3", version=1)
-        sys.modules["flash_attn_interface"] = fa_module
-        sys.modules["flash_attn3"] = fa_module
-        from transformers.utils.import_utils import PACKAGE_DISTRIBUTION_MAPPING
-
-        PACKAGE_DISTRIBUTION_MAPPING["flash_attn_interface"] = ["flash-attn-3"]
+        fa_module = get_kernel("kernels-community/flash-attn4", version=0)
+        sys.modules["flash_attn.cute"] = fa_module
         flash_attn_loaded = True
     else:
         print("Flash Attention already loaded, skipping.")

@@ -105,7 +105,7 @@ class _BaseLightx2vModel(BaseModel):
         model_path: str,
         generation_type: GenerationType,
         aspect_ratios: dict[str, dict[str, tuple[int, int]]],
-        attention_backend: Literal["flash_attn3", "sage_attn2", "torch_sdpa"] = "flash_attn3"
+        attention_backend: Literal["flash_attn3", "flash_attn4", "sage_attn2", "torch_sdpa"] = "flash_attn4"
         if is_hopper_gpu_or_higher()
         else "sage_attn2",
         infer_steps: int = 4,
