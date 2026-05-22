@@ -9,6 +9,7 @@ set_jit_cache_dirs(Path(__file__).parent.resolve() / ".jit_cache")
 load_flash_attention()
 
 from cog import BasePredictor, Input, Path as CogPath
+import lightx2v.models.runners.qwen_image.qwen_image_runner  # noqa Needed before importing lightx2v models
 from turbogen.generation_pipeline import GenerationPipeline
 from turbogen.models.lightx2v_models import QwenImageEditLite
 from turbogen.model_downloads import download_qwen_image_edit

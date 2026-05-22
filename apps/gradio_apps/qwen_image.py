@@ -11,6 +11,7 @@ from turbogen.model_downloads import (
     download_prompt_enhancer,
     download_nsfw_model,
 )
+import lightx2v.models.runners.qwen_image.qwen_image_runner  # noqa Needed before importing lightx2v models
 from turbogen.models.lightx2v_models import QwenImageLite
 from turbogen.generation_pipeline import GenerationPipeline
 from turbogen.services.media_scoring.image_scorer import ImageScorer

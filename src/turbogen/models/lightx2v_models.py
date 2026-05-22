@@ -1,3 +1,4 @@
+import os
 import types
 import random
 import functools
@@ -13,6 +14,8 @@ from lightx2v.models.runners.default_runner import DefaultRunner
 from lightx2v.utils.input_info import init_empty_input_info, update_input_info_from_dict
 from lightx2v import LightX2VPipeline as LightX2VPipelineBase
 from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
+
+os.environ["PROFILING_DEBUG_LEVEL"] = os.getenv("PROFILING_DEBUG_LEVEL", "0")
 
 
 class _LightX2VPipeline(LightX2VPipelineBase):

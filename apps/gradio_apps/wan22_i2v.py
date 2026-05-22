@@ -11,6 +11,7 @@ from turbogen.model_downloads import (
     download_nsfw_model,
     download_video_scorer,
 )
+import lightx2v.models.runners.wan.wan_runner  # noqa Needed before importing lightx2v models
 from turbogen.models.lightx2v_models import Wan22Lite
 from turbogen.models.base_model import GenerationType
 from turbogen.generation_pipeline import GenerationPipeline

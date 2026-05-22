@@ -9,6 +9,7 @@ set_jit_cache_dirs(Path(__file__).parent.resolve() / ".jit_cache")
 load_sage_attention()
 
 from cog import BasePredictor, Input, Path as CogPath
+import lightx2v.models.runners.wan.wan_runner  # noqa Needed before importing lightx2v models
 from turbogen.generation_pipeline import GenerationPipeline
 from turbogen.models.base_model import GenerationType
 from turbogen.models.lightx2v_models import Wan22Lite
