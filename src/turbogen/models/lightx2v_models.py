@@ -8,12 +8,13 @@ from typing import Literal, override
 import torch
 import numpy as np
 
+from lightx2v.common.ops import *  # noqa
 from turbogen.utils import is_hopper_gpu_or_higher, free_memory
 from turbogen.models.base_model import BaseModel, GenerationType
 from lightx2v.models.runners.default_runner import DefaultRunner
 from lightx2v.utils.input_info import init_empty_input_info, update_input_info_from_dict
 from lightx2v import LightX2VPipeline as LightX2VPipelineBase
-from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
+# from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
 
 os.environ["PROFILING_DEBUG_LEVEL"] = os.getenv("PROFILING_DEBUG_LEVEL", "0")
 
@@ -279,7 +280,8 @@ class QwenImageLite(_BaseLightx2vModel):
         **kwargs,
     ):
         if text_encoder and vae:
-            QwenImageRunner.load_model = self._create_patched_load_model(text_encoder, vae)
+            raise Exception("text_encoder and vae are not yet supported")
+            # QwenImageRunner.load_model = self._create_patched_load_model(text_encoder, vae)
         super().__init__(
             model_id="l",
             model_name="Qwen Image 2512",
@@ -306,7 +308,7 @@ class QwenImageLite(_BaseLightx2vModel):
         )
 
     def _create_patched_load_model(self, text_encoder, vae):
-        original_load_model = QwenImageRunner.load_model
+        original_load_model = QwenImageRunner.load_model  # type: ignore  # noqa
 
         @functools.wraps(original_load_model)
         def patched_load_model(self):
@@ -328,7 +330,7 @@ class QwenImageLite(_BaseLightx2vModel):
                 return original_load_model(self)
             finally:
                 # Restore original behavior at class level
-                QwenImageRunner.load_model = original_load_model
+                QwenImageRunner.load_model = original_load_model  # type: ignore  # noqa
 
         return patched_load_model
 
