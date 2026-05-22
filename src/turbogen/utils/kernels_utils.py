@@ -31,7 +31,6 @@ def load_flash_attention(fallback_to_sage_if_not_hopper=True):
 
     if not flash_attn_loaded:
         fa_module = get_kernel("kernels-community/flash-attn4", version=0)
-        sys.modules["flash_attn_interface"] = fa_module
         sys.modules["flash_attn.cute"] = fa_module
         flash_attn_loaded = True
     else:
