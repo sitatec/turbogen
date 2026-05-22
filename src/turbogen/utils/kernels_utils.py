@@ -30,7 +30,7 @@ def load_flash_attention(fallback_to_sage_if_not_hopper=True):
     global flash_attn_loaded
 
     if not flash_attn_loaded:
-        fa_module = get_kernel("kernels-community/flash-attn4")
+        fa_module = get_kernel("kernels-community/flash-attn4", version=0)
         sys.modules["flash_attn_interface"] = fa_module
         sys.modules["flash_attn.cute"] = fa_module
         flash_attn_loaded = True
@@ -43,7 +43,7 @@ def load_sage_attention(register_to_transformers: bool = True):
     global sage_attn_loaded
 
     if not sage_attn_loaded:
-        sage_attn_module = get_kernel("kernels-community/sage-attention")
+        sage_attn_module = get_kernel("kernels-community/sage-attention", version=2)
         sage_attn_module.sageattn_qk_int8_pv_fp16_triton = sage_attn_module.sageattn  # type: ignore
         sys.modules["sageattention"] = sage_attn_module
         sage_attn_loaded = True
