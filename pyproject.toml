@@ -34,7 +34,7 @@ dependencies = [
   "fast-thumbhash",
   "aiohttp",
   "diffusers",
-  "torchao",                                                            # The 0.16.0 version isn't compatible with the current diffusers latest version
+  "torchao",                                                                                                                                                    # The 0.16.0 version isn't compatible with the current diffusers latest version
   "transformers>=5.0.0",
   "accelerate",
   "hf-transfer",
@@ -45,10 +45,11 @@ dependencies = [
   "triton",
   "kernels",
   "decord",
-  "einops",                                                             # Required by flash-attention 4
-  "apache-tvm-ffi",                                                     # Required by flash-attention 4
-  "nvidia-cutlass-dsl",                                                 # Required by flash-attention 4
+  "einops",                                                                                                                                                     # Required by flash-attention 4
+  "apache-tvm-ffi",                                                                                                                                             # Required by flash-attention 4
+  "nvidia-cutlass-dsl",                                                                                                                                         # Required by flash-attention 4
   "lightx2v @ git+https://github.com/sitatec/LightX2V.git@torch2.11.0",
+  "lightx2v_kernel @ https://huggingface.co/sitatech/lightx2v_kernel/resolve/main/lightx2v_kernel-0.0.1%2Bcu130torch2.11sm100sm120-cp39-abi3-linux_x86_64.whl",
 ]
 
 [project.urls]

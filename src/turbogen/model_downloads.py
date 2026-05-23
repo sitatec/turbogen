@@ -16,7 +16,7 @@ def download_qwen_image(
 ) -> Path:
     qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
 
-    ignore_patterns = ["transformer/**", "scheduler/**"]
+    ignore_patterns = ["transformer/**"]
     if te_quant_method:
         ignore_patterns.append("text_encoder/**")
 
@@ -26,8 +26,8 @@ def download_qwen_image(
         ignore_patterns=ignore_patterns,
     )
     hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen-Image-2512-Turbo-2-Steps",
-        local_dir=qwen_image_2512_path,  # download transformer and scheduler sub-folders
+        repo_id="sitatech/Qwen-Image-2512-Lightning-NFP4",
+        local_dir=qwen_image_2512_path,  # download transformer sub-folder
     )
     if te_quant_method:
         hf_hub.snapshot_download(
