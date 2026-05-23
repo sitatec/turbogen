@@ -70,7 +70,7 @@ def download_qwen_image_edit(
 def download_zimage_models(te_quantized: bool = True):
     zimage_turbo_path = _ROOT_DIR / "Z-Image-Turbo"
 
-    ignore_patterns = ["transformer/diffusion_pytorch_model*", "assets/**"]
+    ignore_patterns = ["assets/**"]
     if te_quantized:
         ignore_patterns.append("text_encoder/**")
 
@@ -79,11 +79,7 @@ def download_zimage_models(te_quantized: bool = True):
         local_dir=zimage_turbo_path,
         ignore_patterns=ignore_patterns,
     )
-    hf_hub.hf_hub_download(
-        repo_id="lightx2v/Z-Image-Turbo-Quantized",
-        filename="z_image_turbo_scaled_fp8_e4m3fn.safetensors",
-        local_dir=zimage_turbo_path / "transformer",
-    )
+
     if te_quantized:
         hf_hub.snapshot_download(
             repo_id="JunHowie/Qwen3-4B-GPTQ-Int4",

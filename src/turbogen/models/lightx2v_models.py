@@ -343,7 +343,7 @@ class ZImageTurbo(_BaseLightx2vModel):
         lora_configs: list[dict] | None = None,
         compile: bool = False,
         enable_cpu_offload: bool = False,
-        quant_scheme: str | None = "fp8-sgl",
+        quant_scheme: str | None = None,
         text_encoder_quant_scheme: str | None = "int4",
         **kwargs,
     ):
