@@ -1,14 +1,24 @@
 from pathlib import Path
 import os
 import sys
+import importlib.metadata
 from functools import lru_cache
 
 import torch
 import torch.nn as nn
 from kernels import get_kernel
 
-flash_attn_loaded = False
-sage_attn_loaded = False
+
+def is_package_installed(package_name: str) -> bool:
+    try:
+        importlib.metadata.version(package_name)
+        return True
+    except importlib.metadata.PackageNotFoundError:
+        return False
+
+
+flash_attn_loaded = is_package_installed("flash-attn-4")
+sage_attn_loaded = is_package_installed("sageattention")
 
 
 @lru_cache()
