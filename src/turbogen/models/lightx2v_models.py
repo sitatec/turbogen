@@ -121,6 +121,7 @@ class _BaseLightx2vModel(BaseModel):
         text_encoder_quant_scheme: str | None = None,
         quantized_model_path: str | None = None,
         quantized_text_encoder_path: str | None = None,
+        do_mm_calib: bool | None = False,
     ):
         self.model_id = model_id
         self.model_name = model_name
@@ -135,6 +136,7 @@ class _BaseLightx2vModel(BaseModel):
             model_cls=model_cls,
             task=generation_type.value,
         )
+        self.pipe.do_mm_calib = do_mm_calib  # type: ignore
 
         if enable_cpu_offload:
             self.pipe.enable_offload(
