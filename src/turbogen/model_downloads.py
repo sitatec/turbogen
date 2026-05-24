@@ -223,6 +223,8 @@ def _symlink_common_components(
     destination_dir: Path,
     subdirs: list[str],
 ):
+    source_dir = source_dir.resolve()
+
     for subdir in subdirs:
         dest = destination_dir / subdir
         src = source_dir / subdir
