@@ -291,11 +291,11 @@ class QwenImageLite(_BaseLightx2vModel):
             generation_type=GenerationType.T2I,
             model_path=str(model_path),
             compile=compile,
-            quant_scheme="nvfp4",
+            quant_scheme=kwargs.pop("quant_scheme", "nvfp4"),
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
             enable_cpu_offload=enable_cpu_offload,
-            infer_steps=kwargs.pop("infer_steps", 3),
+            infer_steps=kwargs.pop("infer_steps", 4),
             aspect_ratios={
                 "1:1": {"1.3K": (1328, 1328)},
                 "16:9": {"1.3K": (1664, 928)},
