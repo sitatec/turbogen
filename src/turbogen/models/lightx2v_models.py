@@ -140,9 +140,10 @@ class _BaseLightx2vModel(BaseModel):
 
         if enable_cpu_offload:
             self.pipe.enable_offload(
-                text_encoder_offload=True,
-                image_encoder_offload=True,
-                vae_offload=True,
+                cpu_offload=True,
+                # text_encoder_offload=True,
+                # image_encoder_offload=True,
+                # vae_offload=True,
             )
 
         if quant_scheme or quantized_model_path or quantized_text_encoder_path or text_encoder_quantized:
