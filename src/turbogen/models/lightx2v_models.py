@@ -81,7 +81,7 @@ class _LightX2VPipeline(LightX2VPipelineBase):
                     "target_video_length": (
                         int(self.runner.config.fps * duration_seconds) + 1
                         if duration_seconds
-                        else self.runner.config.target_video_length
+                        else self.runner.config.get("target_video_length")
                     ),
                     "infer_steps": steps or self.infer_steps,
                     "sample_guide_scale": guidance_scale or self.sample_guide_scale,
