@@ -114,7 +114,6 @@ class _BaseLightx2vModel(BaseModel):
         default_negative_prompt: str | None = None,
         lora_configs: list[dict] | None = None,
         supports_last_frame: bool = False,  # Only relevant for I2V gen type
-        enable_cpu_offload: bool = False,
         quant_scheme: str | None = None,
         rope_type: Literal["torch", "flashinfer"] = "flashinfer",
         text_encoder_quantized: bool = False,
@@ -122,6 +121,10 @@ class _BaseLightx2vModel(BaseModel):
         quantized_model_path: str | None = None,
         quantized_text_encoder_path: str | None = None,
         do_mm_calib: bool | None = False,
+        enable_cpu_offload: bool = False,
+        text_encoder_offload: bool = False,
+        image_encoder_offload: bool = False,
+        vae_offload: bool = False,
     ):
         self.model_id = model_id
         self.model_name = model_name
@@ -138,12 +141,12 @@ class _BaseLightx2vModel(BaseModel):
         )
         self.pipe.do_mm_calib = do_mm_calib  # type: ignore
 
-        if enable_cpu_offload:
+        if enable_cpu_offload or text_encoder_offload or image_encoder_offload or vae_offload:
             self.pipe.enable_offload(
-                cpu_offload=True,
-                # text_encoder_offload=True,
-                # image_encoder_offload=True,
-                # vae_offload=True,
+                cpu_offload=enable_cpu_offload,
+                text_encoder_offload=text_encoder_offload,
+                image_encoder_offload=image_encoder_offload,
+                vae_offload=vae_offload,
             )
 
         if quant_scheme or quantized_model_path or quantized_text_encoder_path or text_encoder_quantized:
