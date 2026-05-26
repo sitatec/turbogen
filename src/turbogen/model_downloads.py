@@ -92,7 +92,7 @@ def download_zimage_models(
 
     if te_quant_method:
         hf_hub.snapshot_download(
-            repo_id="JunHowie/Qwen3-4B-GPTQ-Int4" if te_quant_method == "gptq" else "unsloth/Qwen3-4B-unsloth-bnb-4bit",
+            repo_id="JunHowie/Qwen3-4B-GPTQ-Int4" if te_quant_method == "gptq" else "unsloth/Qwen3-4B-bnb-4bit",
             local_dir=zimage_turbo_path / "text_encoder",
         )
 
