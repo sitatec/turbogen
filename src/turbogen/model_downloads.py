@@ -67,11 +67,15 @@ def download_qwen_image_edit(
     return qwen_image_edit_2511_path.resolve()
 
 
-def download_zimage_models(te_quantized: bool = True):
+def download_zimage_models(
+    te_quant_method: Literal["gptq", "bnb"] | None = "gptq", dit_quant_method: Literal["fp8"] | None = None
+):
     zimage_turbo_path = _ROOT_DIR / "Z-Image-Turbo"
 
     ignore_patterns = ["assets/**"]
-    if te_quantized:
+    if dit_quant_method:
+        ignore_patterns.append("transformer/diffusion_pytorch_model*")
+    if te_quant_method:
         ignore_patterns.append("text_encoder/**")
 
     hf_hub.snapshot_download(
@@ -80,9 +84,15 @@ def download_zimage_models(te_quantized: bool = True):
         ignore_patterns=ignore_patterns,
     )
 
-    if te_quantized:
+    hf_hub.hf_hub_download(
+        repo_id="lightx2v/Z-Image-Turbo-Quantized",
+        filename="z_image_turbo_scaled_fp8_e4m3fn.safetensors",
+        local_dir=zimage_turbo_path / "transformer",
+    )
+
+    if te_quant_method:
         hf_hub.snapshot_download(
-            repo_id="JunHowie/Qwen3-4B-GPTQ-Int4",
+            repo_id="JunHowie/Qwen3-4B-GPTQ-Int4" if te_quant_method == "gptq" else "unsloth/Qwen3-4B-unsloth-bnb-4bit",
             local_dir=zimage_turbo_path / "text_encoder",
         )
 
