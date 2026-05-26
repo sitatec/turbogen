@@ -14,7 +14,7 @@ _SCORING_MODELS_DIR = (_ROOT_DIR / "scoring_models").resolve()
 def download_qwen_image(
     te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
 ) -> Path:
-    qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Lightning"
+    qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Fast"
 
     ignore_patterns = ["transformer/**", "scheduler/**"]
     if te_quant_method:
@@ -26,7 +26,7 @@ def download_qwen_image(
         ignore_patterns=ignore_patterns,
     )
     hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen-Image-2512-Turbo-2-Steps",
+        repo_id="sitatech/Qwen-Image-2512-Turbo-2stpes-FP8",
         local_dir=qwen_image_2512_path,  # download transformer and scheduler sub-folders
     )
     if te_quant_method:
