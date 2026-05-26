@@ -252,6 +252,7 @@ class QwenImageEditLite(_BaseLightx2vModel):
             compile=compile,
             quantized_model_path=quantized_model_path,
             lora_configs=lora_configs,
+            quant_scheme=kwargs.pop("quant_scheme", "fp8-sgl"),
             enable_cpu_offload=enable_cpu_offload,
             infer_steps=kwargs.pop("infer_steps", 4),
             aspect_ratios={

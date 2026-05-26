@@ -43,7 +43,7 @@ def download_qwen_image_edit(
 ) -> Path:
     qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
 
-    ignore_patterns = ["transformer/**"]
+    ignore_patterns = ["transformer/diffusion_pytorch_model*"]
     if te_quant_method:
         ignore_patterns.append("text_encoder/**")
 
@@ -53,9 +53,10 @@ def download_qwen_image_edit(
         ignore_patterns=ignore_patterns,
     )
 
-    hf_hub.snapshot_download(
-        repo_id="sitatech/Qwen-Image-Edit-2511-Lightning",
-        local_dir=qwen_image_edit_2511_path,  # sitatech/Qwen-Image-Edit-2511-Lightning has the transformer subfolder
+    hf_hub.hf_hub_download(
+        repo_id="lightx2v/Qwen-Image-Edit-2511-Lightning",
+        filename="qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_4steps_v1.0.safetensors",
+        local_dir=qwen_image_edit_2511_path / "transformer",
     )
 
     if te_quant_method:
