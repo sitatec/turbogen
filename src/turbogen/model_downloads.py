@@ -99,9 +99,8 @@ def download_zimage_models(
     return zimage_turbo_path.resolve()
 
 
-def download_wan22_models():
+def download_wan22_i2v_model():
     wan22_i2v_path = _ROOT_DIR / "Wan2.2-I2V"
-    wan22_t2v_path = _ROOT_DIR / "Wan2.2-T2V"
 
     hf_hub.snapshot_download(
         repo_id="lightx2v/Encoders",
@@ -129,6 +128,29 @@ def download_wan22_models():
         filename="wan2.2_i2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
         local_dir=wan22_i2v_path / "low_noise_model",
     )
+
+    return wan22_i2v_path.resolve()
+
+
+def download_wan22_t2v_models():
+    wan22_t2v_path = _ROOT_DIR / "Wan2.2-T2V"
+
+    hf_hub.snapshot_download(
+        repo_id="lightx2v/Encoders",
+        local_dir=wan22_t2v_path,
+        allow_patterns=["google/**", "models_t5_umt5-xxl-enc-fp8.pth"],
+    )
+    hf_hub.hf_hub_download(
+        repo_id="lightx2v/Autoencoders",
+        filename="Wan2.1_VAE.pth",
+        local_dir=wan22_t2v_path,
+    )
+    hf_hub.hf_hub_download(
+        repo_id="sitatech/Wan2.2-FP8-Models",
+        filename="config.json",
+        local_dir=wan22_t2v_path,
+    )
+
     hf_hub.hf_hub_download(
         repo_id="sitatech/Wan2.2-FP8-Models",
         filename="wan2.2_t2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
@@ -140,18 +162,7 @@ def download_wan22_models():
         local_dir=wan22_t2v_path / "low_noise_model",
     )
 
-    _symlink_common_components(
-        wan22_i2v_path,
-        wan22_t2v_path,
-        [
-            "google",
-            "models_t5_umt5-xxl-enc-fp8.pth",
-            "Wan2.1_VAE.pth",
-            "config.json",
-        ],
-    )
-
-    return wan22_i2v_path.resolve(), wan22_t2v_path.resolve()
+    return wan22_t2v_path.resolve()
 
 
 def download_video_scorer() -> Path:

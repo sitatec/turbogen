@@ -13,14 +13,14 @@ import lightx2v.models.runners.wan.wan_runner  # noqa Needed before importing li
 from turbogen.generation_pipeline import GenerationPipeline
 from turbogen.models.base_model import GenerationType
 from turbogen.models.lightx2v_models import Wan22Lite
-from turbogen.model_downloads import download_wan22_models
+from turbogen.model_downloads import download_wan22_t2v_models
 
 
 class Model(BasePredictor):
     # pyrefly: ignore
     def setup(self) -> None:
         t = time.perf_counter()
-        _, wan22_t2v_path = download_wan22_models()
+        wan22_t2v_path = download_wan22_t2v_models()
         print(f"Downloaded in {time.perf_counter() - t} seconds")
 
         t2 = time.perf_counter()

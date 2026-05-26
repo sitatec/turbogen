@@ -6,7 +6,7 @@ load_sage_attention()
 
 # ruff: noqa:E402
 from turbogen.model_downloads import (
-    download_wan22_models,
+    download_wan22_t2v_models,
     download_prompt_enhancer,
     download_nsfw_model,
     download_video_scorer,
@@ -22,7 +22,7 @@ from turbogen.services.nsfw_detector import NsfwDetector
 
 nsfw_model_path = download_nsfw_model()
 video_scorer_path = download_video_scorer()
-_, wan22_t2v_path = download_wan22_models()
+wan22_t2v_path = download_wan22_t2v_models()
 prompt_enhancer_path = download_prompt_enhancer(quant_method="bnb")
 
 wan22_t2v = Wan22Lite(
