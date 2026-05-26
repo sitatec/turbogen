@@ -483,11 +483,8 @@ def create_model_interface(
             num_outputs,
         ]
 
-        if prompt_enhancing_supported:
-            inputs_list.append(prompt_enhancer_checkbox)
-
-        if postprocessing_supported:
-            inputs_list.append(postprocess_checkbox)
+        inputs_list.append(prompt_enhancer_checkbox if prompt_enhancing_supported else gr.State(None))
+        inputs_list.append(postprocess_checkbox if postprocessing_supported else gr.State(None))
 
         if max_input_images > 0:
             inputs_list.extend(

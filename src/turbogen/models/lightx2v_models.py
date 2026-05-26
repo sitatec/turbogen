@@ -411,7 +411,7 @@ class Wan22Lite(_BaseLightx2vModel):
             supports_last_frame=True,
             model_path=str(model_path),
             compile=compile,
-            attention_backend="sage_attn2",
+            attention_backend=kwargs.pop("attention_backend", "sage_attn2"),
             quant_scheme=quant_scheme,
             text_encoder_quantized=text_encoder_quantized,
             lora_configs=lora_configs,
