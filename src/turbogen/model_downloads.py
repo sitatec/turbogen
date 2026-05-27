@@ -69,7 +69,8 @@ def download_qwen_image_edit(
 
 
 def download_zimage_models(
-    te_quant_method: Literal["gptq", "bnb"] | None = "gptq", dit_quant_method: Literal["fp8"] | None = None
+    te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
+    dit_quant_method: Literal["fp8"] | None = None,
 ):
     zimage_turbo_path = _ROOT_DIR / "Z-Image-Turbo"
 
@@ -85,15 +86,18 @@ def download_zimage_models(
         ignore_patterns=ignore_patterns,
     )
 
-    hf_hub.hf_hub_download(
-        repo_id="lightx2v/Z-Image-Turbo-Quantized",
-        filename="z_image_turbo_scaled_fp8_e4m3fn.safetensors",
-        local_dir=zimage_turbo_path / "transformer",
-    )
+    if dit_quant_method:
+        hf_hub.hf_hub_download(
+            repo_id="lightx2v/Z-Image-Turbo-Quantized",
+            filename="z_image_turbo_scaled_fp8_e4m3fn.safetensors",
+            local_dir=zimage_turbo_path / "transformer",
+        )
 
     if te_quant_method:
         hf_hub.snapshot_download(
-            repo_id="JunHowie/Qwen3-4B-GPTQ-Int4" if te_quant_method == "gptq" else "unsloth/Qwen3-4B-bnb-4bit",
+            repo_id="JunHowie/Qwen3-4B-GPTQ-Int4"
+            if te_quant_method == "gptq"
+            else "unsloth/Qwen3-4B-bnb-4bit",
             local_dir=zimage_turbo_path / "text_encoder",
         )
 
@@ -235,7 +239,9 @@ def download_prompt_enhancer(
 def download_nsfw_model():
     model_path = _ROOT_DIR / "nsfw_model"
 
-    hf_hub.snapshot_download(repo_id="Freepik/nsfw_image_detector", local_dir=model_path)
+    hf_hub.snapshot_download(
+        repo_id="Freepik/nsfw_image_detector", local_dir=model_path
+    )
 
     return model_path.resolve()
 
