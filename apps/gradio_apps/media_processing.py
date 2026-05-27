@@ -57,7 +57,7 @@ def evaluate_image(image: torch.Tensor):
 
 @spaces.GPU(duration=30)
 def evaluate_video(video_tensor: torch.Tensor, fps: float):
-    # We limit the fps to max 30 to reduce memory processing time. But since this is for quality scoring,
+    # We limit the fps to max 30 to reduce memory and processing time. But since this is for quality scoring,
     # videos with fps<=30 and fps>30 would be scored unfairly since the later got its native fps reduced.
     # So by default we divide by 2 to reduce the rate of unfair scoring. The scoring model was trained on low fps so, this will work.
     scoring_fps = max(30, round(fps / 2))
@@ -75,7 +75,7 @@ async def process_image(input_mode, file_path, url, metadata_input):
         if input_mode == "URL":
             if not url:
                 raise gr.Error("URL is required")
-            image_path = str(request_dir / "input_image.jpg")
+            image_path = str(request_dir / "input_image")
             async with aiohttp.ClientSession() as session:
                 await download_file(session, url, image_path)
         else:

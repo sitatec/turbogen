@@ -185,7 +185,7 @@ class _BaseLightx2vModel(BaseModel):
         if generation_type == GenerationType.I2V and supports_last_frame:
             # Add support for First-Last-Frame To Video
             def encode_input(self: DefaultRunner):
-                if self.input_info and self.input_info.last_frame_path:
+                if self.input_info and getattr(self.input_info, "last_frame_path", None):
                     return self._run_input_encoder_local_flf2v()
 
                 return self._run_input_encoder_local_i2v()
