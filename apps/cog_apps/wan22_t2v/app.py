@@ -51,8 +51,6 @@ class Model(BasePredictor):
             default=-1,
         ),
     ) -> CogPath:
-        t = time.perf_counter()
-
         # The lightx2v lib do a lot of torch.cuda.empty_cache() which sync gpu,
         # introducing some latency. So we disable it. TODO: make it configurable
         with disable_manual_memory_gc():
@@ -67,7 +65,6 @@ class Model(BasePredictor):
                 output_dir_path="./output",
             )
 
-        print(f"Generated in {time.perf_counter() - t} seconds")
         return CogPath(cast(str, output_path))
 
     def warmup(self) -> None:

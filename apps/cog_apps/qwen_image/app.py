@@ -53,8 +53,6 @@ class Model(BasePredictor):
             default=-1,
         ),
     ) -> CogPath:
-        t = time.perf_counter()
-
         model_id = self.qwen_image.model_id
         resolution = "1.3K"
         image_paths = []
@@ -73,7 +71,6 @@ class Model(BasePredictor):
                 output_dir_path="./output",
             )
 
-        print(f"Generated in {time.perf_counter() - t} seconds")
         return CogPath(cast(str, output_path))
 
     def warmup(self) -> None:
