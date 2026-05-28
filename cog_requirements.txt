@@ -1,0 +1,5 @@
+-r requirements.txt
+flashinfer-python[cu13]
+flashinfer-cubin
+optimum
+gptqmodel
