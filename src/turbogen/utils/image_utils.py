@@ -41,10 +41,22 @@ def convert_to_webp_with_metadata(
         metadata = b""
 
     if output_path:
-        image.save(output_path, format="WEBP", quality=quality, exif=metadata, lossless=lossless)
+        image.save(
+            output_path,
+            format="WEBP",
+            quality=quality,
+            exif=metadata,
+            lossless=lossless,
+        )
     else:
         output_buffer = io.BytesIO()
-        image.save(output_buffer, format="WEBP", quality=quality, exif=metadata, lossless=lossless)
+        image.save(
+            output_buffer,
+            format="WEBP",
+            quality=quality,
+            exif=metadata,
+            lossless=lossless,
+        )
         return output_buffer.getvalue()
 
 
@@ -83,7 +95,9 @@ def create_exif_data(metadata: dict[str, str]) -> bytes:
     exif_data = {}
 
     if "description" in metadata:
-        ifd_data[piexif.ImageIFD.ImageDescription] = metadata["description"].encode("utf-8")
+        ifd_data[piexif.ImageIFD.ImageDescription] = metadata["description"].encode(
+            "utf-8"
+        )
         del metadata["description"]
 
     if "artist" in metadata:
@@ -120,5 +134,7 @@ def generate_thumbhash(image: np.ndarray) -> str:
     rgba_image = np.full((thumb_height, thumb_width, 4), 255, dtype=np.uint8)
     rgba_image[:, :, :3] = thumbnail  # Copy RGB channels
 
-    thumb_hash_bytes = rgba_to_thumb_hash(width=thumb_width, height=thumb_height, rgba=rgba_image.tobytes())
+    thumb_hash_bytes = rgba_to_thumb_hash(
+        width=thumb_width, height=thumb_height, rgba=rgba_image.tobytes()
+    )
     return base64.b64encode(bytes(thumb_hash_bytes)).decode()

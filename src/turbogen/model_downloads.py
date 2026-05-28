@@ -6,7 +6,11 @@ import huggingface_hub as hf_hub
 
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
-_ROOT_DIR = Path(__file__).parent / "_model_weights"
+_ROOT_DIR = (
+    Path(os.environ["MODEL_WEIGHTS_ROOT_DIR"])
+    if os.environ.get("MODEL_WEIGHTS_ROOT_DIR")
+    else Path(__file__).parent / "_model_weights"
+)
 
 _SCORING_MODELS_DIR = (_ROOT_DIR / "scoring_models").resolve()
 
