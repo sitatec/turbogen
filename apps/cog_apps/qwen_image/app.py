@@ -3,7 +3,7 @@ import time
 from typing import cast
 from pathlib import Path
 
-os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["HF_HUB_OFFLINE"] = os.environ.get("HF_HUB_OFFLINE", "1")
 
 from turbogen.utils import load_flash_attention, disable_manual_memory_gc, set_jit_cache_dirs
 
@@ -51,13 +51,17 @@ class Model(BasePredictor):
                 "4:5",
             ],
         ),
+        resolution: str = Input(
+            default="1.3K",
+            choices=["1.3K"],
+            description="Currently, only the native 1.3k (1328x1328 for square AR) is supported. This is the recommended resolution by the Qwen team for the best results.",
+        ),
         seed: int = Input(
             description="Random seed. Set to -1 for random.",
             default=-1,
         ),
     ) -> CogPath:
         model_id = self.qwen_image.model_id
-        resolution = "1.3K"
         image_paths = []
 
         # The lightx2v lib do a lot of torch.cuda.empty_cache() which sync gpu,

@@ -3,7 +3,7 @@ import time
 from typing import cast
 from pathlib import Path
 
-os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["HF_HUB_OFFLINE"] = os.environ.get("HF_HUB_OFFLINE", "1")
 
 from turbogen.utils import load_flash_attention, disable_manual_memory_gc, set_jit_cache_dirs
 

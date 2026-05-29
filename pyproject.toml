@@ -43,7 +43,7 @@ dependencies = [
   "piexif",
   "sglang-kernel",
   "triton",
-  "kernels",
+  "kernels==0.14.1",
   "decord",
   # We are currently installing fa4 directly without `kernels` until a sm12 specific bug is fixed. So we comment the following
   # "einops",                                                                                                                                                     # Required by flash-attention 4
