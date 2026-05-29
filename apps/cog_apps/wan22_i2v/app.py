@@ -1,7 +1,7 @@
 import os
 import time
 from typing import cast
-from pathlib import Path
+from cog import BasePredictor, Input, Path
 
 os.environ["HF_HUB_OFFLINE"] = os.environ.get("HF_HUB_OFFLINE", "1")
 
@@ -11,7 +11,6 @@ from turbogen.utils import load_sage_attention, disable_manual_memory_gc, set_ji
 set_jit_cache_dirs(Path(__file__).parent.resolve() / ".jit_cache")
 load_sage_attention()
 
-from cog import BasePredictor, Input, Path as CogPath
 import lightx2v.models.runners.wan.wan_runner  # noqa Needed before importing lightx2v models
 from turbogen.generation_pipeline import GenerationPipeline
 from turbogen.models.base_model import GenerationType
@@ -38,7 +37,7 @@ class Model(BasePredictor):
     def predict(
         self,
         prompt: str = Input(description="Description of the video"),
-        image: CogPath = Input(
+        image: Path = Input(
             description="Input image for Image-To-Video",
             default=None,
         ),
@@ -50,14 +49,14 @@ class Model(BasePredictor):
             default="720p",
             choices=["480p", "720p"],
         ),
-        last_frame: CogPath = Input(
+        last_frame: Path = Input(
             default=None,
         ),
         seed: int = Input(
             description="Random seed. Set to -1 for random.",
             default=-1,
         ),
-    ) -> CogPath:
+    ) -> Path:
         # The lightx2v lib do a lot of torch.cuda.empty_cache() which sync gpu,
         # introducing some latency. So we disable it. TODO: make it configurable
         with disable_manual_memory_gc():
@@ -73,7 +72,7 @@ class Model(BasePredictor):
                 output_dir_path="./output",
             )
 
-        return CogPath(cast(str, output_path))
+        return Path(cast(str, output_path))
 
     def warmup(self) -> None:
         import tempfile
@@ -85,7 +84,7 @@ class Model(BasePredictor):
             Image.new("RGB", (480, 480), color=(128, 128, 128)).save(tmp_f.name)
             self.predict(
                 prompt="a cat sitting on a chair",
-                image=CogPath(tmp_f.name),
+                image=Path(tmp_f.name),
                 aspect_ratio="16:9",
                 resolution="480p",
                 seed=42,

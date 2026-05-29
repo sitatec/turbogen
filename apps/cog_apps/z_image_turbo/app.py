@@ -1,7 +1,7 @@
 import os
 import time
 from typing import cast
-from pathlib import Path
+from cog import BasePredictor, Input, Path
 
 os.environ["HF_HUB_OFFLINE"] = os.environ.get("HF_HUB_OFFLINE", "1")
 
@@ -11,7 +11,6 @@ from turbogen.utils import load_flash_attention, disable_manual_memory_gc, set_j
 set_jit_cache_dirs(Path(__file__).parent.resolve() / ".jit_cache")
 load_flash_attention()
 
-from cog import BasePredictor, Input, Path as CogPath
 import lightx2v.models.runners.z_image.z_image_runner  # noqa Needed before importing lightx2v models
 from turbogen.generation_pipeline import GenerationPipeline
 from turbogen.models.lightx2v_models import ZImageTurbo
@@ -61,7 +60,7 @@ class Model(BasePredictor):
             description="Random seed. Set to -1 for random.",
             default=-1,
         ),
-    ) -> CogPath:
+    ) -> Path:
         # The lightx2v lib do a lot of torch.cuda.empty_cache() which sync gpu,
         # introducing some latency. So we disable it. TODO: make it configurable
         with disable_manual_memory_gc():
@@ -75,7 +74,7 @@ class Model(BasePredictor):
                 output_dir_path="./output",
             )
 
-        return CogPath(cast(str, output_path))
+        return Path(cast(str, output_path))
 
     def warmup(self) -> None:
         print("Running warmup...")
