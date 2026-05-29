@@ -26,9 +26,12 @@ ensure_command() {
     fi
 }
 
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/' | sed 's/arm.*/arm/')
+
 # Ensure the required commands are available
-ensure_command "cog" "sudo curl -L https://github.com/replicate/cog/releases/latest/download/cog_$(uname -s)_$(uname -m) -o /usr/local/bin/cog && sudo chmod +x /usr/local/bin/cog" && \
-ensure_command "yq" "sudo curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_$(uname -s)_$(uname -m) -o /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq"
+ensure_command "cog" "sudo curl -L https://github.com/replicate/cog/releases/latest/download/cog_${OS}_${ARCH} -o /usr/local/bin/cog && sudo chmod +x /usr/local/bin/cog" && \
+ensure_command "yq" "sudo curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_${OS}_${ARCH} -o /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq"
 
 yq eval-all 'select(fileIndex == 0) *+ select(fileIndex == 1)' ./apps/cog_apps/cog.template.yaml "./apps/cog_apps/$1/cog.yaml" > ./cog.yaml
 mv ./apps/cog_apps/$1/app.py app.py
