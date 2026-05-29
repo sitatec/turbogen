@@ -1,9 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
-from app import Model
+import torch
 
-model = Model()
+if torch.cuda.is_available():
+    from app import Model
 
-model.setup()
+    model = Model()
 
-model.warmup()
+    model.setup()
+
+    model.warmup()
+else:
+    print("[WARNING] CUDA not available, skipping warmup")

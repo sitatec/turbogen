@@ -117,3 +117,22 @@ def set_jit_cache_dirs(cache_root_dir: Path):
     os.environ["FLASHINFER_CACHE_DIR"] = f"{cache_root_dir}/flashinfer"
     os.environ["TRITON_CACHE_DIR"] = f"{cache_root_dir}/triton"
     os.environ["TORCHINDUCTOR_CACHE_DIR"] = f"{cache_root_dir}/inductor"
+
+    # --- FlashAttention 4 / CuTe DSL (If using FA4 or custom CuTe kernels) ---
+    os.environ["FLASH_ATTENTION_CUTE_DSL_CACHE_DIR"] = str(cache_root_dir / "cute_dsl")
+    os.environ["FLASH_ATTENTION_CUTE_DSL_CACHE_ENABLED"] = "1"
+
+    # Caches dynamic JIT C++/CUDA compilations via torch.utils.cpp_extension (Ninja backend)
+    os.environ["TORCH_EXTENSIONS_DIR"] = str(cache_root_dir / "torch_extensions")
+    # Caches the NVIDIA driver JIT compilation (PTX to device-specific SASS binary)
+    os.environ["CUDA_CACHE_PATH"] = str(cache_root_dir / "cuda_nv_cache")
+    # Increase CUDA cache limit (e.g., to ~4GB) so compiled kernels aren't evicted
+    os.environ["CUDA_CACHE_MAXSIZE"] = "4294967296"
+
+    # SGLang JIT kernels use tvm-ffi to compile and link C++/CUDA on the fly
+    os.environ["TVM_FFI_CACHE_DIR"] = str(cache_root_dir / "tvm_ffi")
+    # DeepGEMM maybe used by SGLang workloads on Hopper & Blackwell
+    os.environ["DG_CACHE_DIR"] = str(cache_root_dir / "deep_gemm")
+    os.environ["SGLANG_DG_CACHE_DIR"] = str(cache_root_dir / "deep_gemm")
+    # Caches compiled finite state machines (FSM) used for guided JSON or Regex decoding
+    os.environ["OUTLINES_CACHE_DIR"] = str(cache_root_dir / "outlines")
