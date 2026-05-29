@@ -19,7 +19,7 @@ class Model(BasePredictor):
     # pyrefly: ignore
     def setup(self) -> None:
         t = time.perf_counter()
-        zimage_path = download_zimage_models()
+        zimage_path = download_zimage_models(offline=True)
         print(f"Downloaded in {time.perf_counter() - t} seconds")
 
         t2 = time.perf_counter()

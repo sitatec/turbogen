@@ -20,7 +20,7 @@ class Model(BasePredictor):
     # pyrefly: ignore
     def setup(self) -> None:
         t = time.perf_counter()
-        wan22_t2v_path = download_wan22_t2v_models()
+        wan22_t2v_path = download_wan22_t2v_models(offline=True)
         print(f"Downloaded in {time.perf_counter() - t} seconds")
 
         t2 = time.perf_counter()

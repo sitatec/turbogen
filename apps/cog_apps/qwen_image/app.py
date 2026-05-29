@@ -19,7 +19,7 @@ class Model(BasePredictor):
     # pyrefly: ignore
     def setup(self) -> None:
         t = time.perf_counter()
-        qwen_image_path = download_qwen_image()
+        qwen_image_path = download_qwen_image(offline=True)
         print(f"Downloaded in {time.perf_counter() - t} seconds")
 
         t2 = time.perf_counter()

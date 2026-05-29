@@ -17,8 +17,12 @@ _SCORING_MODELS_DIR = (_ROOT_DIR / "scoring_models").resolve()
 
 def download_qwen_image(
     te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
+    offline: bool = False,
 ) -> Path:
     qwen_image_2512_path = _ROOT_DIR / "Qwen-Image-2512-Fast"
+
+    if offline and qwen_image_2512_path.exists():
+        return qwen_image_2512_path
 
     ignore_patterns = ["transformer/**", "scheduler/**"]
     if te_quant_method:
@@ -44,8 +48,12 @@ def download_qwen_image(
 
 def download_qwen_image_edit(
     te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
+    offline: bool = False,
 ) -> Path:
     qwen_image_edit_2511_path = _ROOT_DIR / "Qwen-Image-Edit-2511-Lightning"
+
+    if offline and qwen_image_edit_2511_path.exists():
+        return qwen_image_edit_2511_path
 
     ignore_patterns = ["transformer/diffusion_pytorch_model*"]
     if te_quant_method:
@@ -75,8 +83,12 @@ def download_qwen_image_edit(
 def download_zimage_models(
     te_quant_method: Literal["gptq", "bnb"] | None = "gptq",
     dit_quant_method: Literal["fp8"] | None = None,
+    offline: bool = False,
 ):
     zimage_turbo_path = _ROOT_DIR / "Z-Image-Turbo"
+
+    if offline and zimage_turbo_path.exists():
+        return zimage_turbo_path
 
     ignore_patterns = ["assets/**"]
     if dit_quant_method:
@@ -99,17 +111,18 @@ def download_zimage_models(
 
     if te_quant_method:
         hf_hub.snapshot_download(
-            repo_id="JunHowie/Qwen3-4B-GPTQ-Int4"
-            if te_quant_method == "gptq"
-            else "unsloth/Qwen3-4B-bnb-4bit",
+            repo_id="JunHowie/Qwen3-4B-GPTQ-Int4" if te_quant_method == "gptq" else "unsloth/Qwen3-4B-bnb-4bit",
             local_dir=zimage_turbo_path / "text_encoder",
         )
 
     return zimage_turbo_path.resolve()
 
 
-def download_wan22_i2v_model():
+def download_wan22_i2v_model(offline: bool = False):
     wan22_i2v_path = _ROOT_DIR / "Wan2.2-I2V"
+
+    if offline and wan22_i2v_path.exists():
+        return wan22_i2v_path
 
     hf_hub.snapshot_download(
         repo_id="lightx2v/Encoders",
@@ -141,8 +154,11 @@ def download_wan22_i2v_model():
     return wan22_i2v_path.resolve()
 
 
-def download_wan22_t2v_models():
+def download_wan22_t2v_models(offline: bool = False):
     wan22_t2v_path = _ROOT_DIR / "Wan2.2-T2V"
+
+    if offline and wan22_t2v_path.exists():
+        return wan22_t2v_path
 
     hf_hub.snapshot_download(
         repo_id="lightx2v/Encoders",
@@ -174,11 +190,14 @@ def download_wan22_t2v_models():
     return wan22_t2v_path.resolve()
 
 
-def download_video_scorer() -> Path:
+def download_video_scorer(offline: bool = False) -> Path:
     """
     Download the VideoReward model.
     """
     video_reward_path = _SCORING_MODELS_DIR / "VideoReward"
+
+    if offline and video_reward_path.exists():
+        return video_reward_path
 
     hf_hub.snapshot_download(
         repo_id="sitatech/VideoReward",
@@ -190,11 +209,15 @@ def download_video_scorer() -> Path:
 
 def download_image_scorer(
     quant_method: Literal["gptq", "bnb"] | None = "gptq",
+    offline: bool = False,
 ) -> Path:
     """
     Download the TianheWu/VisualQuality-R1-7B, aesthetic-predictor-v2 and clip-vit-large-patch14 models.
     """
     image_scorer_path = _SCORING_MODELS_DIR / "image_scorer"
+
+    if offline and image_scorer_path.exists():
+        return image_scorer_path
 
     hf_hub.snapshot_download(
         repo_id=(
@@ -221,12 +244,16 @@ def download_image_scorer(
 
 def download_prompt_enhancer(
     quant_method: Literal["gptq", "bnb"] | None = "gptq",
+    offline: bool = False,
 ) -> Path:
     """
     Download the Qwen3-VL-8B-Instruct model or sitatech/Qwen3-VL-8B-Instruct-{quant_method}-Int4.
     """
 
     model_path = _ROOT_DIR / "prompt_enhancer"
+
+    if offline and model_path.exists():
+        return model_path
 
     hf_hub.snapshot_download(
         repo_id=(
@@ -240,12 +267,13 @@ def download_prompt_enhancer(
     return model_path.resolve()
 
 
-def download_nsfw_model():
+def download_nsfw_model(offline: bool = False):
     model_path = _ROOT_DIR / "nsfw_model"
 
-    hf_hub.snapshot_download(
-        repo_id="Freepik/nsfw_image_detector", local_dir=model_path
-    )
+    if offline and model_path.exists():
+        return model_path
+
+    hf_hub.snapshot_download(repo_id="Freepik/nsfw_image_detector", local_dir=model_path)
 
     return model_path.resolve()
 
