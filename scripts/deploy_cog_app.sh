@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit on error
+set -e
+
 if [ -z "$1" ] || { [ "$1" != "wan22_i2v" ] && [ "$1" != "wan22_t2v" ] && [ "$1" != "z_image_turbo" ] && [ "$1" != "qwen_image" ] && [ "$1" != "qwen_image_edit" ]; }; then
     echo "Usage:"
     echo "  ./scripts/deploy_cog_inference.sh model"
