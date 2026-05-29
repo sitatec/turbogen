@@ -6,7 +6,6 @@ from functools import lru_cache
 
 import torch
 import torch.nn as nn
-from kernels import get_kernel
 
 
 def is_package_installed(package_name: str) -> bool:
@@ -33,6 +32,8 @@ def is_hopper_gpu_or_higher():
 
 
 def load_flash_attention(fallback_to_sage_if_not_hopper=True):
+    from kernels import get_kernel
+
     if fallback_to_sage_if_not_hopper and not is_hopper_gpu_or_higher():
         return load_sage_attention()
 
@@ -48,6 +49,8 @@ def load_flash_attention(fallback_to_sage_if_not_hopper=True):
 
 
 def load_sage_attention(register_to_transformers: bool = True):
+    from kernels import get_kernel
+
     # TODO: check if already installed and skip
     global sage_attn_loaded
 
