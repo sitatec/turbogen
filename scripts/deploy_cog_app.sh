@@ -38,7 +38,8 @@ mv ./apps/cog_apps/$1/app.py app.py
 
 rm -rf src notebooks apps # We remove the local turbogen code, the pip installed version should be used
 
-cog run script/warmup_cog_app
+chmod u+x scripts/warmup_cog_app
+cog exec scripts/warmup_cog_app
 
 cog login
 
