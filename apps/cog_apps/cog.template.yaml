@@ -11,4 +11,4 @@ build:
 
   python_requirements: cog_requirements.txt
 
-predict: "app.py:Model"
+run: "app.py:Model"
