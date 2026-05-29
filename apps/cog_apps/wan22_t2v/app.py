@@ -1,6 +1,9 @@
+import os
 import time
 from typing import cast
 from pathlib import Path
+
+os.environ["HF_HUB_OFFLINE"] = "1"
 
 from turbogen.utils import load_sage_attention, disable_manual_memory_gc, set_jit_cache_dirs
 

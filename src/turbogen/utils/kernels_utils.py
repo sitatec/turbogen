@@ -136,3 +136,7 @@ def set_jit_cache_dirs(cache_root_dir: Path):
     os.environ["SGLANG_DG_CACHE_DIR"] = str(cache_root_dir / "deep_gemm")
     # Caches compiled finite state machines (FSM) used for guided JSON or Regex decoding
     os.environ["OUTLINES_CACHE_DIR"] = str(cache_root_dir / "outlines")
+
+    os.environ["HF_HOME"] = str(cache_root_dir / "huggingface")
+    os.environ["HF_HUB_CACHE"] = str(cache_root_dir / "huggingface" / "hub")
+    os.environ["KERNELS_CACHE"] = str(cache_root_dir / "community-kernels")

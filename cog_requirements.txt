@@ -4,3 +4,7 @@ flashinfer-python[cu13]
 flashinfer-cubin
 optimum
 gptqmodel
+# Below deps are required by fa4
+einops
+apache-tvm-ffi
+nvidia-cutlass-dsl
