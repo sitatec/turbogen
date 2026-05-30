@@ -42,6 +42,7 @@ def main():
     start_time = time.time()
     ready = False
 
+    start_up_error = None
     while time.time() - start_time < args.timeout:
         try:
             status_code, body = make_request(health_url, timeout=5)
@@ -60,14 +61,17 @@ def main():
                     print(f"Status is currently: {status}...")
             else:
                 print(f"Health check returned status code: {status_code}")
-        except Exception:
+        except Exception as e:
+            start_up_error = e
             # Server might not be bound to the port yet or is starting up
+            print(f"{start_up_error}"[:100])
             print("Waiting for server to start...")
 
         time.sleep(5)
 
     if not ready:
         print("Error: Timeout waiting for container to become ready.")
+        print(start_up_error)
         sys.exit(1)
 
     # Build the specific input payload for the model

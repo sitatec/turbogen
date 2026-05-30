@@ -44,9 +44,7 @@ if [ -z "$IMAGE_NAME" ] || [ "$IMAGE_NAME" = "null" ]; then
     exit 1
 fi
 
-echo "Target Replicate registry image: $IMAGE_NAME"
-
-echo "Building local image via Cog..."
+printf "\nBuilding local image via Cog...\n"
 cog build -t "$IMAGE_NAME"
 
 # Setup cleanup trap to stop background container on script exit/error
@@ -74,7 +72,7 @@ python scripts/warmup_cog_app.py --model "$1" --port 5000 --timeout 300
 echo "Stopping container..."
 docker stop "$CONTAINER_NAME"
 
-echo "Committing runtime modifications (all cached JIT kernels) to image..."
+printf "\nCommitting runtime modifications (all cached JIT kernels) to image...\n"
 docker commit "$CONTAINER_NAME" "$IMAGE_NAME"
 
 # Clean up container explicitly to avoid triggering the trap

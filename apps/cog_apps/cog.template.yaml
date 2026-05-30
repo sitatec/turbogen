@@ -8,12 +8,16 @@ build:
   python_version: "3.12"
   system_packages:
     - "git"
+    - "ffmpeg"
+    - "clang"
+    - "libpcre3"
+    - "libpcre3-dev"
 
   python_requirements: cog_requirements.txt
 
-  # Temporary fix
   run:
-    - uv python install 3.12 && ln -sf $(uv python find 3.12) /usr/bin/python3 && ln -sf $(uv python find 3.12) /usr/bin/python
+    # Fix Cog's missing symlink by pointing python to the python3 that Cog set up
+    - ln -sf /usr/bin/python3 /usr/bin/python
 
 run: "app.py:Model"
 
