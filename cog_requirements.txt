@@ -1,5 +1,5 @@
 -r requirements.txt
-torch==2.11.0 # Already defined in turbogen deps, but we redefine it here to let cog know the version to use prebuilt base images
+torch==2.11.0+cu130 # Already defined in turbogen deps, but we redefine it here to let cog know the version to use prebuilt base images
 flashinfer-python[cu13]
 flashinfer-cubin
 optimum
