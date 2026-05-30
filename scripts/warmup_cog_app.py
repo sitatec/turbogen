@@ -94,13 +94,13 @@ def main():
 
     print(f"Executing warmup prediction for model '{args.model}'...")
     try:
-        status_code, body = make_request(predict_url, data=payload, method="POST", timeout=args.timeout)
-        if status_code == 200:
-            print("First-generation finished successfully. Cache populated.")
-            print(f"Response (truncated): {body[:300]}...")
-        else:
-            print(f"Warning: Prediction run returned code {status_code}")
-            print(f"Response: {body}")
+        for i in range(1, 4):
+            status_code, body = make_request(predict_url, data=payload, method="POST", timeout=args.timeout)
+            if status_code == 200:
+                print(f"Warmup Num {i} metrics: {json.loads(body)['metrics']}")
+            else:
+                print(f"Warning: Run num {i} returned code {status_code}")
+                print(f"Response: {body}")
     except Exception as e:
         print(f"Error during prediction: {e}")
         sys.exit(1)

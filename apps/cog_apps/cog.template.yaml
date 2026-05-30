@@ -10,18 +10,23 @@ build:
     - "git"
     - "ffmpeg"
     - "clang"
-    - "libpcre3"
-    - "libpcre3-dev"
+    - "pkg-config" # REQUIRED: Allows pypcre to find and link libpcre2-8
+    - "libpcre2-dev" 
+    - "libjemalloc2"
+    - "ninja-build"
 
   python_requirements: cog_requirements.txt
 
   run:
     # Fix Cog's missing symlink by pointing python to the python3 that Cog set up
-    - ln -sf /usr/bin/python3 /usr/bin/python
+    - "ln -sf /usr/bin/python3 /usr/bin/python"
+    # Bridge system python paths to the uv environment using a .pth file
+    - "echo '/usr/local/lib/python3.12/dist-packages' > $(python3 -c 'import site; print(site.getsitepackages()[0])')/cog_system_bridge.pth"
+    - "python -m pip install --no-cache-dir --force-reinstall pypcre"
 
 run: "app.py:Model"
 
-# Temporary fix:  until cog fix its build
 environment:
+  # Temporary fix:  until cog fix its build
   - PIP_BREAK_SYSTEM_PACKAGES=1
   - UV_BREAK_SYSTEM_PACKAGES=1

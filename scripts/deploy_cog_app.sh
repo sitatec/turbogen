@@ -33,7 +33,7 @@ ensure_command "yq" "sudo curl -L https://github.com/mikefarah/yq/releases/lates
 
 # Merge cog.yaml templates to get the final yaml config
 yq eval-all 'select(fileIndex == 0) *+ select(fileIndex == 1)' ./apps/cog_apps/cog.template.yaml "./apps/cog_apps/$1/cog.yaml" > ./cog.yaml
-mv ./apps/cog_apps/$1/app.py app.py
+cp ./apps/cog_apps/$1/app.py app.py
 
 rm -rf requirements.txt src notebooks apps # We remove the local turbogen code, the pip installed version should be used
 
@@ -64,16 +64,20 @@ docker run -d \
   --gpus all \
   -p 5000:5000 \
   -e HF_HUB_OFFLINE=0 \
+  -e LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2 \
   "$IMAGE_NAME"
 
 echo "Running warmup code..."
 python scripts/warmup_cog_app.py --model "$1" --port 5000 --timeout 300
 
-echo "Stopping container..."
+echo "Warmup complete, stopping container..."
 docker stop "$CONTAINER_NAME"
 
-printf "\nCommitting runtime modifications (all cached JIT kernels) to image...\n"
-docker commit "$CONTAINER_NAME" "$IMAGE_NAME"
+printf "\nCommitting runtime modifications (all cached JIT kernels) to image.Thi may take a while..."
+docker commit \
+  --change 'ENV HF_HUB_OFFLINE=1' \
+  "$CONTAINER_NAME" \
+  "$IMAGE_NAME"
 
 # Clean up container explicitly to avoid triggering the trap
 docker rm "$CONTAINER_NAME"
