@@ -54,6 +54,7 @@ def main():
                     break
                 elif status == "SETUP_FAILED":
                     print("Error: Model setup failed inside the container.")
+                    print(json.dumps(data, indent=2))
                     sys.exit(1)
                 else:
                     print(f"Status is currently: {status}...")

@@ -65,7 +65,6 @@ docker run -d \
   --name "$CONTAINER_NAME" \
   --gpus all \
   -p 5000:5000 \
-  # By default
   -e HF_HUB_OFFLINE=0 \
   "$IMAGE_NAME"
 
