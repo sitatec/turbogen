@@ -1,4 +1,4 @@
--r base_requirements.txt # requirements.txt will be renamed to base_requirements.txt in the scripts/deploy_cog_app.sh file
+git+https://github.com/sitatec/turbogen.git
 torch==2.11.0+cu130 # Already defined in turbogen deps, but we redefine it here to let cog know the version to use prebuilt base images
 flashinfer-python[cu13]
 flashinfer-cubin

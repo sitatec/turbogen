@@ -11,4 +11,13 @@ build:
 
   python_requirements: cog_requirements.txt
 
+  # Temporary fix
+  run:
+    - uv python install 3.12 && ln -sf $(uv python find 3.12) /usr/bin/python3 && ln -sf $(uv python find 3.12) /usr/bin/python
+
 run: "app.py:Model"
+
+# Temporary fix:  until cog fix its build
+environment:
+  - PIP_BREAK_SYSTEM_PACKAGES=1
+  - UV_BREAK_SYSTEM_PACKAGES=1
