@@ -25,7 +25,10 @@ class Model(BasePredictor):
         print(f"Downloaded in {time.perf_counter() - t} seconds")
 
         t2 = time.perf_counter()
-        self.zimage = ZImageTurbo(model_path=zimage_path)
+        self.zimage = ZImageTurbo(
+            model_path=zimage_path,
+            quant_scheme="fp8-sgl",
+        )
         print(f"Model loaded in {time.perf_counter() - t2} seconds")
 
         self.pipeline = GenerationPipeline(models=[self.zimage])
