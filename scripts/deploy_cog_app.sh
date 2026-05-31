@@ -73,9 +73,9 @@ python scripts/warmup_cog_app.py --model "$1" --port 5000 --timeout 300
 echo "Warmup complete, stopping container..."
 docker stop "$CONTAINER_NAME"
 
-printf "\nCommitting runtime modifications (all cached JIT kernels) to image.Thi may take a while..."
+printf "\nCommitting runtime modifications (all cached JIT kernels) to image.This may take a while..."
 docker commit \
-  --change 'ENV HF_HUB_OFFLINE=1' \
+  --change 'ENV HF_HUB_OFFLINE=0' \
   "$CONTAINER_NAME" \
   "$IMAGE_NAME"
 
