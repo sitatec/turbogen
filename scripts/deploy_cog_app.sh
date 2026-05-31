@@ -3,9 +3,11 @@
 # Exit on error
 set -e
 
-if [ -z "$1" ] || { [ "$1" != "wan22_i2v" ] && [ "$1" != "wan22_t2v" ] && [ "$1" != "z_image_turbo" ] && [ "$1" != "qwen_image" ] && [ "$1" != "qwen_image_edit" ]; }; then
+MODEL="$1"
+
+if [ -z "$MODEL" ] || { [ "$MODEL" != "wan22_i2v" ] && [ "$MODEL" != "wan22_t2v" ] && [ "$MODEL" != "z_image_turbo" ] && [ "$MODEL" != "qwen_image" ] && [ "$MODEL" != "qwen_image_edit" ]; }; then
     echo "Usage:"
-    echo "  ./scripts/deploy_cog_inference.sh model"
+    echo "  ./scripts/deploy_cog_app.sh model"
     echo " model: One of wan22_i2v, wan22_t2v, z_image_turbo, qwen_image, or qwen_image_edit"
     exit 1
 fi
@@ -33,7 +35,7 @@ ensure_command "yq" "sudo curl -L https://github.com/mikefarah/yq/releases/lates
 
 # Merge cog.yaml templates to get the final yaml config
 yq eval-all 'select(fileIndex == 0) *+ select(fileIndex == 1)' ./apps/cog_apps/cog.template.yaml "./apps/cog_apps/$1/cog.yaml" > ./cog.yaml
-cp ./apps/cog_apps/$1/app.py app.py
+mv -f ./apps/cog_apps/$MODEL/app.py ./apps/cog_apps/downloads.py ./src/turbogen .
 
 rm -rf requirements.txt src notebooks apps # We remove the local turbogen code, the pip installed version should be used
 
@@ -44,8 +46,13 @@ if [ -z "$IMAGE_NAME" ] || [ "$IMAGE_NAME" = "null" ]; then
     exit 1
 fi
 
+echo "Installing download dependencies"
+python -m ensurepip --default-pip
+python -m pip install huggingface-hub hf-transfer
+python downloads.py "$MODEL"
+
 printf "\nBuilding local image via Cog...\n"
-cog build -t "$IMAGE_NAME"
+cog build --separate-weights -t "$IMAGE_NAME"
 
 # Setup cleanup trap to stop background container on script exit/error
 CONTAINER_NAME="cog_warmup_$(date +%s)"
@@ -75,7 +82,8 @@ docker stop "$CONTAINER_NAME"
 
 printf "\nCommitting runtime modifications (all cached JIT kernels) to image.This may take a while..."
 docker commit \
-  --change 'ENV HF_HUB_OFFLINE=0' \
+  --change 'ENV HF_HUB_OFFLINE=1' \
+  --change 'ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2' \
   "$CONTAINER_NAME" \
   "$IMAGE_NAME"
 

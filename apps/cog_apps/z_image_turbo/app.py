@@ -1,42 +1,67 @@
+print("Container Starting...")
 import os
 import time
 from typing import cast
-from cog import BasePredictor, Input, Path
 
-os.environ["HF_HUB_OFFLINE"] = os.environ.get("HF_HUB_OFFLINE", "1")
+print("Importing COG...")
+from cog import BaseRunner, Input, Path
 
-from turbogen.utils import load_flash_attention, disable_manual_memory_gc, set_jit_cache_dirs
 
+app_root_dir = Path(__file__).parent.resolve()
+
+print("Importing turbogen.utils...")
+from turbogen.utils import disable_manual_memory_gc, set_jit_cache_dirs
+
+print("Setting JIT cache dirs...")
 # ruff: noqa:E402
-set_jit_cache_dirs(Path(__file__).parent.resolve() / ".jit_cache")
-load_flash_attention()
+jit_cache_dir_root = app_root_dir / ".jit_cache"
+set_jit_cache_dirs(jit_cache_dir_root)
+print(f"JIT cache dirs set with root: {jit_cache_dir_root}")
+try:
+    print(f"cache dir content: {os.listdir(jit_cache_dir_root)}")
+except Exception as e:
+    print(f"Failed to list cache dir content: {e}")
 
+print("Importing lightx2v...")
 import lightx2v.models.runners.z_image.z_image_runner  # noqa Needed before importing lightx2v models
+
+print("Importing turbogen.generation_pipeline...")
 from turbogen.generation_pipeline import GenerationPipeline
+
+print("Importing turbogen.models.lightx2v_models...")
 from turbogen.models.lightx2v_models import ZImageTurbo
-from turbogen.model_downloads import download_zimage_models
+
+print("Importing downloads...")
+from downloads import download_zimage_models  # type:ignore
+
+print("All Imports completed")
 
 
-class Model(BasePredictor):
+class Model(BaseRunner):
     # pyrefly: ignore
     def setup(self) -> None:
+        print("Setup starting...")
+
         t = time.perf_counter()
-        zimage_path = download_zimage_models(offline=True, dit_quant_method="fp8")
-        print(f"Downloaded in {time.perf_counter() - t} seconds")
+        print("Downloading z_image_models...")
+        zimage_path = download_zimage_models()
+        print(f"Downloaded in {time.perf_counter() - t} seconds. Path: {zimage_path}")
 
         t2 = time.perf_counter()
+        print("Loading ZImageTurbo...")
         self.zimage = ZImageTurbo(
             model_path=zimage_path,
             quant_scheme="fp8-sgl",
         )
         print(f"Model loaded in {time.perf_counter() - t2} seconds")
 
+        print("Instantiating GenerationPipeline...")
         self.pipeline = GenerationPipeline(models=[self.zimage])
 
         print(f"Completed setup in {time.perf_counter() - t} seconds")
 
     # pyrefly: ignore
-    def predict(
+    def run(
         self,
         prompt: str = Input(description="Description of the image"),
         aspect_ratio: str = Input(

@@ -5,23 +5,22 @@ from cog import BasePredictor, Input, Path
 
 os.environ["HF_HUB_OFFLINE"] = os.environ.get("HF_HUB_OFFLINE", "1")
 
-from turbogen.utils import load_flash_attention, disable_manual_memory_gc, set_jit_cache_dirs
+from turbogen.utils import disable_manual_memory_gc, set_jit_cache_dirs
 
 # ruff: noqa:E402
 set_jit_cache_dirs(Path(__file__).parent.resolve() / ".jit_cache")
-load_flash_attention()
 
 import lightx2v.models.runners.qwen_image.qwen_image_runner  # noqa Needed before importing lightx2v models
 from turbogen.generation_pipeline import GenerationPipeline
 from turbogen.models.lightx2v_models import QwenImageEditLite
-from turbogen.model_downloads import download_qwen_image_edit
+from downloads import download_qwen_image_edit  # type:ignore
 
 
 class Model(BasePredictor):
     # pyrefly: ignore
     def setup(self) -> None:
         t = time.perf_counter()
-        qwen_image_edit_path = download_qwen_image_edit(offline=True)
+        qwen_image_edit_path = download_qwen_image_edit()
         print(f"Downloaded in {time.perf_counter() - t} seconds")
 
         t2 = time.perf_counter()

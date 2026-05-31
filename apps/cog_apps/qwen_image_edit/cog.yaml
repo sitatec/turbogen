@@ -1,3 +1,7 @@
 # Merge with ../cog.template.yaml before deployment
 
+build:
+  run:
+    - python -m pip install --no-cache-dir "flash-attn-4[cu13] @ git+https://github.com/sitatec/flash-attention.git#subdirectory=flash_attn/cute" einops apache-tvm-ffi nvidia-cutlass-dsl
+
 image: "r8.im/sitatec/qwen-image-edit-2511-fast"

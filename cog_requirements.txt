@@ -1,10 +1,7 @@
-git+https://github.com/sitatec/turbogen.git
-torch==2.11.0+cu130 # Already defined in turbogen deps, but we redefine it here to let cog know the version to use prebuilt base images
+-r https://raw.githubusercontent.com/sitatec/turbogen/refs/heads/main/requirements.txt
+
+torch==2.11.0 # Already defined in the requirements.txt above but this serves as a hint for cog to pick the right base image
 flashinfer-python[cu13]
 flashinfer-cubin
 optimum
 gptqmodel
-# Below deps are required by fa4
-einops
-apache-tvm-ffi
-nvidia-cutlass-dsl

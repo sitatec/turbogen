@@ -5,24 +5,23 @@ from cog import BasePredictor, Input, Path
 
 os.environ["HF_HUB_OFFLINE"] = os.environ.get("HF_HUB_OFFLINE", "1")
 
-from turbogen.utils import load_sage_attention, disable_manual_memory_gc, set_jit_cache_dirs
+from turbogen.utils import disable_manual_memory_gc, set_jit_cache_dirs
 
 # ruff: noqa:E402
 set_jit_cache_dirs(Path(__file__).parent.resolve() / ".jit_cache")
-load_sage_attention()
 
 import lightx2v.models.runners.wan.wan_runner  # noqa Needed before importing lightx2v models
 from turbogen.generation_pipeline import GenerationPipeline
 from turbogen.models.base_model import GenerationType
 from turbogen.models.lightx2v_models import Wan22Lite
-from turbogen.model_downloads import download_wan22_i2v_model
+from downloads import download_wan22_i2v_model  # type:ignore
 
 
 class Model(BasePredictor):
     # pyrefly: ignore
     def setup(self) -> None:
         t = time.perf_counter()
-        wan22_i2v_path = download_wan22_i2v_model(offline=True)
+        wan22_i2v_path = download_wan22_i2v_model()
         print(f"Downloaded in {time.perf_counter() - t} seconds")
 
         t2 = time.perf_counter()
