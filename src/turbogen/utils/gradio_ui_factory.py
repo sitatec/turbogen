@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Callable, Any
 import spaces
 import aiohttp
 import gradio as gr
-import torch
 from turbogen.utils.memory_utils import disable_manual_memory_gc
 
 if TYPE_CHECKING:
@@ -158,9 +157,8 @@ def get_gen_duration(inputs: dict):
         (model for model in pipe.models if model.model_id == inputs["model_id"]),
     )
     gen_type = model.generation_type.value.lower()
-    initialization_time = 20  # Estimated Zero GPU initialization time
-    if inputs.get("enhance_prompt", False):
-        initialization_time += 10 + (10 * num_input_images)
+    initialization_time = 15  # Estimated Zero GPU initialization time
+    initialization_time += 10 + (10 * num_input_images)  # Prompt enhancement/checking
 
     postprocessing_time = 0
     if inputs.get("postprocess", False):
@@ -168,7 +166,7 @@ def get_gen_duration(inputs: dict):
 
     model_name = model.model_name.lower()
     if model_name.startswith("qwen"):
-        if gen_type == "t2i" and inputs["resolution"] == "1K":
+        if gen_type == "t2i":
             duration = 10
         else:
             duration = 15
@@ -220,6 +218,7 @@ def generate_on_gpu(prepared_inputs: dict):
         negative_prompt=prepared_inputs["negative_prompt"],
         postprocess=prepared_inputs.get("postprocess", False),
         enhance_prompt=prepared_inputs.get("enhance_prompt", False),
+        output_dir_path=str(prepared_inputs["request_dir"]),
         metadata=prepared_inputs.get("metadata"),
     )
 
@@ -520,7 +519,6 @@ def create_model_interface(
         progress=gr.Progress(track_tqdm=True),
     ):
         """Main generation function that coordinates preprocessing and GPU execution."""
-        assert pipe is not None
         request_dir = None
         error = None
         all_outputs = []
@@ -561,10 +559,6 @@ def create_model_interface(
             # introduces latency sometimes higher than the generation time for highly optimized models. So we disable it.
             with disable_manual_memory_gc():
                 for output in generate_on_gpu(prepared_inputs):
-                    if isinstance(output, torch.Tensor):
-                        output = pipe.save_output(
-                            output, model.generation_type, str(request_dir), prepared_inputs.get("metadata")
-                        )
                     all_outputs.append(output)
 
                     if isinstance(output, str):

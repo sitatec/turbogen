@@ -35,7 +35,9 @@ def load_flash_attention(fallback_to_sage_if_not_hopper=True):
     global flash_attn_loaded
 
     if not flash_attn_loaded:
-        fa_module = get_kernel("kernels-community/flash-attn4", version=0, trust_remote_code=True)
+        fa_module = get_kernel(
+            "kernels-community/flash-attn4", version=0, trust_remote_code=True
+        )
         sys.modules["flash_attn.cute"] = fa_module
         flash_attn_loaded = True
     else:
@@ -49,7 +51,9 @@ def load_sage_attention(register_to_transformers: bool = True):
     global sage_attn_loaded
 
     if not sage_attn_loaded:
-        sage_attn_module = get_kernel("kernels-community/sage-attention", version=2, trust_remote_code=True)
+        sage_attn_module = get_kernel(
+            "kernels-community/sage-attention", version=2, trust_remote_code=True
+        )
         sage_attn_module.sageattn_qk_int8_pv_fp16_triton = sage_attn_module.sageattn  # type: ignore
         sys.modules["sageattention"] = sage_attn_module
         sage_attn_loaded = True
@@ -57,8 +61,12 @@ def load_sage_attention(register_to_transformers: bool = True):
         if register_to_transformers:
             from transformers import AttentionInterface
 
-            def sage_attention(module, query_states, key_states, value_states, _, **kwargs):
-                return sage_attn_module.sageattn(query_states, key_states, value_states, tensor_layout="HND")
+            def sage_attention(
+                module, query_states, key_states, value_states, _, **kwargs
+            ):
+                return sage_attn_module.sageattn(
+                    query_states, key_states, value_states, tensor_layout="HND"
+                )
 
             AttentionInterface.register("sage_attention", sage_attention)
     else:
@@ -72,7 +80,9 @@ def apply_sgl_kernel_rmsnorm(
     add_to_weight: int | None = None,
 ):
     # Adapted from https://github.com/ModelTC/LightX2V/blob/f76e82c/lightx2v/models/input_encoders/lightllm/qwen25_text_encoder_kernel.py
-    print("⚡️ Applying fused RMSNorm kernels from sgl_kernel")
+    print(
+        f"⚡️ Applying fused RMSNorm kernels from sgl_kernel to {rmsnorm_class.__module__}.{rmsnorm_class.__qualname__}"
+    )
     try:
         from sgl_kernel.elementwise import rmsnorm as optimized_rmsnorm
     except ImportError as e:
@@ -98,7 +108,9 @@ def apply_sgl_kernel_rmsnorm(
             hidden_states = out_2d.view(orig_shape)
             if gate is not None:
                 input_dtype = hidden_states.dtype
-                hidden_states = hidden_states.to(torch.float32) * F.silu(gate.to(torch.float32))
+                hidden_states = hidden_states.to(torch.float32) * F.silu(
+                    gate.to(torch.float32)
+                )
                 return hidden_states.to(input_dtype)
             return hidden_states
 

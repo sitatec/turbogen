@@ -189,8 +189,8 @@ class GenerationPipeline:
                     yield self.process_and_save_output(output, generation_type, str(current_output_dir), metadata)
                 else:
                     yield self.save_output(output, generation_type, str(current_output_dir), metadata)
-
-            yield output
+            else:
+                yield output
 
     def _handle_prompt(
         self,

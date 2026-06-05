@@ -5,7 +5,10 @@ from pathlib import Path
 
 import torch
 from transformers import Qwen3_5ForConditionalGeneration, AutoProcessor
-from transformers.models.qwen3_5.modeling_qwen3_5 import Qwen3_5RMSNorm, Qwen3_5RMSNormGated
+from transformers.models.qwen3_5.modeling_qwen3_5 import (
+    Qwen3_5RMSNorm,
+    Qwen3_5RMSNormGated,
+)
 from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory, is_package_installed
 from turbogen.models.base_model import GenerationType
 
@@ -394,7 +397,7 @@ class PromptEnhancer:
         self.attention_backend = attention_backend
         apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNorm, epsilon_attr_name="eps", add_to_weight=1)
 
-        if not is_package_installed("fla"):
+        if not is_package_installed("flash-linear-attention"):
             apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNormGated)
 
         free_memory()
@@ -553,6 +556,10 @@ class PromptEnhancer:
                 except json.JSONDecodeError:
                     pass
 
+        if "is_safe" not in json_data and "properties" in json_data:
+            # the model my return the full schema instead of the requested json object only
+            json_data = json_data["properties"]
+
         is_prompt_safe = json_data.get("is_safe")
 
         if isinstance(is_prompt_safe, str):
@@ -589,6 +596,10 @@ class PromptEnhancer:
                         json_data = json.loads(match.group(0))
                     except json.JSONDecodeError:
                         pass
+
+        if "is_safe" not in json_data and "properties" in json_data:
+            # the model my return the full schema instead of the requested json object only
+            json_data = json_data["properties"]
 
         is_prompt_safe = json_data.get("is_safe")
 
