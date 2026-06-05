@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Callable, Any
 import spaces
 import aiohttp
 import gradio as gr
+import torch
 from turbogen.utils.memory_utils import disable_manual_memory_gc
 
 if TYPE_CHECKING:
@@ -219,7 +220,6 @@ def generate_on_gpu(prepared_inputs: dict):
         negative_prompt=prepared_inputs["negative_prompt"],
         postprocess=prepared_inputs.get("postprocess", False),
         enhance_prompt=prepared_inputs.get("enhance_prompt", False),
-        output_dir_path=str(prepared_inputs["request_dir"]),
         metadata=prepared_inputs.get("metadata"),
     )
 
@@ -520,6 +520,7 @@ def create_model_interface(
         progress=gr.Progress(track_tqdm=True),
     ):
         """Main generation function that coordinates preprocessing and GPU execution."""
+        assert pipe is not None
         request_dir = None
         error = None
         all_outputs = []
@@ -560,6 +561,10 @@ def create_model_interface(
             # introduces latency sometimes higher than the generation time for highly optimized models. So we disable it.
             with disable_manual_memory_gc():
                 for output in generate_on_gpu(prepared_inputs):
+                    if isinstance(output, torch.Tensor):
+                        output = pipe.save_output(
+                            output, model.generation_type, str(request_dir), prepared_inputs.get("metadata")
+                        )
                     all_outputs.append(output)
 
                     if isinstance(output, str):

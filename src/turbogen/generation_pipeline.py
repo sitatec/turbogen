@@ -73,7 +73,7 @@ class GenerationPipeline:
         enhance_prompt: bool = False,
         output_dir_path: str | None = None,
         metadata: dict | None = None,
-    ) -> ProcessedOutput | str:
+    ) -> ProcessedOutput | str | torch.Tensor:
         assert not postprocess or self.nsfw_detector and (self.video_scorer or self.image_scorer), (
             "NSFW detector and at least one media scorer are required for postprocessing"
         )
@@ -85,16 +85,19 @@ class GenerationPipeline:
         generation_type = model.generation_type
 
         if self.prompt_enhancer:
-            enhanced_prompt = self._handle_prompt(
+            enhanced_prompt, translated_prompt = self._handle_prompt(
                 prompt,
                 enhance_prompt,
                 generation_type,
                 image_paths,
                 last_frame_path,
             )
-            prompt = enhanced_prompt or prompt
-            if enhanced_prompt and metadata:
-                metadata["enhanced_prompt"] = enhanced_prompt
+            prompt = enhanced_prompt or translated_prompt or prompt
+            if (enhanced_prompt or translated_prompt) and metadata is not None:
+                if enhanced_prompt:
+                    metadata["enhanced_prompt"] = enhanced_prompt
+                if translated_prompt:
+                    metadata["translated_prompt"] = translated_prompt
 
         output = model.generate(
             prompt=prompt,
@@ -108,14 +111,13 @@ class GenerationPipeline:
             guidance_scale=guidance_scale,
             duration_seconds=duration_seconds,
         )
+        if output_dir_path or postprocess:
+            if postprocess:
+                return self.process_and_save_output(output, generation_type, output_dir_path or mkdtemp(), metadata)
+            else:
+                return self.save_output(output, generation_type, output_dir_path, metadata)  # type:ignore
 
-        output_dir_path = output_dir_path or mkdtemp()
-        if postprocess:
-            result = self._process_and_save_output(output, generation_type, output_dir_path, metadata)
-        else:
-            result = self._save_output(output, generation_type, output_dir_path, metadata)
-
-        return result
+        return output
 
     @torch.inference_mode()
     def generate_batch(
@@ -164,8 +166,6 @@ class GenerationPipeline:
                 if translated_prompt:
                     metadata["translated_prompt"] = translated_prompt
 
-        base_dir = Path(output_dir_path or mkdtemp())
-
         for i in range(num_outputs):
             current_seed = random.randint(1, np.iinfo(np.int32).max) if seed == -1 else seed + i
             output = model.generate(
@@ -181,15 +181,16 @@ class GenerationPipeline:
                 duration_seconds=duration_seconds,
             )
 
-            current_output_dir = base_dir / f"output_{i}"
-            current_output_dir.mkdir(parents=True, exist_ok=True)
+            if output_dir_path or postprocess:
+                base_dir = Path(output_dir_path or mkdtemp())
+                current_output_dir = base_dir / f"output_{i}"
+                current_output_dir.mkdir(parents=True, exist_ok=True)
+                if postprocess:
+                    yield self.process_and_save_output(output, generation_type, str(current_output_dir), metadata)
+                else:
+                    yield self.save_output(output, generation_type, str(current_output_dir), metadata)
 
-            if postprocess:
-                result = self._process_and_save_output(output, generation_type, str(current_output_dir), metadata)
-            else:
-                result = self._save_output(output, generation_type, str(current_output_dir), metadata)
-
-            yield result
+            yield output
 
     def _handle_prompt(
         self,
@@ -221,7 +222,7 @@ class GenerationPipeline:
             )
             return None, translated_prompt
 
-    def _process_and_save_output(
+    def process_and_save_output(
         self,
         output: torch.Tensor,
         generation_type: GenerationType,
@@ -284,7 +285,7 @@ class GenerationPipeline:
 
         return processed_output
 
-    def _save_output(
+    def save_output(
         self,
         output: torch.Tensor,
         generation_type: GenerationType,

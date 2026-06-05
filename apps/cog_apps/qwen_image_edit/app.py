@@ -66,7 +66,7 @@ class Model(BasePredictor):
                 seed=seed,
                 resolution="1K",
                 postprocess=False,
-                output_dir_path="./output",
+                output_dir_path="output",
             )
 
         return Path(cast(str, output_path))
