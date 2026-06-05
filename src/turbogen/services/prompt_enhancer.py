@@ -392,16 +392,17 @@ class PromptEnhancer:
         )
         self.processor = AutoProcessor.from_pretrained(model_path)
         self.attention_backend = attention_backend
-        apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNorm, epsilon_attr_name="eps")
+        apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNorm, epsilon_attr_name="eps", add_to_weight=1)
 
         free_memory()
 
     def _optimize_for_token_count(self, token_count: int):
-        if not self.attention_backend or token_count < 2048:
-            self.model.set_attn_implementation("sdpa")
-        else:
-            selected_attn = self.attention_backend
-            self.model.set_attn_implementation(selected_attn)
+        if self.attention_backend:
+            if token_count < 2048:
+                self.model.set_attn_implementation("sdpa")
+            else:
+                selected_attn = self.attention_backend
+                self.model.set_attn_implementation(selected_attn)
 
     def enhance_prompt(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> str:
         """

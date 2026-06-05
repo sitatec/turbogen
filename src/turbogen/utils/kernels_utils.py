@@ -41,9 +41,7 @@ def load_flash_attention(fallback_to_sage_if_not_hopper=True):
     global flash_attn_loaded
 
     if not flash_attn_loaded:
-        fa_module = get_kernel(
-            "kernels-community/flash-attn4", version=0, trust_remote_code=True
-        )
+        fa_module = get_kernel("kernels-community/flash-attn4", version=0, trust_remote_code=True)
         sys.modules["flash_attn.cute"] = fa_module
         flash_attn_loaded = True
     else:
@@ -57,9 +55,7 @@ def load_sage_attention(register_to_transformers: bool = True):
     global sage_attn_loaded
 
     if not sage_attn_loaded:
-        sage_attn_module = get_kernel(
-            "kernels-community/sage-attention", version=2, trust_remote_code=True
-        )
+        sage_attn_module = get_kernel("kernels-community/sage-attention", version=2, trust_remote_code=True)
         sage_attn_module.sageattn_qk_int8_pv_fp16_triton = sage_attn_module.sageattn  # type: ignore
         sys.modules["sageattention"] = sage_attn_module
         sage_attn_loaded = True
@@ -67,12 +63,8 @@ def load_sage_attention(register_to_transformers: bool = True):
         if register_to_transformers:
             from transformers import AttentionInterface
 
-            def sage_attention(
-                module, query_states, key_states, value_states, _, **kwargs
-            ):
-                return sage_attn_module.sageattn(
-                    query_states, key_states, value_states, tensor_layout="HND"
-                )
+            def sage_attention(module, query_states, key_states, value_states, _, **kwargs):
+                return sage_attn_module.sageattn(query_states, key_states, value_states, tensor_layout="HND")
 
             AttentionInterface.register("sage_attention", sage_attention)
     else:
@@ -83,6 +75,7 @@ def apply_sgl_kernel_rmsnorm(
     model: nn.Module,
     rmsnorm_class: type[nn.Module],
     epsilon_attr_name: str = "variance_epsilon",
+    add_to_weight: int | None = None,
 ):
     # Adapted from https://github.com/ModelTC/LightX2V/blob/f76e82c/lightx2v/models/input_encoders/lightllm/qwen25_text_encoder_kernel.py
     print("⚡️ Applying fused RMSNorm kernels from sgl_kernel")
@@ -95,7 +88,11 @@ def apply_sgl_kernel_rmsnorm(
     class OptimizedRMSNormWrapper(nn.Module):
         def __init__(self, original_norm, kernel_fn):
             super().__init__()
-            self.weight = original_norm.weight
+            if add_to_weight:
+                self.weight = add_to_weight + original_norm.weight
+            else:
+                self.weight = original_norm.weight
+
             self.variance_epsilon = getattr(original_norm, epsilon_attr_name)
             self.kernel_fn = kernel_fn
 
