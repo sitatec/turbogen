@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 
 import torch
-from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
-from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLTextRMSNorm
-from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory, is_hopper_gpu_or_higher
+from transformers import Qwen3_5ForConditionalGeneration, AutoProcessor
+from transformers.models.qwen3_5.modeling_qwen3_5 import Qwen3_5RMSNorm
+from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory
 from turbogen.models.base_model import GenerationType
 
 
@@ -313,6 +313,8 @@ You are an expert AI safety moderator. Your task is to evaluate the user's media
 2. Real-life public figures (e.g., celebrities, politicians) are **strictly forbidden**. But anonymous, fictional, and historical figures are allowed.
 {}
 Analyze the input objectively. If it violates any rule, mark it as unsafe and provide the exact violation reason.
+If the prompt is safe and in a language different from English, translate it to English without changing its meaning in any way. You must preserve the exact user intent in the English version without sacrificing cultural nuances. 
+When translating, texts to be displayed must preserve their original language (e.g. "Merci" est écrit sur la chemise => "Merci" is written on the shirt).
 """
 
 
@@ -340,6 +342,10 @@ Return a single JSON object that strictly follows this JSON schema:
       "type": "string",
       "enum": {enum_str},
       "description": "The reason why the generation is not safe. Should only be provided when is_safe is false."
+    }},
+    "translated_prompt": {{
+      "type": "string",
+      "description": "The final translated prompt in English. Should only be provided if the generation is safe and the prompt is not already in English."
     }}
   }},
   "required": ["is_safe"]
@@ -373,24 +379,23 @@ class SafetyViolationError(Exception):
 class PromptEnhancer:
     """Serves as a Prompt Enhancer and Safety Guard"""
 
-    def __init__(self, model_path: Path, device: str = "cuda"):
-        self.model = Qwen3VLForConditionalGeneration.from_pretrained(
+    def __init__(self, model_path: Path, device: str = "cuda", attention_backend: str | None = None):
+        self.model = Qwen3_5ForConditionalGeneration.from_pretrained(
             model_path,
             device_map=device,
             dtype=torch.bfloat16,
         )
         self.processor = AutoProcessor.from_pretrained(model_path)
-        apply_sgl_kernel_rmsnorm(self.model, Qwen3VLTextRMSNorm)
+        self.attention_backend = attention_backend
+        apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNorm)
 
         free_memory()
 
     def _optimize_for_token_count(self, token_count: int):
-        if token_count < 2048:
-            print(f"Receive {token_count}, using SDPA")
+        if not self.attention_backend or token_count < 2048:
             self.model.set_attn_implementation("sdpa")
         else:
-            selected_attn = "flash_attention_4" if is_hopper_gpu_or_higher() else "sage_attention"
-            print(f"Receive {token_count}, using {selected_attn}")
+            selected_attn = self.attention_backend
             self.model.set_attn_implementation(selected_attn)
 
     def enhance_prompt(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> str:
@@ -412,19 +417,20 @@ class PromptEnhancer:
         ]
         messages.append(self._get_user_message(prompt, images))
 
-        inputs = self.processor.apply_chat_template(  # pyrefly: ignore
+        inputs = self.processor.apply_chat_template(  # type: ignore
             messages,
             tokenize=True,
             add_generation_prompt=True,
             return_dict=True,
+            enable_thinking=False,
             return_tensors="pt",
         ).to(self.model.device)
 
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
-        generated_ids = self.model.generate(**inputs, max_new_tokens=512, **self._get_gen_params(len(images) > 0))
+        generated_ids = self.model.generate(**inputs, max_new_tokens=1024, **self._get_gen_params(len(images) > 0))
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
-        output_text = self.processor.batch_decode(  # pyrefly: ignore
+        output_text = self.processor.batch_decode(  # type: ignore
             generated_ids_trimmed,
             skip_special_tokens=True,
             clean_up_tokenization_spaces=False,
@@ -436,7 +442,7 @@ class PromptEnhancer:
 
         return output_json["enhanced_prompt"]
 
-    def ensure_prompt_safety(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> None:
+    def ensure_prompt_safety(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> str | None:
         """
         Evaluates the safety of the prompt and input images without modifying the prompt.
         Throws a SafetyViolationError if the inputs violate safety guidelines.
@@ -458,12 +464,13 @@ class PromptEnhancer:
             tokenize=True,
             add_generation_prompt=True,
             return_dict=True,
+            enable_thinking=False,
             return_tensors="pt",
         ).to(self.model.device)
 
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
-        generated_ids = self.model.generate(**inputs, max_new_tokens=128, **self._get_gen_params(len(images) > 0))
+        generated_ids = self.model.generate(**inputs, max_new_tokens=2048, **self._get_gen_params())
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
         output_text = self.processor.batch_decode(  # pyrefly: ignore
             generated_ids_trimmed,
@@ -474,6 +481,9 @@ class PromptEnhancer:
         output_json = self._parse_safety_json(output_text)
 
         self._ensure_safe(output_json)
+
+        if output_json.get("translated_prompt"):
+            return output_json["translated_prompt"]
 
     def _get_user_message(self, prompt: str, images: list[str]) -> dict:
         user_content = []
@@ -502,26 +512,17 @@ class PromptEnhancer:
             case _:
                 raise Exception(f"Unsupported generation type: {generation_type}")
 
-    def _get_gen_params(self, has_images: bool) -> dict:
+    def _get_gen_params(self) -> dict:
         """
-        Returns transformers-compatible generation parameters based on Qwen3-VL recommended settings.
+        Returns transformers-compatible generation parameters based on Qwen3.5 recommended settings.
         """
-        if has_images:
-            return {
-                "do_sample": True,
-                "top_p": 0.8,
-                "top_k": 20,
-                "temperature": 0.7,
-                "repetition_penalty": 1.0,
-            }
-        else:
-            return {
-                "do_sample": True,
-                "top_p": 1.0,
-                "top_k": 40,
-                "temperature": 1.0,
-                "repetition_penalty": 1.0,
-            }
+        return {
+            "do_sample": True,
+            "top_p": 0.8,
+            "top_k": 20,
+            "temperature": 0.7,
+            "repetition_penalty": 1.0,
+        }
 
     def _parse_json(self, text: str) -> dict:
         json_data = {}

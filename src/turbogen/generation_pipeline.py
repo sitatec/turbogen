@@ -150,16 +150,19 @@ class GenerationPipeline:
         image_paths_list = image_paths if image_paths is not None else []
 
         if self.prompt_enhancer:
-            enhanced_prompt = self._handle_prompt(
+            enhanced_prompt, translated_prompt = self._handle_prompt(
                 prompt,
                 enhance_prompt,
                 generation_type,
                 image_paths_list,
                 last_frame_path,
             )
-            prompt = enhanced_prompt or prompt
-            if enhanced_prompt and metadata is not None:
-                metadata["enhanced_prompt"] = enhanced_prompt
+            prompt = enhanced_prompt or translated_prompt or prompt
+            if (enhanced_prompt or translated_prompt) and metadata is not None:
+                if enhanced_prompt:
+                    metadata["enhanced_prompt"] = enhanced_prompt
+                if translated_prompt:
+                    metadata["translated_prompt"] = translated_prompt
 
         base_dir = Path(output_dir_path or mkdtemp())
 
@@ -210,9 +213,13 @@ class GenerationPipeline:
         if enhance_prompt:
             enhanced_prompt = self.prompt_enhancer.enhance_prompt(prompt, generation_type, input_images)
             print(f"Prompt Enhanced in {time.perf_counter() - t:.4f}s")
-            return enhanced_prompt
+            return enhanced_prompt, None
         else:
-            self.prompt_enhancer.ensure_prompt_safety(prompt, generation_type, input_images)
+            translated_prompt = self.prompt_enhancer.ensure_prompt_safety(prompt, generation_type, input_images)
+            print(
+                f"Prompt safety checked {'and translated ' if translated_prompt else ''}in {time.perf_counter() - t:.4f}s"
+            )
+            return None, translated_prompt
 
     def _process_and_save_output(
         self,

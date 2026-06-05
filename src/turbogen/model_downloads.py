@@ -243,24 +243,16 @@ def download_image_scorer(
 
 
 def download_prompt_enhancer(
-    quant_method: Literal["gptq", "bnb"] | None = "gptq",
+    quant_method: Literal["bnb"] | None = "bnb",
     offline: bool = False,
 ) -> Path:
-    """
-    Download the Qwen3-VL-8B-Instruct model or sitatech/Qwen3-VL-8B-Instruct-{quant_method}-Int4.
-    """
-
     model_path = _ROOT_DIR / "prompt_enhancer"
 
     if offline and model_path.exists():
         return model_path
 
     hf_hub.snapshot_download(
-        repo_id=(
-            f"sitatech/Qwen3-VL-8B-Instruct-{quant_method.upper()}-Int4"
-            if quant_method
-            else "Qwen/Qwen3-VL-8B-Instruct"
-        ),
+        repo_id=("sitatech/Qwen3.5-4B-bnb-4bit" if quant_method else "Qwen/Qwen3.5-4B"),
         local_dir=model_path,
     )
 

@@ -13,15 +13,11 @@ from turbogen.services.media_scoring.video_scorer.utils import (
     DataConfig,
 )
 from turbogen.services.media_scoring.video_scorer.model import Qwen2VLRewardModelBT
-from turbogen.utils import free_memory, apply_sgl_kernel_rmsnorm, is_hopper_gpu_or_higher
+from turbogen.utils import free_memory, apply_sgl_kernel_rmsnorm
 
 
 class VideoScorer:
-    def __init__(
-        self,
-        model_path: Path,
-        device="cuda",
-    ):
+    def __init__(self, model_path: Path, device="cuda", attention_backend: str | None = None):
         config_path = model_path / "reward_model_config.json"
         model_config, data_config, inference_config = load_configs_from_json(str(config_path))
         model_config = ModelConfig(**model_config)
@@ -29,7 +25,7 @@ class VideoScorer:
         processor = AutoProcessor.from_pretrained(model_path, padding_side="right")
         model = Qwen2VLRewardModelBT.from_pretrained(
             model_path,
-            attn_implementation="flash_attention_4" if is_hopper_gpu_or_higher() else "sage_attention",
+            attn_implementation=attention_backend,
             output_dim=model_config.output_dim,
             reward_token=model_config.reward_token,
             special_token_ids=processor.tokenizer.additional_special_tokens_ids,

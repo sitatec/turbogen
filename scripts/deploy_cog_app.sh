@@ -91,6 +91,9 @@ docker commit \
 docker rm "$CONTAINER_NAME"
 trap - EXIT
 
+printf "\nDone committing, testing final image\n"
+cog run "$IMAGE_NAME" -i prompt="a photo of a cat"
+
 cog login
 echo "Pushing pre-warmed image to Replicate..."
 docker push "$IMAGE_NAME"
