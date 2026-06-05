@@ -1,19 +1,13 @@
 from pathlib import Path
 import os
 import sys
-import importlib.metadata
 from functools import lru_cache
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
-
-def is_package_installed(package_name: str) -> bool:
-    try:
-        importlib.metadata.version(package_name)
-        return True
-    except importlib.metadata.PackageNotFoundError:
-        return False
+from .core_utils import is_package_installed
 
 
 flash_attn_loaded = is_package_installed("flash-attn-4")
@@ -96,12 +90,17 @@ def apply_sgl_kernel_rmsnorm(
             self.variance_epsilon = getattr(original_norm, epsilon_attr_name)
             self.kernel_fn = kernel_fn
 
-        def forward(self, hidden_states):
+        def forward(self, hidden_states, gate=None):
             orig_shape = hidden_states.shape
             # Reshape to (-1, hidden_dim) as sgl_kernel expects 2D
             x_2d = hidden_states.view(-1, orig_shape[-1])
             out_2d = self.kernel_fn(x_2d, self.weight, self.variance_epsilon)
-            return out_2d.view(orig_shape)
+            hidden_states = out_2d.view(orig_shape)
+            if gate is not None:
+                input_dtype = hidden_states.dtype
+                hidden_states = hidden_states.to(torch.float32) * F.silu(gate.to(torch.float32))
+                return hidden_states.to(input_dtype)
+            return hidden_states
 
     replaced_count = 0
 

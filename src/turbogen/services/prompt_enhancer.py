@@ -5,8 +5,8 @@ from pathlib import Path
 
 import torch
 from transformers import Qwen3_5ForConditionalGeneration, AutoProcessor
-from transformers.models.qwen3_5.modeling_qwen3_5 import Qwen3_5RMSNorm
-from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory
+from transformers.models.qwen3_5.modeling_qwen3_5 import Qwen3_5RMSNorm, Qwen3_5RMSNormGated
+from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory, is_package_installed
 from turbogen.models.base_model import GenerationType
 
 
@@ -393,6 +393,9 @@ class PromptEnhancer:
         self.processor = AutoProcessor.from_pretrained(model_path)
         self.attention_backend = attention_backend
         apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNorm, epsilon_attr_name="eps", add_to_weight=1)
+
+        if not is_package_installed("fla"):
+            apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNormGated)
 
         free_memory()
 
