@@ -379,7 +379,12 @@ class SafetyViolationError(Exception):
 class PromptEnhancer:
     """Serves as a Prompt Enhancer and Safety Guard"""
 
-    def __init__(self, model_path: Path, device: str = "cuda", attention_backend: str | None = None):
+    def __init__(
+        self,
+        model_path: Path,
+        device: str = "cuda",
+        attention_backend: str | None = None,
+    ):
         self.model = Qwen3_5ForConditionalGeneration.from_pretrained(
             model_path,
             device_map=device,
@@ -387,7 +392,7 @@ class PromptEnhancer:
         )
         self.processor = AutoProcessor.from_pretrained(model_path)
         self.attention_backend = attention_backend
-        apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNorm)
+        apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNorm, epsilon_attr_name="eps")
 
         free_memory()
 
@@ -398,7 +403,9 @@ class PromptEnhancer:
             selected_attn = self.attention_backend
             self.model.set_attn_implementation(selected_attn)
 
-    def enhance_prompt(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> str:
+    def enhance_prompt(
+        self, prompt: str, generation_type: GenerationType, images: list[str] = []
+    ) -> str:
         """
         Enhance the given prompt.
         For video prompt enhancement, the first image is treated as first frame and the second (if any), is treated as last frame.
@@ -428,8 +435,13 @@ class PromptEnhancer:
 
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
-        generated_ids = self.model.generate(**inputs, max_new_tokens=1024, **self._get_gen_params(len(images) > 0))
-        generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
+        generated_ids = self.model.generate(
+            **inputs, max_new_tokens=1024, **self._get_gen_params(len(images) > 0)
+        )
+        generated_ids_trimmed = [
+            out_ids[len(in_ids) :]
+            for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+        ]
         output_text = self.processor.batch_decode(  # type: ignore
             generated_ids_trimmed,
             skip_special_tokens=True,
@@ -442,13 +454,17 @@ class PromptEnhancer:
 
         return output_json["enhanced_prompt"]
 
-    def ensure_prompt_safety(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> str | None:
+    def ensure_prompt_safety(
+        self, prompt: str, generation_type: GenerationType, images: list[str] = []
+    ) -> str | None:
         """
         Evaluates the safety of the prompt and input images without modifying the prompt.
         Throws a SafetyViolationError if the inputs violate safety guidelines.
         """
         system_prompt = SAFETY_CHECK_SYS_PROMPT.format(
-            CHILDREN_UNDER_13_EDITING_GUIDELINE if generation_type == GenerationType.I2I else ""
+            CHILDREN_UNDER_13_EDITING_GUIDELINE
+            if generation_type == GenerationType.I2I
+            else ""
         )
         system_prompt = system_prompt + get_safety_output_format(generation_type)
         messages = [
@@ -470,8 +486,13 @@ class PromptEnhancer:
 
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
-        generated_ids = self.model.generate(**inputs, max_new_tokens=2048, **self._get_gen_params())
-        generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
+        generated_ids = self.model.generate(
+            **inputs, max_new_tokens=2048, **self._get_gen_params()
+        )
+        generated_ids_trimmed = [
+            out_ids[len(in_ids) :]
+            for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+        ]
         output_text = self.processor.batch_decode(  # pyrefly: ignore
             generated_ids_trimmed,
             skip_special_tokens=True,
@@ -493,18 +514,24 @@ class PromptEnhancer:
 
         return {"role": "user", "content": user_content}
 
-    def _get_system_prompt(self, generation_type: GenerationType, num_images: int) -> str:
+    def _get_system_prompt(
+        self, generation_type: GenerationType, num_images: int
+    ) -> str:
         output_format = get_output_format(generation_type)
         match generation_type:
             case GenerationType.T2I:
                 return IMAGE_GENERATION_SYS_PROMPT + output_format
             case GenerationType.I2I:
-                assert num_images > 0, "At least one image is required for image editing"
+                assert num_images > 0, (
+                    "At least one image is required for image editing"
+                )
                 return IMAGE_EDITING_SYS_PROMPT + output_format
             case GenerationType.T2V:
                 return TEXT_TO_VIDEO_SYS_PROMPT + output_format
             case GenerationType.I2V:
-                assert num_images > 0, "At least one image is required for image to video"
+                assert num_images > 0, (
+                    "At least one image is required for image to video"
+                )
                 if num_images == 2:
                     return FIRST_LAST_FRAME_SYS_PROMPT + output_format
                 else:
@@ -555,7 +582,11 @@ class PromptEnhancer:
 
             json_data["is_safe"] = is_prompt_safe
 
-        if not isinstance(is_prompt_safe, bool) or is_prompt_safe and not json_data.get("enhanced_prompt", "").strip():
+        if (
+            not isinstance(is_prompt_safe, bool)
+            or is_prompt_safe
+            and not json_data.get("enhanced_prompt", "").strip()
+        ):
             raise Exception(f"Failed to enhance prompt, got: {text}")
 
         return json_data
@@ -593,7 +624,10 @@ class PromptEnhancer:
         if not isinstance(is_prompt_safe, bool):
             raise Exception(f"Failed to parse safety check response, got: {text}")
 
-        return {"is_safe": is_prompt_safe, "unsafe_reason": json_data.get("unsafe_reason")}
+        return {
+            "is_safe": is_prompt_safe,
+            "unsafe_reason": json_data.get("unsafe_reason"),
+        }
 
     def _ensure_safe(self, output_json: dict):
         if not output_json["is_safe"]:
