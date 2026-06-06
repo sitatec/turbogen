@@ -9,6 +9,7 @@ from .kernels_utils import (
     is_hopper_gpu_or_higher,
     apply_sgl_kernel_rmsnorm,
     set_jit_cache_dirs,
+    patch_causal_conv1d_with_sgl_kernel,
 )
 
 
@@ -26,4 +27,5 @@ __all__ = [
     "create_thumbnail",
     "set_jit_cache_dirs",
     "is_package_installed",
+    "patch_causal_conv1d_with_sgl_kernel",
 ]

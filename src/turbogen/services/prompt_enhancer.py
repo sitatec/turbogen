@@ -1,15 +1,27 @@
 from enum import Enum
 import re
 import json
+import copy
 from pathlib import Path
+from typing import Any, Tuple, Dict
 
 import torch
+from turbogen.utils import (
+    apply_sgl_kernel_rmsnorm,
+    free_memory,
+    is_package_installed,
+    patch_causal_conv1d_with_sgl_kernel,
+)
+
+patch_causal_conv1d_with_sgl_kernel()
+
+# ruff:noqa
 from transformers import Qwen3_5ForConditionalGeneration, AutoProcessor
+from transformers.cache_utils import DynamicCache
 from transformers.models.qwen3_5.modeling_qwen3_5 import (
     Qwen3_5RMSNorm,
     Qwen3_5RMSNormGated,
 )
-from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory, is_package_installed
 from turbogen.models.base_model import GenerationType
 
 
@@ -316,7 +328,8 @@ You are an expert AI safety moderator. Your task is to evaluate the user's media
 2. Real-life public figures (e.g., celebrities, politicians) are **strictly forbidden**. But anonymous, fictional, and historical figures are allowed.
 {}
 Analyze the input objectively. If it violates any rule, mark it as unsafe and provide the exact violation reason.
-If the prompt is safe and in a language different from English, translate it to English without changing its meaning in any way. You must preserve the exact user intent in the translated English version without sacrificing cultural nuances. 
+
+If the prompt is safe and its language is not English, translate it into English without changing its meaning or sacrificing cultural nuances; the user intent must be preserved. 
 When translating, texts to be displayed must preserve their original language (e.g. "Merci" est écrit sur la chemise => "Merci" is written on the shirt).
 """
 
@@ -348,10 +361,10 @@ Return a single JSON object that strictly follows this JSON schema:
     }},
     "translated_prompt": {{
       "type": "string",
-      "description":  "The final translated prompt in English. Should only be provided if is_safe is true and the user prompt is not already in English."
+      "description":  "The final prompt translated into English. Must be empty if the generation is not safe or if the user prompt is already in English."
     }}
   }},
-  "required": ["is_safe"]
+  "required": ["is_safe", "translated_prompt"]
 }}
 ```
 No additional text, only the json output.
@@ -379,6 +392,62 @@ class SafetyViolationError(Exception):
         return f'SafetyViolationError(reason="{self.reason}")'
 
 
+# Helper function to clone a DynamicCache with minimal overhead
+def clone_cache(cache: Any) -> Any:
+    """
+    Safely and efficiently clones a DynamicCache to prevent in-place modification
+    during generation, with minimal CPU/GPU overhead.
+    """
+    if cache is None:
+        return None
+    try:
+        new_cache = copy.copy(cache)
+        # Handle newer versions of transformers that store states in a list of CacheLayers
+        if hasattr(cache, "layers") and cache.layers:
+            new_cache.layers = [copy.copy(layer) for layer in cache.layers]
+            for layer in new_cache.layers:
+                if hasattr(layer, "key_states") and isinstance(layer.key_states, torch.Tensor):
+                    layer.key_states = layer.key_states.clone()
+                if hasattr(layer, "value_states") and isinstance(layer.value_states, torch.Tensor):
+                    layer.value_states = layer.value_states.clone()
+        # Handle traditional versions of transformers that use key_cache and value_cache lists
+        if hasattr(cache, "key_cache") and cache.key_cache:
+            new_cache.key_cache = [t.clone() if isinstance(t, torch.Tensor) else t for t in cache.key_cache]
+        if hasattr(cache, "value_cache") and cache.value_cache:
+            new_cache.value_cache = [t.clone() if isinstance(t, torch.Tensor) else t for t in cache.value_cache]
+        if hasattr(cache, "_seen_tokens"):
+            new_cache._seen_tokens = cache._seen_tokens
+        return new_cache
+    except Exception:
+        # Fallback to standard deepcopy in case of any unexpected cache structure modifications
+        return copy.deepcopy(cache)
+
+
+def move_cache_to_device(cache: Any, device: Any) -> Any:
+    """
+    Moves all internal tensors of a DynamicCache to the target device in-place.
+    Supports both traditional and modern Hugging Face cache structure layouts.
+    """
+    if cache is None:
+        return None
+    try:
+        # Handle newer versions of transformers that store states in list of CacheLayers
+        if hasattr(cache, "layers") and cache.layers:
+            for layer in cache.layers:
+                if hasattr(layer, "key_states") and isinstance(layer.key_states, torch.Tensor):
+                    layer.key_states = layer.key_states.to(device)
+                if hasattr(layer, "value_states") and isinstance(layer.value_states, torch.Tensor):
+                    layer.value_states = layer.value_states.to(device)
+        # Handle traditional versions of transformers that use key_cache and value_cache lists
+        if hasattr(cache, "key_cache") and cache.key_cache:
+            cache.key_cache = [t.to(device) if isinstance(t, torch.Tensor) else t for t in cache.key_cache]
+        if hasattr(cache, "value_cache") and cache.value_cache:
+            cache.value_cache = [t.to(device) if isinstance(t, torch.Tensor) else t for t in cache.value_cache]
+    except Exception as e:
+        print(f"[Prefix Cache Warning] Failed to move cache to {device}: {e}")
+    return cache
+
+
 class PromptEnhancer:
     """Serves as a Prompt Enhancer and Safety Guard"""
 
@@ -402,6 +471,54 @@ class PromptEnhancer:
 
         free_memory()
 
+        # Lazy in-memory prefix cache mapping: system_prompt_string -> (DynamicCache, input_ids)
+        self._prefix_cache: Dict[str, Tuple[DynamicCache, torch.Tensor]] = {}
+
+    def _get_or_create_prefix_cache_from_inputs(
+        self, system_prompt: str, inputs: Any
+    ) -> Tuple[Any | None, torch.Tensor | None]:
+        """
+        Lazily gets or computes the KV states for the given system prompt.
+        Designed to persist data on CPU to remain safe for Hugging Face ZeroGPU.
+        """
+        if not system_prompt:
+            return None, None
+
+        if system_prompt not in self._prefix_cache:
+            try:
+                tokenizer = self.processor.tokenizer
+                im_end_id = tokenizer.convert_tokens_to_ids("<|im_end|>")
+                if im_end_id is None or (isinstance(im_end_id, int) and im_end_id < 0):
+                    im_end_id = tokenizer.eos_token_id
+
+                input_ids_list = inputs.input_ids[0].tolist()
+                if im_end_id in input_ids_list:
+                    prefix_len = input_ids_list.index(im_end_id) + 1
+
+                    system_inputs = {
+                        "input_ids": inputs.input_ids[:, :prefix_len],
+                    }
+                    if "attention_mask" in inputs:
+                        system_inputs["attention_mask"] = inputs.attention_mask[:, :prefix_len]
+
+                    # Compute the system prompt KV states on GPU
+                    with torch.no_grad():
+                        outputs = self.model(**system_inputs, use_cache=True)
+                        cpu_cache = move_cache_to_device(outputs.past_key_values, "cpu")
+                        cpu_ids = system_inputs["input_ids"].to("cpu")
+                        self._prefix_cache[system_prompt] = (cpu_cache, cpu_ids)
+                else:
+                    return None, None
+            except Exception as e:
+                print(f"[Prefix Cache Warning] Failed to compute prefix cache: {e}")
+                return None, None
+
+        cached_cache, cached_ids = self._prefix_cache[system_prompt]
+        # Clone the CPU cache, then transfer the clean clone copy to the active GPU device
+        gpu_cache = move_cache_to_device(clone_cache(cached_cache), self.model.device)
+        gpu_ids = cached_ids.to(self.model.device) if cached_ids is not None else None
+        return gpu_cache, gpu_ids
+
     def _optimize_for_token_count(self, token_count: int):
         if self.attention_backend:
             if token_count < 2048:
@@ -417,13 +534,16 @@ class PromptEnhancer:
         For video prompt enhancement, the first image is treated as first frame and the second (if any), is treated as last frame.
         Throws SafetyViolationError if the prompt is unsafe
         """
+
+        system_prompt = self._get_system_prompt(generation_type, len(images))
+
         messages = [
             {
                 "role": "system",
                 "content": [
                     {
                         "type": "text",
-                        "text": self._get_system_prompt(generation_type, len(images)),
+                        "text": system_prompt,
                     }
                 ],
             }
@@ -441,10 +561,24 @@ class PromptEnhancer:
 
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
+        prefix_cache, system_input_ids = self._get_or_create_prefix_cache_from_inputs(system_prompt, inputs)
+        if prefix_cache is not None and system_input_ids is not None:
+            prefix_len = system_input_ids.shape[-1]
+            if inputs.input_ids.shape[-1] >= prefix_len and torch.equal(
+                inputs.input_ids[0, :prefix_len], system_input_ids[0]
+            ):
+                pass  # prefix_cache is ready to use
+            else:
+                prefix_cache = None
+
         generated_ids = self.model.generate(
-            **inputs, max_new_tokens=512, cache_implementation="static", **self._get_gen_params()
+            **inputs,
+            max_new_tokens=512,
+            past_key_values=prefix_cache,
+            **self._get_gen_params(),
         )
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
+
         output_text = self.processor.batch_decode(  # type: ignore
             generated_ids_trimmed,
             skip_special_tokens=True,
@@ -463,6 +597,7 @@ class PromptEnhancer:
         Evaluates the safety of the prompt and input images without modifying the prompt.
         Throws a SafetyViolationError if the inputs violate safety guidelines.
         """
+
         system_prompt = SAFETY_CHECK_SYS_PROMPT.format(
             CHILDREN_UNDER_13_EDITING_GUIDELINE if generation_type == GenerationType.I2I else ""
         )
@@ -486,10 +621,24 @@ class PromptEnhancer:
 
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
+        prefix_cache, system_input_ids = self._get_or_create_prefix_cache_from_inputs(system_prompt, inputs)
+        if prefix_cache is not None and system_input_ids is not None:
+            prefix_len = system_input_ids.shape[-1]
+            if inputs.input_ids.shape[-1] >= prefix_len and torch.equal(
+                inputs.input_ids[0, :prefix_len], system_input_ids[0]
+            ):
+                pass  # prefix_cache is ready to use
+            else:
+                prefix_cache = None
+
         generated_ids = self.model.generate(
-            **inputs, max_new_tokens=1024, cache_implementation="static", **self._get_gen_params()
+            **inputs,
+            max_new_tokens=1024,
+            past_key_values=prefix_cache,
+            **self._get_gen_params(),
         )
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
+
         output_text = self.processor.batch_decode(  # pyrefly: ignore
             generated_ids_trimmed,
             skip_special_tokens=True,
@@ -563,7 +712,7 @@ class PromptEnhancer:
                     pass
 
         if "is_safe" not in json_data and "properties" in json_data:
-            # the model my return the full schema instead of the requested json object only
+            print("[PROMPT_ENHANCER] The model my return the full schema instead of the requested json object only")
             json_data = json_data["properties"]
 
         is_prompt_safe = json_data.get("is_safe")
@@ -604,7 +753,7 @@ class PromptEnhancer:
                         pass
 
         if "is_safe" not in json_data and "properties" in json_data:
-            # the model my return the full schema instead of the requested json object only
+            print("[PROMPT_ENHANCER] The model my return the full schema instead of the requested json object only")
             json_data = json_data["properties"]
 
         is_prompt_safe = json_data.get("is_safe")
@@ -616,13 +765,12 @@ class PromptEnhancer:
             elif cleaned == "false":
                 is_prompt_safe = False
 
+            json_data["is_safe"] = is_prompt_safe
+
         if not isinstance(is_prompt_safe, bool):
             raise Exception(f"Failed to parse safety check response, got: {text}")
 
-        return {
-            "is_safe": is_prompt_safe,
-            "unsafe_reason": json_data.get("unsafe_reason"),
-        }
+        return json_data
 
     def _ensure_safe(self, output_json: dict):
         if not output_json["is_safe"]:
