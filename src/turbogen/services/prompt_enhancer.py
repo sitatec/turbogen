@@ -329,8 +329,9 @@ You are an expert AI safety moderator. Your task is to evaluate the user's media
 {}
 Analyze the input objectively. If it violates any rule, mark it as unsafe and provide the exact violation reason.
 
-If the prompt is safe and its language is not English, translate it into English without changing its meaning or sacrificing cultural nuances; the user intent must be preserved. 
-When translating, texts to be displayed must preserve their original language (e.g. "Merci" est écrit sur la chemise => "Merci" is written on the shirt).
+If the prompt is safe and its language is not English, translate it into English without changing its meaning or sacrificing cultural nuances. 
+If translation is needed, rendered texts must preserve their original language (e.g. "Merci" est écrit sur la chemise => "Merci" is written on the shirt).
+If the input prompt is already in English, do not output translated text.
 """
 
 
@@ -361,10 +362,10 @@ Return a single JSON object that strictly follows this JSON schema:
     }},
     "translated_prompt": {{
       "type": "string",
-      "description":  "The final prompt translated into English. Must be empty if the generation is not safe or if the user prompt is already in English."
+      "description":  "Should only be provided when the user input prompt is not in English and is_safe is true."
     }}
   }},
-  "required": ["is_safe", "translated_prompt"]
+  "required": ["is_safe"]
 }}
 ```
 No additional text, only the json output.
@@ -685,9 +686,9 @@ class PromptEnhancer:
         """
         return {
             "do_sample": True,
-            "top_p": 0.8,
+            "top_p": 0.95,
             "top_k": 20,
-            "temperature": 0.7,
+            "temperature": 1.0,
             "repetition_penalty": 1.0,
         }
 

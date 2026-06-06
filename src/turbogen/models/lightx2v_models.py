@@ -12,7 +12,11 @@ from lightx2v.common.ops import *  # noqa
 from turbogen.utils import is_hopper_gpu_or_higher, free_memory
 from turbogen.models.base_model import BaseModel, GenerationType
 from lightx2v.models.runners.default_runner import DefaultRunner
-from lightx2v.utils.input_info import init_empty_input_info, update_input_info_from_dict
+from lightx2v.utils.input_info import (
+    init_empty_input_info,
+    update_input_info_from_dict,
+    calculate_target_video_length_from_duration,
+)
 from lightx2v import LightX2VPipeline as LightX2VPipelineBase
 # from lightx2v.models.runners.qwen_image.qwen_image_runner import QwenImageRunner
 
@@ -22,6 +26,16 @@ os.environ["PROFILING_DEBUG_LEVEL"] = os.getenv("PROFILING_DEBUG_LEVEL", "0")
 class _LightX2VPipeline(LightX2VPipelineBase):
     def enable_compilation(self, supported_shapes: list[list[int]]):
         pass  # TODO: implement
+
+    @override
+    def set_infer_config(self, *args, **kwargs):
+        super().set_infer_config(*args, **kwargs)
+        if "wan2" in self.model_cls and not getattr(self, "disable_auto_wan_autotune", False):
+            print("Wan2 model detected setting custom configs")
+            self.self_attn_1_type = "sla_attn"
+            self.sla_attn_setting = {"sparsity_ratio": 0.8, "operator": "triton"}
+            self.sample_guide_scale = [4.0, 3.0] if self.task == "t2v" else [3.5, 3.5]
+            self.t5_quant_scheme = "fp8-sgl"
 
     @override
     @torch.no_grad()
@@ -125,6 +139,7 @@ class _BaseLightx2vModel(BaseModel):
         text_encoder_offload: bool = False,
         image_encoder_offload: bool = False,
         vae_offload: bool = False,
+        default_video_duration: float = 3.5,
     ):
         self.model_id = model_id
         self.model_name = model_name
@@ -175,6 +190,7 @@ class _BaseLightx2vModel(BaseModel):
             infer_steps=infer_steps,
             guidance_scale=guidance_scale,
             rope_type=rope_type,
+            num_frames=calculate_target_video_length_from_duration(default_video_duration),
         )
 
         if compile:

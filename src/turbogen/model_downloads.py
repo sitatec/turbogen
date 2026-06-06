@@ -4,8 +4,6 @@ from pathlib import Path
 
 import huggingface_hub as hf_hub
 
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
-
 _ROOT_DIR = (
     Path(os.environ["MODEL_WEIGHTS_ROOT_DIR"])
     if os.environ.get("MODEL_WEIGHTS_ROOT_DIR")
@@ -118,7 +116,7 @@ def download_zimage_models(
     return zimage_turbo_path.resolve()
 
 
-def download_wan22_i2v_model(offline: bool = False):
+def download_wan22_i2v_model(offline: bool = False, dit_quant_method: Literal["fp8", "nvfp4"] | None = "fp8"):
     wan22_i2v_path = _ROOT_DIR / "Wan2.2-I2V"
 
     if offline and wan22_i2v_path.exists():
@@ -139,22 +137,33 @@ def download_wan22_i2v_model(offline: bool = False):
         filename="config.json",
         local_dir=wan22_i2v_path,
     )
-
-    hf_hub.hf_hub_download(
-        repo_id="sitatech/Wan2.2-FP8-Models",
-        filename="wan2.2_i2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
-        local_dir=wan22_i2v_path / "high_noise_model",
-    )
-    hf_hub.hf_hub_download(
-        repo_id="sitatech/Wan2.2-FP8-Models",
-        filename="wan2.2_i2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
-        local_dir=wan22_i2v_path / "low_noise_model",
-    )
+    if dit_quant_method == "nvfp4":
+        hf_hub.hf_hub_download(
+            repo_id="lightx2v/Wan2.2-NVFP4-Sparse",
+            filename="Wan2.2-I2V-A14B_NVFP4_Sparse_high.safetensors",
+            local_dir=wan22_i2v_path / "high_noise_model",
+        )
+        hf_hub.hf_hub_download(
+            repo_id="lightx2v/Wan2.2-NVFP4-Sparse",
+            filename="Wan2.2-I2V-A14B_NVFP4_Sparse_low.safetensors",
+            local_dir=wan22_i2v_path / "low_noise_model",
+        )
+    else:
+        hf_hub.hf_hub_download(
+            repo_id="sitatech/Wan2.2-FP8-Models",
+            filename="wan2.2_i2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
+            local_dir=wan22_i2v_path / "high_noise_model",
+        )
+        hf_hub.hf_hub_download(
+            repo_id="sitatech/Wan2.2-FP8-Models",
+            filename="wan2.2_i2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1022.safetensors",
+            local_dir=wan22_i2v_path / "low_noise_model",
+        )
 
     return wan22_i2v_path.resolve()
 
 
-def download_wan22_t2v_models(offline: bool = False):
+def download_wan22_t2v_models(offline: bool = False, dit_quant_method: Literal["fp8", "nvfp4"] | None = "fp8"):
     wan22_t2v_path = _ROOT_DIR / "Wan2.2-T2V"
 
     if offline and wan22_t2v_path.exists():
@@ -176,16 +185,28 @@ def download_wan22_t2v_models(offline: bool = False):
         local_dir=wan22_t2v_path,
     )
 
-    hf_hub.hf_hub_download(
-        repo_id="sitatech/Wan2.2-FP8-Models",
-        filename="wan2.2_t2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
-        local_dir=wan22_t2v_path / "high_noise_model",
-    )
-    hf_hub.hf_hub_download(
-        repo_id="sitatech/Wan2.2-FP8-Models",
-        filename="wan2.2_t2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
-        local_dir=wan22_t2v_path / "low_noise_model",
-    )
+    if dit_quant_method == "nvfp4":
+        hf_hub.hf_hub_download(
+            repo_id="lightx2v/Wan2.2-NVFP4-Sparse",
+            filename="Wan2.2-T2V-A14B_NVFP4_Sparse_high.safetensors",
+            local_dir=wan22_t2v_path / "high_noise_model",
+        )
+        hf_hub.hf_hub_download(
+            repo_id="lightx2v/Wan2.2-NVFP4-Sparse",
+            filename="Wan2.2-T2V-A14B_NVFP4_Sparse_low.safetensors",
+            local_dir=wan22_t2v_path / "low_noise_model",
+        )
+    else:
+        hf_hub.hf_hub_download(
+            repo_id="sitatech/Wan2.2-FP8-Models",
+            filename="wan2.2_t2v_A14b_high_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
+            local_dir=wan22_t2v_path / "high_noise_model",
+        )
+        hf_hub.hf_hub_download(
+            repo_id="sitatech/Wan2.2-FP8-Models",
+            filename="wan2.2_t2v_A14b_low_noise_scaled_fp8_lightx2v_4step_1217.safetensors",
+            local_dir=wan22_t2v_path / "low_noise_model",
+        )
 
     return wan22_t2v_path.resolve()
 

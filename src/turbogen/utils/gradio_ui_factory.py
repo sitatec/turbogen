@@ -181,7 +181,8 @@ def get_gen_duration(inputs: dict):
         else:
             duration = 15
 
-    return duration * num_outputs + initialization_time + postprocessing_time
+    max_duration = 120 if os.getenv("ZERO_GPU_SIZE", "large") == "large" else 60
+    return min(max_duration, duration * num_outputs + initialization_time + postprocessing_time)
 
 
 def __run_async(coro):
@@ -199,7 +200,7 @@ def __run_async(coro):
         return asyncio.run(coro)
 
 
-@spaces.GPU(duration=get_gen_duration)
+@spaces.GPU(duration=get_gen_duration, size=os.getenv("ZERO_GPU_SIZE", "large"))  # type:ignore
 def generate_on_gpu(prepared_inputs: dict):
     start_time = time.perf_counter()
     assert pipe is not None
