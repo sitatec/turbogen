@@ -316,7 +316,7 @@ You are an expert AI safety moderator. Your task is to evaluate the user's media
 2. Real-life public figures (e.g., celebrities, politicians) are **strictly forbidden**. But anonymous, fictional, and historical figures are allowed.
 {}
 Analyze the input objectively. If it violates any rule, mark it as unsafe and provide the exact violation reason.
-If the prompt is safe and in a language different from English, translate it to English without changing its meaning in any way. You must preserve the exact user intent in the English version without sacrificing cultural nuances. 
+If the prompt is safe and in a language different from English, translate it to English without changing its meaning in any way. You must preserve the exact user intent in the translated English version without sacrificing cultural nuances. 
 When translating, texts to be displayed must preserve their original language (e.g. "Merci" est écrit sur la chemise => "Merci" is written on the shirt).
 """
 
@@ -348,7 +348,7 @@ Return a single JSON object that strictly follows this JSON schema:
     }},
     "translated_prompt": {{
       "type": "string",
-      "description": "The final translated prompt in English. Should only be provided if the generation is safe and the prompt is not already in English."
+      "description":  "The final translated prompt in English. Should only be provided if is_safe is true and the user prompt is not already in English."
     }}
   }},
   "required": ["is_safe"]
@@ -410,6 +410,7 @@ class PromptEnhancer:
                 selected_attn = self.attention_backend
                 self.model.set_attn_implementation(selected_attn)
 
+    @torch.inference_mode()
     def enhance_prompt(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> str:
         """
         Enhance the given prompt.
@@ -440,7 +441,9 @@ class PromptEnhancer:
 
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
-        generated_ids = self.model.generate(**inputs, max_new_tokens=1024, **self._get_gen_params())
+        generated_ids = self.model.generate(
+            **inputs, max_new_tokens=512, cache_implementation="static", **self._get_gen_params()
+        )
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
         output_text = self.processor.batch_decode(  # type: ignore
             generated_ids_trimmed,
@@ -454,6 +457,7 @@ class PromptEnhancer:
 
         return output_json["enhanced_prompt"]
 
+    @torch.inference_mode()
     def ensure_prompt_safety(self, prompt: str, generation_type: GenerationType, images: list[str] = []) -> str | None:
         """
         Evaluates the safety of the prompt and input images without modifying the prompt.
@@ -482,7 +486,9 @@ class PromptEnhancer:
 
         self._optimize_for_token_count(inputs.input_ids.shape[-1])
 
-        generated_ids = self.model.generate(**inputs, max_new_tokens=2048, **self._get_gen_params())
+        generated_ids = self.model.generate(
+            **inputs, max_new_tokens=1024, cache_implementation="static", **self._get_gen_params()
+        )
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
         output_text = self.processor.batch_decode(  # pyrefly: ignore
             generated_ids_trimmed,

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 import torch
 from transformers import AutoProcessor
-from transformers.models.qwen2.modeling_qwen2 import Qwen2RMSNorm
+from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLRMSNorm
 from turbogen.services.media_scoring.qwen2_vision_processing import process_vision_info
 from turbogen.services.media_scoring.video_scorer.utils import build_prompt
 from turbogen.services.media_scoring.video_scorer.utils import (
@@ -28,11 +28,11 @@ class VideoScorer:
             attn_implementation=attention_backend,
             output_dim=model_config.output_dim,
             reward_token=model_config.reward_token,
-            special_token_ids=processor.tokenizer.additional_special_tokens_ids,
+            special_token_ids=processor.tokenizer.extra_special_tokens_ids,
             dtype=torch.bfloat16,
             device_map=device,
         )
-        apply_sgl_kernel_rmsnorm(model, Qwen2RMSNorm)
+        apply_sgl_kernel_rmsnorm(model, Qwen2VLRMSNorm)
         model.config.tokenizer_padding_side = processor.tokenizer.padding_side
         model.config.pad_token_id = processor.tokenizer.pad_token_id
 
