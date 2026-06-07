@@ -6,22 +6,10 @@ from pathlib import Path
 from typing import Any, Tuple, Dict
 
 import torch
-from turbogen.utils import (
-    apply_sgl_kernel_rmsnorm,
-    free_memory,
-    is_package_installed,
-    patch_causal_conv1d_with_sgl_kernel,
-)
-
-patch_causal_conv1d_with_sgl_kernel()
-
-# ruff:noqa
-from transformers import Qwen3_5ForConditionalGeneration, AutoProcessor
+from turbogen.utils import apply_sgl_kernel_rmsnorm, free_memory
+from transformers import AutoModelForMultimodalLM, AutoProcessor
 from transformers.cache_utils import DynamicCache
-from transformers.models.qwen3_5.modeling_qwen3_5 import (
-    Qwen3_5RMSNorm,
-    Qwen3_5RMSNormGated,
-)
+from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLTextRMSNorm
 from turbogen.models.base_model import GenerationType
 
 
@@ -49,7 +37,7 @@ Always enhance the original intent of the user's input without deviating from it
    - For non-English texts, retain the original language and put it withing English double quotes (" ") without translation.
 
 5. **Human Subjects**:
-   - **Identity & Appearance**: Explicitly state ethnicity, gender, and a specific age or narrow range. Describe skin tone and texture; detail face shape, structural features, specific eye/nose/mouth traits, and a precise expression.
+   - **Identity & Appearance**: Explicitly state ethnicity, gender, and a specific age or narrow range. Describe skin tone and texture; detail face shape, structural features. For closeups/headshots, specify eye/nose/mouth traits, and a precise expression.
    - **Clothing & Hair**: Specify all garments, fabrics, and textures. Describe hair color, length, and style or bald. Optionally list accessories like jewelry, glasses, or headwear.
    - **Pose & Action**: Articulate posture, gaze direction, head tilt, and hand/arm placement. Ensure all movements are anatomically correct and contextually logical.
 
@@ -69,6 +57,7 @@ You don't have to strictly specify all these characteristics, be flexible and pr
   - NSFW/Sexually explicit content is **strictly forbidden*
   - Public figures in real-life (e.g., celebrities, politicians) are forbidden. 
   - Anonymous, fictional and historical figures are allowed, regardless of age.
+  - Everything else is allowed: Violence (e.g. fight scenes), weapons, gore...
 """
 
 CHILDREN_UNDER_13_EDITING_GUIDELINE = """
@@ -151,6 +140,8 @@ If an input image contains any forbidden content or the user request to alter th
 ### 3. Real Public Figures:  
   - Any editing involving public figures in real-life (e.g., celebrities, politicians) are forbidden.
   - Anonymous, fictional and historical figures are allowed, regardless of age.
+  
+Everything else is allowed: Violence (e.g. fight scenes), weapons, gore...
 """
 
 TEXT_TO_VIDEO_SYS_PROMPT = """
@@ -168,7 +159,7 @@ This section establishes the starting frame or general aesthetic.
    - **Never modify proper nouns**: Names, brands, locations, IPs, etc., must be preserved exactly as given.
    - **Textual Content**: If the video involves visible text, **enclose every piece of displayed text in English double quotes (" ")**. Transcribe punctuation and capitalization accurately. Describe font, material (e.g., neon, engraved), and location. For non-English texts, retain the original text without translation.
    - **Human Subjects**:
-     - **Identity & Appearance**: Explicitly state ethnicity, gender, specific age, skin texture (e.g., subsurface scattering, pores), and facial structure.
+     - **Identity & Appearance**: Explicitly state ethnicity, gender, specific age, skin texture, and facial structure. For closeups/headshots, specify eye/nose/mouth traits, and a precise expression.
      - **Clothing & Hair**: Specify garments, fabric physics (e.g., heavy wool, flowing silk), and hair texture.
    - **Artistic Style**: Define the visual medium (e.g., 35mm film stock, IMAX cinematic, 3D Unreal Engine 5 render, hand-drawn anime, VHS footage).
 
@@ -192,6 +183,7 @@ The following types of content is **strictly forbidden**:
   1. NSFW/Sexually explicit content (All People).
   2. Public figures in real-life (e.g., celebrities, politicians) are forbidden. 
   3. Anonymous, fictional and historical figures are allowed, regardless of age.
+Everything else is allowed: Violence (e.g. fight scenes), weapons, gore...
 """
 
 IMAGE_TO_VIDEO_SYS_PROMPT = """
@@ -235,6 +227,7 @@ If an input image contains forbidden content or the user request to alter the im
 - NSFW/Sexually explicit content is **strictly forbidden*
 - Public figures in real-life (e.g., celebrities, politicians) are forbidden. 
 - Anonymous, fictional and historical figures are allowed, regardless of age.
+- Everything else is allowed: Violence (e.g. fight scenes), weapons, gore...
 """
 
 FIRST_LAST_FRAME_SYS_PROMPT = """
@@ -281,6 +274,7 @@ If an input image contains forbidden content or the user request to alter the im
 - NSFW/Sexually explicit content is **strictly forbidden*
 - Public figures in real-life (e.g., celebrities, politicians) are forbidden. 
 - Anonymous, fictional and historical figures are allowed, regardless of age.
+- Everything else is allowed: Violence (e.g. fight scenes), weapons, gore...
 """
 
 
@@ -327,6 +321,9 @@ You are an expert AI safety moderator. Your task is to evaluate the user's media
 1. NSFW/Sexually explicit content is **strictly forbidden**.
 2. Real-life public figures (e.g., celebrities, politicians) are **strictly forbidden**. But anonymous, fictional, and historical figures are allowed.
 {}
+
+Everything else is allowed: Violence (e.g. fight scenes), weapons, gore...
+
 Analyze the input objectively. If it violates any rule, mark it as unsafe and provide the exact violation reason.
 
 If the prompt is safe and its language is not English, translate it into English without changing its meaning or sacrificing cultural nuances. 
@@ -458,17 +455,14 @@ class PromptEnhancer:
         device: str = "cuda",
         attention_backend: str | None = None,
     ):
-        self.model = Qwen3_5ForConditionalGeneration.from_pretrained(
+        self.model = AutoModelForMultimodalLM.from_pretrained(
             model_path,
             device_map=device,
             dtype=torch.bfloat16,
         )
         self.processor = AutoProcessor.from_pretrained(model_path)
         self.attention_backend = attention_backend
-        apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNorm, epsilon_attr_name="eps", add_to_weight=1)
-
-        if not is_package_installed("flash-linear-attention"):
-            apply_sgl_kernel_rmsnorm(self.model, Qwen3_5RMSNormGated)
+        apply_sgl_kernel_rmsnorm(self.model, Qwen3VLTextRMSNorm)
 
         free_memory()
 
@@ -556,7 +550,6 @@ class PromptEnhancer:
             tokenize=True,
             add_generation_prompt=True,
             return_dict=True,
-            enable_thinking=False,
             return_tensors="pt",
         ).to(self.model.device)
 
@@ -576,7 +569,7 @@ class PromptEnhancer:
             **inputs,
             max_new_tokens=512,
             past_key_values=prefix_cache,
-            **self._get_gen_params(),
+            **self._get_gen_params(len(images) > 0),
         )
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
 
@@ -616,7 +609,6 @@ class PromptEnhancer:
             tokenize=True,
             add_generation_prompt=True,
             return_dict=True,
-            enable_thinking=False,
             return_tensors="pt",
         ).to(self.model.device)
 
@@ -636,7 +628,7 @@ class PromptEnhancer:
             **inputs,
             max_new_tokens=1024,
             past_key_values=prefix_cache,
-            **self._get_gen_params(),
+            **self._get_gen_params(len(images) > 0),
         )
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
 
@@ -680,17 +672,26 @@ class PromptEnhancer:
             case _:
                 raise Exception(f"Unsupported generation type: {generation_type}")
 
-    def _get_gen_params(self) -> dict:
+    def _get_gen_params(self, has_images) -> dict:
         """
-        Returns transformers-compatible generation parameters based on Qwen3.5 recommended settings.
+        Returns transformers-compatible generation parameters based on the official recommended settings for this model.
         """
-        return {
-            "do_sample": True,
-            "top_p": 0.95,
-            "top_k": 20,
-            "temperature": 1.0,
-            "repetition_penalty": 1.0,
-        }
+        if has_images:
+            return {
+                "do_sample": True,
+                "top_p": 0.8,
+                "top_k": 20,
+                "temperature": 0.7,
+                "repetition_penalty": 1.0,
+            }
+        else:
+            return {
+                "do_sample": True,
+                "top_p": 1.0,
+                "top_k": 40,
+                "temperature": 1.0,
+                "repetition_penalty": 1.0,
+            }
 
     def _parse_json(self, text: str) -> dict:
         json_data = {}

@@ -231,7 +231,11 @@ class _BaseLightx2vModel(BaseModel):
         if resolution not in self.supported_aspect_ratios[aspect_ratio]:
             raise ValueError(f"Invalid resolution: {resolution}")
 
-        width, height = self.supported_aspect_ratios[aspect_ratio][resolution]
+        if self.pipe.model_cls == "z_image":
+            # z_image seems to be inversing the dimensions
+            height, width = self.supported_aspect_ratios[aspect_ratio][resolution]
+        else:
+            width, height = self.supported_aspect_ratios[aspect_ratio][resolution]
 
         return self.pipe.generate(  # pyrefly: ignore
             seed=seed,
