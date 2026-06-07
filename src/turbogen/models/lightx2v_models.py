@@ -130,6 +130,7 @@ class _BaseLightx2vModel(BaseModel):
         supports_last_frame: bool = False,  # Only relevant for I2V gen type
         quant_scheme: str | None = None,
         rope_type: Literal["torch", "flashinfer"] = "flashinfer",
+        rms_norm_type: str = "sgl-kernel",
         text_encoder_quantized: bool = False,
         text_encoder_quant_scheme: str | None = None,
         quantized_model_path: str | None = None,
@@ -155,6 +156,8 @@ class _BaseLightx2vModel(BaseModel):
             task=generation_type.value,
         )
         self.pipe.do_mm_calib = do_mm_calib  # type: ignore
+        if rms_norm_type is not None:
+            self.pipe.rms_norm_type = rms_norm_type  # type:ignore
 
         if enable_cpu_offload or text_encoder_offload or image_encoder_offload or vae_offload:
             self.pipe.enable_offload(
@@ -211,6 +214,7 @@ class _BaseLightx2vModel(BaseModel):
         free_memory()
 
     @override
+    @torch.inference_mode()
     def generate(
         self,
         prompt: str,
