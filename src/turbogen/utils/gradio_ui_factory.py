@@ -30,6 +30,7 @@ async def prepare_inputs(
     seed_value,
     postprocess_value,
     prompt_enhancer_value,
+    safety_checker_value,
     num_outputs_value,
     request,
     model,
@@ -129,6 +130,7 @@ async def prepare_inputs(
         "num_outputs": int(num_outputs_value),
         "postprocess": postprocess_value if postprocessing_supported else False,
         "enhance_prompt": prompt_enhancer_value if prompt_enhancing_supported else False,
+        "check_safety": safety_checker_value if prompt_enhancing_supported else False,
     }
 
     if pre_gen_hook:
@@ -219,6 +221,7 @@ def generate_on_gpu(prepared_inputs: dict):
         negative_prompt=prepared_inputs["negative_prompt"],
         postprocess=prepared_inputs.get("postprocess", False),
         enhance_prompt=prepared_inputs.get("enhance_prompt", False),
+        check_safety=prepared_inputs.get("check_safety", True),
         output_dir_path=str(prepared_inputs["request_dir"]),
         metadata=prepared_inputs.get("metadata"),
     )
@@ -384,10 +387,16 @@ def create_model_interface(
                 )
 
                 prompt_enhancer_checkbox = None
+                safety_checker_checkbox = None
                 if prompt_enhancing_supported:
                     prompt_enhancer_checkbox = gr.Checkbox(
                         label="Enhance Prompt",
                         value=False,
+                    )
+                    safety_checker_checkbox = gr.Checkbox(
+                        label="Check Safety",
+                        info="When prompt enhancer enabled, safety is always checked regardless of this value",
+                        value=True,
                     )
 
                 postprocess_checkbox = None
@@ -484,6 +493,7 @@ def create_model_interface(
         ]
 
         inputs_list.append(prompt_enhancer_checkbox if prompt_enhancing_supported else gr.State(None))
+        inputs_list.append(safety_checker_checkbox if prompt_enhancing_supported else gr.State(None))
         inputs_list.append(postprocess_checkbox if postprocessing_supported else gr.State(None))
 
         if max_input_images > 0:
@@ -510,6 +520,7 @@ def create_model_interface(
         seed_value,
         num_outputs_value,
         prompt_enhancer_value=False,
+        safety_checker_value=False,
         postprocess_value=False,
         input_mode_value=None,
         input_image_upload_value=None,
@@ -533,6 +544,7 @@ def create_model_interface(
                     seed_value,
                     postprocess_value,
                     prompt_enhancer_value,
+                    safety_checker_value,
                     num_outputs_value,
                     request,
                     model,
@@ -625,6 +637,7 @@ def create_model_interface(
         "num_outputs": num_outputs,
         "postprocess_checkbox": postprocess_checkbox,
         "prompt_enhancer_checkbox": prompt_enhancer_checkbox,
+        "safety_checker_checkbox": safety_checker_checkbox,
         "input_mode": input_mode,
         "input_image_upload": input_image_upload,
         "input_image_url": input_image_url,

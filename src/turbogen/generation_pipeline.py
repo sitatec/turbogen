@@ -73,6 +73,7 @@ class GenerationPipeline:
         enhance_prompt: bool = False,
         output_dir_path: str | None = None,
         metadata: dict | None = None,
+        check_safety: bool = True,
     ) -> ProcessedOutput | str | torch.Tensor:
         assert not postprocess or self.nsfw_detector and (self.video_scorer or self.image_scorer), (
             "NSFW detector and at least one media scorer are required for postprocessing"
@@ -84,7 +85,7 @@ class GenerationPipeline:
 
         generation_type = model.generation_type
 
-        if self.prompt_enhancer:
+        if self.prompt_enhancer and (enhance_prompt or check_safety):
             enhanced_prompt, translated_prompt = self._handle_prompt(
                 prompt,
                 enhance_prompt,
@@ -138,6 +139,7 @@ class GenerationPipeline:
         enhance_prompt: bool = False,
         output_dir_path: str | None = None,
         metadata: dict | None = None,
+        check_safety: bool = True,
     ):
         assert not postprocess or self.nsfw_detector and (self.video_scorer or self.image_scorer), (
             "NSFW detector and at least one media scorer are required for postprocessing"
@@ -151,7 +153,7 @@ class GenerationPipeline:
 
         image_paths_list = image_paths if image_paths is not None else []
 
-        if self.prompt_enhancer:
+        if self.prompt_enhancer and (enhance_prompt or check_safety):
             enhanced_prompt, translated_prompt = self._handle_prompt(
                 prompt,
                 enhance_prompt,
