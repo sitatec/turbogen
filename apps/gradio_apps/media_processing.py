@@ -10,11 +10,6 @@ from PIL import Image
 from pathlib import Path
 import decord
 
-from turbogen.utils import load_flash_attention, create_thumbnail
-
-load_flash_attention()
-
-# ruff: noqa:E402
 from turbogen.model_downloads import (
     download_video_scorer,
     download_image_scorer,
@@ -23,6 +18,8 @@ from turbogen.model_downloads import (
 from turbogen.services.media_scoring.image_scorer import ImageScorer
 from turbogen.services.media_scoring.video_scorer import VideoScorer
 from turbogen.services.nsfw_detector import NsfwDetector
+from turbogen.utils import create_thumbnail
+from turbogen.utils.video_utils import create_video_preview
 from turbogen.utils.image_utils import generate_thumbhash, convert_to_webp_with_metadata
 
 video_scorer_path = download_video_scorer()
@@ -57,7 +54,7 @@ def evaluate_image(image: torch.Tensor):
 
 @spaces.GPU(duration=30)
 def evaluate_video(video_tensor: torch.Tensor, fps: float):
-    # We limit the fps to max 30 to reduce memory and processing time. But since this is for quality scoring,
+    # We limit the fps to max 30 to reduce memory processing time. But since this is for quality scoring,
     # videos with fps<=30 and fps>30 would be scored unfairly since the later got its native fps reduced.
     # So by default we divide by 2 to reduce the rate of unfair scoring. The scoring model was trained on low fps so, this will work.
     scoring_fps = max(30, round(fps / 2))
@@ -159,7 +156,10 @@ async def process_video(input_mode, file_path, url, metadata_input):
         thumb_path = str(request_dir / "thumbnail.webp")
         convert_to_webp_with_metadata(thumbnail, metadata, quality=87, output_path=thumb_path)
 
-        return thumb_path, str(nsfw_level), quality_score, thumbhash
+        preview_path = str(request_dir / "preview.webm")
+        create_video_preview(video_path, preview_path)
+
+        return thumb_path, str(nsfw_level), quality_score, thumbhash, preview_path
     except Exception as err:
         raise gr.Error(f"Generation failed: {err}") from err
     finally:
@@ -220,6 +220,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
                             vid_nsfw_out = gr.Textbox(label="NSFW Level")
                             vid_quality_out = gr.Number(label="Quality Score")
                             vid_hash_out = gr.Textbox(label="ThumbHash")
+                            vid_preview = gr.Video(label="Video Preview")
 
             def toggle_vid_input(mode):
                 return [
@@ -231,7 +232,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
             vid_submit_btn.click(
                 process_video,
                 inputs=[vid_input_mode, vid_file_upload, vid_url_input, vid_metadata_input],
-                outputs=[vid_thumb_out, vid_nsfw_out, vid_quality_out, vid_hash_out],
+                outputs=[vid_thumb_out, vid_nsfw_out, vid_quality_out, vid_hash_out, vid_preview],
             )
 
 if __name__ == "__main__":

@@ -5,9 +5,7 @@ import numpy as np
 
 
 def save_video_tensor(frames_tensor: torch.Tensor, output_path: str, fps: int):
-    assert frames_tensor.dim() == 4 and frames_tensor.shape[-1] == 3, (
-        "Input must be [N, H, W, C] with C=3"
-    )
+    assert frames_tensor.dim() == 4 and frames_tensor.shape[-1] == 3, "Input must be [N, H, W, C] with C=3"
 
     frames_tensor = (frames_tensor * 255).clamp_(0, 255).to(torch.uint8)
     frames = frames_tensor.cpu().numpy()
@@ -52,7 +50,33 @@ def save_video_tensor(frames_tensor: torch.Tensor, output_path: str, fps: int):
     process.wait()
 
     if process.returncode != 0:
-        error_output = (
-            process.stderr.read().decode() if process.stderr else "Unknown error"
-        )
+        error_output = process.stderr.read().decode() if process.stderr else "Unknown error"
         raise RuntimeError(f"FFmpeg failed with error: {error_output}")
+
+
+def create_video_preview(
+    video_path: str,
+    output_path: str,
+    target_width: int = 420,
+    min_height: int = 360,
+):
+    """Creates a WEBM video preview with max 8s and 16fps"""
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-an",
+            "-i",
+            video_path,
+            "-t",
+            "8",  # Clamps the duration to a maximum of 8s
+            "-vf",
+            f"scale={target_width}:{min_height}:force_original_aspect_ratio=increase",
+            "-fpsmax",
+            "16",  # Clamps the frame rate to a maximum of 16
+            "-c:v",
+            "libvpx-vp9",
+            output_path,
+        ],
+        check=True,
+    )
