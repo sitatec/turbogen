@@ -497,7 +497,7 @@ class PromptEnhancer:
                         system_inputs["attention_mask"] = inputs.attention_mask[:, :prefix_len]
 
                     # Compute the system prompt KV states on GPU
-                    with torch.no_grad():
+                    with torch.inference_mode():
                         outputs = self.model(**system_inputs, use_cache=True)
                         cpu_cache = move_cache_to_device(outputs.past_key_values, "cpu")
                         cpu_ids = system_inputs["input_ids"].to("cpu")
@@ -628,7 +628,7 @@ class PromptEnhancer:
             **inputs,
             max_new_tokens=1024,
             past_key_values=prefix_cache,
-            **self._get_gen_params(len(images) > 0),
+            **self._get_safety_checker_gen_params(len(images) > 0),
         )
         generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
 
@@ -673,6 +673,29 @@ class PromptEnhancer:
                 raise Exception(f"Unsupported generation type: {generation_type}")
 
     def _get_gen_params(self, has_images) -> dict:
+        """
+        These allow more diverse outputs compared to self._get_safety_checker_gen_params
+        """
+        if has_images:
+            return {
+                "do_sample": True,
+                "temperature": 0.9,
+                "top_p": 1.0,  # Handled dynamically by min_p
+                "top_k": 0,  # Disabled to prevent early truncation
+                "min_p": 0.05,  # Only tokens with >= 5% of the top token's prob are kept
+                "repetition_penalty": 1.12,  # Prevents repetitive cliches
+            }
+        else:
+            return {
+                "do_sample": True,
+                "temperature": 1.1,
+                "top_p": 1.0,
+                "top_k": 0,  # Disabled to prevent early truncation
+                "min_p": 0.06,  # Slightly more selective for higher temperature
+                "repetition_penalty": 1.15,  # Encourages more diverse stylistic synonyms
+            }
+
+    def _get_safety_checker_gen_params(self, has_images) -> dict:
         """
         Returns transformers-compatible generation parameters based on the official recommended settings for this model.
         """

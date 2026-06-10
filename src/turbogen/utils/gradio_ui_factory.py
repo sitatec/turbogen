@@ -187,6 +187,15 @@ def get_gen_duration(inputs: dict):
     return min(max_duration, duration * num_outputs + initialization_time + postprocessing_time)
 
 
+def _is_gpu_quota_exceeded(error: Any) -> bool:
+    lower = str(error).lower()
+    return (
+        ("gpu" in lower and "quota" in lower)
+        or ("gpu" in lower and "exceed" in lower)
+        or ("quota" in lower and "exceed" in lower)
+    )
+
+
 def __run_async(coro):
     try:
         loop = asyncio.get_running_loop()
@@ -533,6 +542,7 @@ def create_model_interface(
         """Main generation function that coordinates preprocessing and GPU execution."""
         request_dir = None
         error = None
+        is_gpu_quota_error = False
         all_outputs = []
         try:
             prepared_inputs = __run_async(
@@ -594,6 +604,10 @@ def create_model_interface(
                         )
 
         except Exception as e:
+            if _is_gpu_quota_exceeded(e):
+                is_gpu_quota_error = True
+                raise e
+
             error = e
             yield (
                 None,
@@ -606,7 +620,7 @@ def create_model_interface(
             traceback.print_exc()
 
         finally:
-            if post_gen_hook:
+            if post_gen_hook and not is_gpu_quota_error:
                 __run_async(call_callback(post_gen_hook, all_outputs, request, error))
             if request_dir and request_dir.exists():
                 try:
