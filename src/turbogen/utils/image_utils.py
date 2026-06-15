@@ -25,7 +25,7 @@ def image_tensor_to_pil(tensor: torch.Tensor) -> Image.Image:
 def convert_to_webp_with_metadata(
     image: np.ndarray | Image.Image,
     metadata: bytes | dict | None,
-    quality: int = 87,
+    quality: int = 80,
     lossless: bool = False,
     output_path: str | None = None,
 ) -> bytes | None:
@@ -62,11 +62,13 @@ def convert_to_webp_with_metadata(
 
 def create_thumbnail(
     img: np.ndarray,
-    target_width: int = 420,
-    min_height: int = 360,
+    target_width: int = 576,
+    min_height: int = 424,
 ):
     """Resize to [target_width] while preventing the new height from being smaller than [min_height]"""
-    height, width = img.shape[:2]
+    pil_img = Image.fromarray(img)
+
+    width, height = pil_img.size
     scale = max(target_width / width, min_height / height)
 
     if scale >= 1.0:  # Avoid upscaling
@@ -75,17 +77,9 @@ def create_thumbnail(
     new_w = int(round(width * scale))
     new_h = int(round(height * scale))
 
-    # If source is much larger, downscale to 1.7x target using INTER_AREA as a first pass.
-    # This removes high-frequency noise and prevents Lanczos "ringing" (halos).
-    if scale < 0.5:
-        img = cv2.resize(
-            img,
-            (int(new_w * 1.7), int(new_h * 1.7)),
-            interpolation=cv2.INTER_AREA,
-        )
+    resized_pil = pil_img.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
 
-    # Final low scale resize to target using Lanczos for nice acuity
-    return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+    return np.array(resized_pil)
 
 
 def create_exif_data(metadata: dict[str, str]) -> bytes:
@@ -95,9 +89,7 @@ def create_exif_data(metadata: dict[str, str]) -> bytes:
     exif_data = {}
 
     if "description" in metadata:
-        ifd_data[piexif.ImageIFD.ImageDescription] = metadata["description"].encode(
-            "utf-8"
-        )
+        ifd_data[piexif.ImageIFD.ImageDescription] = metadata["description"].encode("utf-8")
         del metadata["description"]
 
     if "artist" in metadata:
@@ -134,7 +126,5 @@ def generate_thumbhash(image: np.ndarray) -> str:
     rgba_image = np.full((thumb_height, thumb_width, 4), 255, dtype=np.uint8)
     rgba_image[:, :, :3] = thumbnail  # Copy RGB channels
 
-    thumb_hash_bytes = rgba_to_thumb_hash(
-        width=thumb_width, height=thumb_height, rgba=rgba_image.tobytes()
-    )
+    thumb_hash_bytes = rgba_to_thumb_hash(width=thumb_width, height=thumb_height, rgba=rgba_image.tobytes())
     return base64.b64encode(bytes(thumb_hash_bytes)).decode()

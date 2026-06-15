@@ -231,7 +231,7 @@ class GenerationPipeline:
         output_dir_path: str,
         metadata: dict | None = None,
         fps: int = 16,
-        thumbnail_quality: int = 87,
+        thumbnail_quality: int = 80,
     ) -> ProcessedOutput:
         start_t = time.perf_counter()
         if generation_type.is_video:
@@ -267,8 +267,7 @@ class GenerationPipeline:
             quality_score = self.image_scorer.score(output)
             print(f"Image scored in {time.perf_counter() - img_t:.4f}s")
 
-            # quality == compression effort when lossless=True
-            convert_to_webp_with_metadata(image, metadata, output_path=output_path, quality=40, lossless=True)
+            convert_to_webp_with_metadata(image, metadata, output_path=output_path, quality=90)
             convert_to_webp_with_metadata(
                 thumbnail,
                 metadata,
@@ -302,8 +301,7 @@ class GenerationPipeline:
             image_tensor_to_pil(output).save(
                 output_path,
                 format="WEBP",
-                quality=40,
-                lossless=True,
+                quality=90,
                 exif=create_exif_data(metadata) if metadata else b"",
             )
         else:

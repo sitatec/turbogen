@@ -98,8 +98,7 @@ async def process_image(input_mode, file_path, url, metadata_input):
 
         if should_convert_to_webp:
             webp_path = str(request_dir / "converted.webp")
-            # quality == compression effort when lossless=True
-            convert_to_webp_with_metadata(img, metadata, quality=40, output_path=webp_path, lossless=True)
+            convert_to_webp_with_metadata(img, metadata, quality=90, output_path=webp_path)
 
         np_image = np.array(img.convert("RGB"))
         quality_score, nsfw_level = evaluate_image(torch.from_numpy(np_image))
@@ -108,7 +107,7 @@ async def process_image(input_mode, file_path, url, metadata_input):
         thumbhash = generate_thumbhash(thumbnail)
 
         thumb_path = str(request_dir / "thumbnail.webp")
-        convert_to_webp_with_metadata(thumbnail, metadata, quality=87, output_path=thumb_path)
+        convert_to_webp_with_metadata(thumbnail, metadata, quality=80, output_path=thumb_path)
 
         return thumb_path, str(nsfw_level), quality_score, thumbhash, webp_path
     except Exception as err:
@@ -154,7 +153,7 @@ async def process_video(input_mode, file_path, url, metadata_input):
                 print(f"Failed to parse metadata: {e}")
 
         thumb_path = str(request_dir / "thumbnail.webp")
-        convert_to_webp_with_metadata(thumbnail, metadata, quality=87, output_path=thumb_path)
+        convert_to_webp_with_metadata(thumbnail, metadata, quality=80, output_path=thumb_path)
 
         preview_path = str(request_dir / "preview.webm")
         create_video_preview(video_path, preview_path)
