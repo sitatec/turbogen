@@ -137,10 +137,9 @@ async def process_video(input_mode, file_path, url, metadata_input):
         vr = decord.VideoReader(video_path)
         fps = vr.get_avg_fps()
         frames = vr.get_batch(range(len(vr))).asnumpy()
-        video_tensor = torch.from_numpy(frames).permute(0, 3, 1, 2)  # [T, C, H, W]
         first_frame = frames[0]
 
-        quality_score, nsfw_level = evaluate_video(video_tensor, fps)
+        quality_score, nsfw_level = evaluate_video(torch.from_numpy(frames), fps)
 
         thumbnail = create_thumbnail(first_frame)
         thumbhash = generate_thumbhash(thumbnail)
